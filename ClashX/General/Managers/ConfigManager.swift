@@ -56,14 +56,19 @@ class ConfigManager {
     }
 
     static func watchCurrentConfigFile() {
+        guard let safeName = try? SafeConfigName(selectConfigName) else {
+            ConfigFileManager.shared.watchFile(path: Paths.defaultConfigURL.path)
+            return
+        }
         if ICloudManager.shared.useiCloud.value {
             ICloudManager.shared.getUrl { url in
                 guard let url = url else { return }
-                let configUrl = url.appendingPathComponent(Paths.configFileName(for: selectConfigName))
+                let configUrl = (try? Paths.configFileURL(for: safeName, in: url)) ?? Paths.defaultConfigURL
                 ConfigFileManager.shared.watchFile(path: configUrl.path)
             }
         } else {
-            ConfigFileManager.shared.watchFile(path: Paths.localConfigPath(for: selectConfigName))
+            let localPath = (try? Paths.localConfigURL(for: safeName).path) ?? Paths.defaultConfigURL.path
+            ConfigFileManager.shared.watchFile(path: localPath)
         }
     }
 
@@ -147,16 +152,20 @@ class ConfigManager {
     }
 
     static func getConfigPath(configName: String, complete: ((String) -> Void)? = nil) {
+        guard let safeName = try? SafeConfigName(configName) else {
+            complete?(Paths.defaultConfigURL.path)
+            return
+        }
         if ICloudManager.shared.useiCloud.value {
             ICloudManager.shared.getUrl { url in
                 guard let url = url else {
                     return
                 }
-                let configPath = url.appendingPathComponent(Paths.configFileName(for: configName)).path
+                let configPath = (try? Paths.configFileURL(for: safeName, in: url).path) ?? Paths.defaultConfigURL.path
                 complete?(configPath)
             }
         } else {
-            let filePath = Paths.localConfigPath(for: configName)
+            let filePath = (try? Paths.localConfigURL(for: safeName).path) ?? Paths.defaultConfigURL.path
             complete?(filePath)
         }
     }

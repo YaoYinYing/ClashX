@@ -6,14 +6,18 @@
 </h1>
 
 
-A rule based proxy For Mac base on [Clash](https://github.com/Dreamacro/clash).
+A rule based proxy client for macOS based on ClashX, with the SmartX `smartx` branch embedding the Vernesong Smart fork of mihomo through the Go c-archive bridge.
 
 ClashX 旨在提供一个简单轻量化的代理客户端，如果需要更多的定制化，可以考虑使用 [CFW Mac 版](https://github.com/Fndroid/clash_for_windows_pkg/releases) 
 
 
-## 注意
-- ClashX / ClashX Pro 只是一个代理工具，不提供任何代理服务器。如果服务器不可用或与服务器续费有关的问题，请与您的提供商联系。
-- ClashX / ClashX Pro 目前并没有创建官网。凡是声称是 ClashX / ClashX Pro 官网的一定是骗子。
+## SmartX branch status
+- This is an **experimental SmartX branch** for preview testing, not a production release.
+- It embeds the **Vernesong Smart fork of mihomo**.
+- It is only a local proxy client, and **does not provide proxy servers or subscriptions**.
+- Legacy ClashX Pro branding/wording is obsolete in this branch.
+- The app keeps the legacy local config directory at `~/.config/clash/`, with additional safe-path validation for config names and writes.
+- Before any public distribution, replace signing identities, helper trust requirements, bundle metadata, and complete notarization/release hardening.
 
 ## Features
 
@@ -25,11 +29,7 @@ ClashX 旨在提供一个简单轻量化的代理客户端，如果需要更多�
 
 ## Install
 
-You can download from [Release](https://github.com/yichengchen/clashX/releases) page
-
-**Download ClashX Pro With enhanced mode and other clash premium feature at [AppCenter](https://install.appcenter.ms/users/clashx/apps/clashx-pro/distribution_groups/public) for free permanently.**
-
-**在 [AppCenter](https://install.appcenter.ms/users/clashx/apps/clashx-pro/distribution_groups/public) 免费下载ClashX Pro版本，支持增强模式以及更多Clash Premium Core特性。**
+Build from source on this branch for preview validation. Legacy public AppCenter links and ClashX Pro release wording are intentionally not used for SmartX preview builds.
 
 ## Build
 - Make sure have python3 and golang installed in your computer.

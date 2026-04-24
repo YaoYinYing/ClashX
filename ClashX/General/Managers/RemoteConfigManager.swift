@@ -166,7 +166,7 @@ class RemoteConfigManager {
             }
 
             if let suggestName = suggestedFilename, config.isPlaceHolderName {
-                let name = URL(fileURLWithPath: suggestName).deletingPathExtension().lastPathComponent
+                let name = safeNameFromSuggestedFilename(suggestName)
                 if !shared.configs.contains(where: { $0.name == name }) {
                     config.name = name
                 }
@@ -180,29 +180,56 @@ class RemoteConfigManager {
                 ConfigFileManager.shared.pauseForNextChange()
             }
 
-            let saveAction: ((String) -> Void) = {
-                savePath in
+            let saveAction: ((URL) -> Void) = { baseDir in
                 do {
-                    if FileManager.default.fileExists(atPath: savePath) {
-                        try FileManager.default.removeItem(atPath: savePath)
-                    }
-                    try newConfig.write(to: URL(fileURLWithPath: savePath), atomically: true, encoding: .utf8)
+                    let safeName = try SafeConfigName(config.name)
+                    let saveURL = try Paths.configFileURL(for: safeName, in: baseDir)
+                    try writeConfigAtomically(content: newConfig, targetURL: saveURL)
                     complete?(nil)
-                } catch let err {
-                    complete?(err.localizedDescription)
+                } catch {
+                    complete?(error.localizedDescription)
                 }
             }
 
             if ICloudManager.shared.useiCloud.value {
                 ICloudManager.shared.getUrl { url in
-                    guard let url = url else { return }
-                    let saveUrl = url.appendingPathComponent(Paths.configFileName(for: config.name))
-                    saveAction(saveUrl.path)
+                    guard let url = url else {
+                        complete?(NSLocalizedString("iCloud not available", comment: ""))
+                        return
+                    }
+                    saveAction(url)
                 }
             } else {
-                let savePath = Paths.localConfigPath(for: config.name)
-                saveAction(savePath)
+                saveAction(Paths.configDirectoryURL)
             }
+        }
+    }
+
+    static func safeNameFromSuggestedFilename(_ suggestedFilename: String) -> String {
+        let rawName = URL(fileURLWithPath: suggestedFilename).deletingPathExtension().lastPathComponent
+        if let safe = try? SafeConfigName(rawName) {
+            return safe.value
+        }
+        return "remote-config"
+    }
+
+    static func writeConfigAtomically(content: String, targetURL: URL) throws {
+        let fileManager = FileManager.default
+        let baseDir = targetURL.deletingLastPathComponent().standardizedFileURL
+        guard targetURL.standardizedFileURL.path.hasPrefix(baseDir.path + "/") else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+        let tempURL = baseDir.appendingPathComponent(".\(UUID().uuidString).tmp.yaml")
+        try content.write(to: tempURL, atomically: true, encoding: .utf8)
+        let verifyResult = verifyConfig(string: content)
+        guard verifyResult == nil else {
+            try? fileManager.removeItem(at: tempURL)
+            throw NSError(domain: "RemoteConfigManager", code: 1, userInfo: [NSLocalizedDescriptionKey: NSLocalizedString("Remote Config Format Error", comment: "") + ": " + (verifyResult ?? "")])
+        }
+        _ = try? fileManager.replaceItemAt(targetURL, withItemAt: tempURL, backupItemName: nil, options: .usingNewMetadataOnly)
+        if fileManager.fileExists(atPath: tempURL.path) {
+            try? fileManager.removeItem(at: targetURL)
+            try fileManager.moveItem(at: tempURL, to: targetURL)
         }
     }
 

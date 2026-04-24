@@ -4,6 +4,8 @@
 <dict>
 	<key>BETA</key>
 	<true/>
+	<key>AppCenterSecret</key>
+	<string></string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDocumentTypes</key>
@@ -62,20 +64,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>Fabric</key>
-	<dict>
-		<key>APIKey</key>
-		<string>e5990c61f53f0e5713e37f78458291760d631147</string>
-		<key>Kits</key>
-		<array>
-			<dict>
-				<key>KitInfo</key>
-				<dict/>
-				<key>KitName</key>
-				<string>Crashlytics</string>
-			</dict>
-		</array>
-	</dict>
+	<key>LegacyIdentityNotice</key>
+	<string>smartx branch: replace legacy bundle IDs, iCloud containers, helper requirements, and signing metadata before public distribution.</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>
@@ -129,6 +119,10 @@
 	<key>SUDisallowSelectChannel</key>
 	<false/>
 	<key>SUFeedURL</key>
-	<string>https://yichengchen.github.io/clashX/appcast.xml</string>
+	<string>https://invalid.local/smartx/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
 </dict>
 </plist>

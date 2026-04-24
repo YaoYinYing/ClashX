@@ -100,13 +100,20 @@ extension RemoteConfigViewController {
         guard response == .alertFirstButtonReturn else { return }
         guard remoteConfigInputView.isVaild() else {
             let alert = NSAlert()
-            alert.messageText = NSLocalizedString("Invalid input", comment: "")
+            alert.messageText = remoteConfigInputView.validationError() ?? NSLocalizedString("Invalid input", comment: "")
             alert.alertStyle = .warning
             alert.runModal()
             return
         }
 
-        let configName = remoteConfigInputView.getConfigName().0
+        let configNameRaw = remoteConfigInputView.getConfigName().0
+        let configName: String
+        do {
+            configName = try SafeConfigName(configNameRaw).value
+        } catch {
+            NSAlert.alert(with: error.localizedDescription)
+            return
+        }
         let isPlaceHolderName = remoteConfigInputView.getConfigName().1
         let configUrl = remoteConfigInputView.getUrlString()
 
@@ -220,13 +227,25 @@ class RemoteConfigAddView: NSView, NibLoadable {
     /// - Returns: return (name, isUserInput)
     func getConfigName() -> (String, Bool) {
         if !configNameTextField.stringValue.isEmpty {
-            return (configNameTextField.stringValue, true)
+            return (configNameTextField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines), true)
         }
-        return (configNameTextField.placeholderString ?? "", false)
+        return ((configNameTextField.placeholderString ?? "").trimmingCharacters(in: .whitespacesAndNewlines), false)
+    }
+
+    func validationError() -> String? {
+        guard urlTextField.stringValue.isUrlVaild() else {
+            return NSLocalizedString("Invalid input", comment: "")
+        }
+        do {
+            _ = try SafeConfigName(getConfigName().0)
+        } catch {
+            return error.localizedDescription
+        }
+        return nil
     }
 
     func isVaild() -> Bool {
-        return urlTextField.stringValue.isUrlVaild() && !getConfigName().0.isEmpty
+        return validationError() == nil
     }
 
     func setUrl(string: String, name: String? = nil, defaultName: String?) {
@@ -237,7 +256,7 @@ class RemoteConfigAddView: NSView, NibLoadable {
         }
 
         if let defaultName = defaultName, !defaultName.isEmpty {
-            configNameTextField.placeholderString = defaultName
+            configNameTextField.placeholderString = defaultName.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
         if name == nil && defaultName == nil {
@@ -248,7 +267,8 @@ class RemoteConfigAddView: NSView, NibLoadable {
     private func updateConfigName() {
         guard urlTextField.stringValue.isUrlVaild() else { return }
         let urlString = urlTextField.stringValue
-        configNameTextField.placeholderString = URL(string: urlString)?.host ?? "unknown"
+        let host = URL(string: urlString)?.host ?? "unknown"
+        configNameTextField.placeholderString = (try? SafeConfigName(host).value) ?? "remote-config"
     }
 }
 

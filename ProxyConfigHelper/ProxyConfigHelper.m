@@ -9,6 +9,7 @@
 #import "ProxyConfigHelper.h"
 #import <AppKit/AppKit.h>
 #import <Security/Security.h>
+#include <arpa/inet.h>
 #import "ProxyConfigRemoteProcessProtocol.h"
 #import "ProxySettingTool.h"
 
@@ -109,12 +110,32 @@ static NSUInteger const kMaxIgnoreItemLength = 255;
     if (pac == nil || pac.length == 0) {
         return YES;
     }
+    // PAC URL is written into system proxy preferences by a privileged helper.
+    // Restrict it to local loopback HTTP(S) endpoints controlled by the app.
     NSURL *url = [NSURL URLWithString:pac];
     if (url == nil || url.scheme == nil) {
         return NO;
     }
+    NSString *scheme = url.scheme.lowercaseString;
+    if (!([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"])) {
+        return NO;
+    }
     NSString *host = url.host.lowercaseString ?: @"";
-    if ([host isEqualToString:@"localhost"] || [host isEqualToString:@"127.0.0.1"] || [host hasPrefix:@"127."]) {
+    if ([host isEqualToString:@"localhost"]) {
+        return YES;
+    }
+    if ([host isEqualToString:@"127.0.0.1"] || [host isEqualToString:@"::1"]) {
+        return YES;
+    }
+    struct in_addr ipv4Addr;
+    if (inet_pton(AF_INET, host.UTF8String, &ipv4Addr) == 1) {
+        if ((ntohl(ipv4Addr.s_addr) >> 24) == 127) {
+            return YES;
+        }
+        return NO;
+    }
+    struct in6_addr ipv6Addr;
+    if (inet_pton(AF_INET6, host.UTF8String, &ipv6Addr) == 1 && IN6_IS_ADDR_LOOPBACK(&ipv6Addr)) {
         return YES;
     }
     return NO;

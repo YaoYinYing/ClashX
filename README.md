@@ -100,6 +100,11 @@ For mihomo-compatible config details, refer to mihomo documentation and rule res
 - Sparkle appcast URL and signing key material.
 - iCloud container identifiers (if iCloud is retained).
 
+Developer note:
+- `AllowedClientCodeSigningRequirement` in helper metadata is currently a legacy placeholder.
+- For local Debug helper testing, replace it with your own signing requirement (or explicitly clear it only in Debug builds).
+- This PR does **not** complete signing identity migration.
+
 ### Get process name
 
 You can add the follow config in your config file, and set your proxy mode to rule. Then open the log via help menu in ClashX.

@@ -12,3 +12,4 @@ This repository currently has no dedicated Xcode unit-test target. The tests in 
 Notes:
 - A robust symlink-escape integration test should run on macOS with a writable filesystem sandbox representative of app behavior.
 - `PathSafetyTests` currently focuses on deterministic name validation/path APIs and config replacement invariants.
+- Manual helper validation case to add during macOS test runs: `http://127.evil.com/proxy.pac` must be rejected by helper PAC validation.

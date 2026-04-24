@@ -193,9 +193,17 @@ extension ConfigManager {
     static func getConfigFilesList() -> [String] {
         do {
             let fileURLs = try FileManager.default.contentsOfDirectory(atPath: kConfigFolderPath)
-            return fileURLs
-                .filter { String($0.split(separator: ".").last ?? "") == "yaml" }
-                .map { $0.split(separator: ".").dropLast().joined(separator: ".") }
+            let names = fileURLs
+                .filter { $0.lowercased().hasSuffix(".yaml") }
+                .compactMap { filename -> String? in
+                    let name = (filename as NSString).deletingPathExtension
+                    if let safeName = try? SafeConfigName(name) {
+                        return safeName.value
+                    }
+                    Logger.log("Skipped unsafe config filename while listing configs", level: .warning)
+                    return nil
+                }
+            return names.isEmpty ? ["config"] : names
         } catch {
             return ["config"]
         }

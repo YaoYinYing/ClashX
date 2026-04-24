@@ -12,6 +12,14 @@ let kConfigFolderPath = "\(NSHomeDirectory())/.config/clash/"
 let kDefaultConfigFilePath = "\(kConfigFolderPath)config.yaml"
 
 enum Paths {
+    static var smartLightGBMModelPath: String {
+        return "\(kConfigFolderPath)Model.bin"
+    }
+
+    static var smartWeightDataPath: String {
+        return "\(kConfigFolderPath)smart_weight_data.csv"
+    }
+
     static func localConfigPath(for name: String) -> String {
         return "\(kConfigFolderPath)\(configFileName(for: name))"
     }

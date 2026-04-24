@@ -30,6 +30,7 @@ class ConnectionDetailViewModel {
     @Published var applicationPath: String? = ""
     @Published var otherText = ""
     @Published var showCloseButton = false
+    @Published var showSmartBlockButton = false
 
     private var uuid = ""
     var cancellable = Set<AnyCancellable>()
@@ -44,6 +45,7 @@ class ConnectionDetailViewModel {
         }
         uuid = connection.id
         showCloseButton = connection.status == .connecting
+        showSmartBlockButton = connection.status == .connecting && !(connection.metadata.smartTarget ?? "").isEmpty
         processImage = connection.metadata.processImage
         applicationPath = connection.metadata.processPath
         let area = clash_getCountryForIp(connection.metadata.destinationIP.goStringBuffer()).toString()
@@ -70,11 +72,29 @@ class ConnectionDetailViewModel {
         chain = connection.chains.joined(separator: "\n")
         sourceIP = connection.metadata.sourceIP.appending(":").appending(connection.metadata.sourcePort)
         destination = connection.metadata.destinationIP.appending(":").appending(connection.metadata.destinationPort)
-        if let error = connection.error {
-            otherText = error
-        } else {
-            otherText = ""
+        var otherLines = [String]()
+        if let error = connection.error, !error.isEmpty {
+            otherLines.append(error)
         }
+        if let smartTarget = connection.metadata.smartTarget, !smartTarget.isEmpty {
+            otherLines.append("Smart Target: \(smartTarget)")
+        }
+        if let smartBlock = connection.metadata.smartBlock, !smartBlock.isEmpty {
+            otherLines.append("Smart Block: \(smartBlock)")
+        }
+        if let sourceIPASN = connection.metadata.sourceIPASN, !sourceIPASN.isEmpty {
+            otherLines.append("Source ASN: \(sourceIPASN)")
+        }
+        if let destinationIPASN = connection.metadata.destinationIPASN, !destinationIPASN.isEmpty {
+            otherLines.append("Destination ASN: \(destinationIPASN)")
+        }
+        if let sourceGeoIP = connection.metadata.sourceGeoIP, !sourceGeoIP.isEmpty {
+            otherLines.append("Source GeoIP: \(sourceGeoIP.joined(separator: ", "))")
+        }
+        if let destinationGeoIP = connection.metadata.destinationGeoIP, !destinationGeoIP.isEmpty {
+            otherLines.append("Destination GeoIP: \(destinationGeoIP.joined(separator: ", "))")
+        }
+        otherText = otherLines.joined(separator: "\n")
     }
 
     func flag(from country: String) -> String {
@@ -89,5 +109,9 @@ class ConnectionDetailViewModel {
 
     func closeConnection() {
         ApiRequest.closeConnection(uuid)
+    }
+
+    func blockSmartConnection() {
+        ApiRequest.blockSmartConnection(uuid)
     }
 }

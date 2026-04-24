@@ -13,9 +13,14 @@ enum ClashProxyType: String, Codable {
     case urltest = "URLTest"
     case fallback = "Fallback"
     case loadBalance = "LoadBalance"
+    case smart = "Smart"
     case select = "Selector"
     case direct = "Direct"
     case reject = "Reject"
+    case rejectDrop = "RejectDrop"
+    case compatible = "Compatible"
+    case pass = "Pass"
+    case dns = "Dns"
     case shadowsocks = "Shadowsocks"
     case shadowsocksR = "ShadowsocksR"
     case socks5 = "Socks5"
@@ -26,13 +31,38 @@ enum ClashProxyType: String, Codable {
     case relay = "Relay"
     case unknown = "Unknown"
     case wireguard = "Wireguard"
+    case hysteria = "Hysteria"
+    case hysteria2 = "Hysteria2"
+    case tuic = "Tuic"
+    case ssh = "Ssh"
+    case mieru = "Mieru"
+    case anyTLS = "AnyTLS"
+    case sudoku = "Sudoku"
+    case masque = "Masque"
+    case trustTunnel = "TrustTunnel"
     case vless = "Vless"
 
-    static let proxyGroups: [ClashProxyType] = [.select, .urltest, .fallback, .loadBalance]
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        switch rawValue {
+        case "WireGuard":
+            self = .wireguard
+        default:
+            self = ClashProxyType(rawValue: rawValue) ?? .unknown
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
+    static let proxyGroups: [ClashProxyType] = [.select, .urltest, .fallback, .loadBalance, .smart]
 
     var isAutoGroup: Bool {
         switch self {
-        case .urltest, .fallback, .loadBalance:
+        case .urltest, .fallback, .loadBalance, .smart:
             return true
         default:
             return false
@@ -41,7 +71,7 @@ enum ClashProxyType: String, Codable {
 
     static func isProxyGroup(_ proxy: ClashProxy) -> Bool {
         switch proxy.type {
-        case .select, .urltest, .fallback, .loadBalance, .relay: return true
+        case .select, .urltest, .fallback, .loadBalance, .smart, .relay: return true
         default: return false
         }
     }

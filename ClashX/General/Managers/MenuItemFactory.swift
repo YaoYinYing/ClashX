@@ -51,6 +51,8 @@ class MenuItemFactory {
             case .urltest, .fallback: menu = generateUrlTestFallBackMenuItem(proxyGroup: proxy, proxyInfo: proxyInfo, leftPadding: leftPadding)
             case .loadBalance:
                 menu = generateLoadBalanceMenuItem(proxyGroup: proxy, proxyInfo: proxyInfo, leftPadding: leftPadding)
+            case .smart:
+                menu = generateSmartMenuItem(proxyGroup: proxy, proxyInfo: proxyInfo, leftPadding: leftPadding)
             case .relay:
                 menu = generateListOnlyMenuItem(proxyGroup: proxy, proxyInfo: proxyInfo)
             default: continue
@@ -204,6 +206,35 @@ class MenuItemFactory {
         addSpeedTestMenuItem(submenu, proxyGroup: proxyGroup)
         menu.submenu = submenu
 
+        return menu
+    }
+
+    private static func generateSmartMenuItem(proxyGroup: ClashProxy, proxyInfo: ClashProxyResp, leftPadding: Bool) -> NSMenuItem? {
+        let proxyMap = proxyInfo.proxiesMap
+        let selectedName = proxyGroup.now ?? NSLocalizedString("Smart", comment: "")
+        let menu = NSMenuItem(title: proxyGroup.name, action: nil, keyEquivalent: "")
+        if !Settings.disableShowCurrentProxyInMenu {
+            menu.view = ProxyGroupMenuItemView(group: proxyGroup.name, targetProxy: selectedName, hasLeftPadding: leftPadding)
+        }
+
+        let submenu = ProxyGroupMenu(title: proxyGroup.name)
+        for proxy in proxyGroup.all ?? [] {
+            guard let proxyModel = proxyMap[proxy] else { continue }
+            let proxyItem = ProxyMenuItem(proxy: proxyModel,
+                                          group: proxyGroup,
+                                          action: #selector(MenuItemFactory.actionSelectProxy(sender:)))
+            proxyItem.target = MenuItemFactory.self
+            if proxyModel.name == selectedName {
+                proxyItem.state = .on
+            }
+            submenu.add(delegate: proxyItem)
+            submenu.addItem(proxyItem)
+        }
+        if proxyGroup.isSpeedTestable && useViewToRenderProxy {
+            submenu.minimumWidth = proxyGroup.maxProxyNameLength + ProxyItemView.fixedPlaceHolderWidth
+        }
+        addSpeedTestMenuItem(submenu, proxyGroup: proxyGroup)
+        menu.submenu = submenu
         return menu
     }
 

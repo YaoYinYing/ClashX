@@ -18,6 +18,7 @@ class ConnectionDetailInfoView: NSView {
     private let containerView = NSView()
     private var cancelable = Set<AnyCancellable>()
     private let closeButton = NSButton()
+    private let smartBlockButton = NSButton()
     private var viewModel: ConnectionDetailViewModel?
     init() {
         super.init(frame: .zero)
@@ -90,6 +91,16 @@ class ConnectionDetailInfoView: NSView {
             $0.rightAnchor.constraint(equalTo: rightAnchor, constant: -12)
         ] }
 
+        smartBlockButton.title = NSLocalizedString("Block Smart Node", comment: "")
+        smartBlockButton.bezelStyle = .regularSquare
+        smartBlockButton.target = self
+        smartBlockButton.action = #selector(actionBlockSmartConn)
+        addSubview(smartBlockButton)
+        smartBlockButton.makeConstraints { [
+            $0.centerYAnchor.constraint(equalTo: nameStackView.centerYAnchor),
+            $0.rightAnchor.constraint(equalTo: closeButton.leftAnchor, constant: -8)
+        ] }
+
         let separator = NSView()
         separator.wantsLayer = true
         separator.layer?.backgroundColor = NSColor.separatorColor.cgColor
@@ -140,11 +151,16 @@ class ConnectionDetailInfoView: NSView {
         viewModel.$otherText.weakAssign(to: \.string, on: generalView.otherTextView).store(in: &cancelable)
 
         viewModel.$showCloseButton.map { !$0 }.weakAssign(to: \.isHidden, on: closeButton).store(in: &cancelable)
+        viewModel.$showSmartBlockButton.map { !$0 }.weakAssign(to: \.isHidden, on: smartBlockButton).store(in: &cancelable)
     }
 
     @objc func actionSelectSegment(sender: NSSegmentedControl?) {}
     @objc func actionCloseConn() {
         viewModel?.closeConnection()
+    }
+
+    @objc func actionBlockSmartConn() {
+        viewModel?.blockSmartConnection()
     }
 
     func addGeneralView() {

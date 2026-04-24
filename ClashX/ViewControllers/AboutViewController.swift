@@ -13,21 +13,13 @@ class AboutViewController: NSViewController {
     @IBOutlet var buildTimeLabel: NSTextField!
     @IBOutlet var coreVersionLabel: NSTextField!
 
-    lazy var clashCoreVersion: String = {
-        return Bundle.main.infoDictionary?["coreVersion"] as? String ?? "unknown"
-    }()
+    lazy var clashCoreVersion: String = Bundle.main.infoDictionary?["coreVersion"] as? String ?? "unknown"
 
-    lazy var commit: String = {
-        return Bundle.main.infoDictionary?["gitCommit"] as? String ?? "unknown"
-    }()
+    lazy var commit: String = Bundle.main.infoDictionary?["gitCommit"] as? String ?? "unknown"
 
-    lazy var branch: String = {
-        return Bundle.main.infoDictionary?["gitBranch"] as? String ?? "unknown"
-    }()
+    lazy var branch: String = Bundle.main.infoDictionary?["gitBranch"] as? String ?? "unknown"
 
-    lazy var buildTime: String = {
-        return Bundle.main.infoDictionary?["buildTime"] as? String ?? "unknown"
-    }()
+    lazy var buildTime: String = Bundle.main.infoDictionary?["buildTime"] as? String ?? "unknown"
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -36,10 +28,16 @@ class AboutViewController: NSViewController {
         let version = AppVersionUtil.currentVersion
         let build = AppVersionUtil.currentBuild
         let isBeta = AppVersionUtil.isBeta ? " Beta" : ""
+        let activeMode = Settings.isUsingEmbeddedCore ? "Embedded Vernesong mihomo" : "External Controller"
 
-        versionLabel.stringValue = "Version: \(version) (\(build))\(isBeta)"
-        coreVersionLabel.stringValue = clashCoreVersion
-        buildTimeLabel.stringValue = "\(commit)-\(branch) \(buildTime)"
+        versionLabel.stringValue = "ClashX \(version) (\(build))\(isBeta)"
+        if Settings.isUsingEmbeddedCore {
+            coreVersionLabel.stringValue = "Core: \(activeMode) \(clashCoreVersion)"
+            buildTimeLabel.stringValue = "Build: \(commit) @ \(branch) \(buildTime)"
+        } else {
+            coreVersionLabel.stringValue = "Core: \(activeMode)"
+            buildTimeLabel.stringValue = "Controller: \(Settings.activeControllerURL)"
+        }
     }
 
     override func viewWillAppear() {

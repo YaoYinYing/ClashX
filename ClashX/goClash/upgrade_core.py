@@ -4,7 +4,7 @@ from build_clash_universal import run
 
 def upgrade_version(current_version):
     string = open('go.mod').read()
-    string = string.replace(current_version, "dev")
+    string = string.replace(current_version, "v0.0.0")
     file = open("go.mod", "w")
     file.write(string)
 
@@ -12,7 +12,7 @@ def upgrade_version(current_version):
 def get_full_version():
     with open('./go.mod') as file:
         for line in file.readlines():
-            if "clash" in line and "ClashX" not in line:
+            if "github.com/metacubex/mihomo" in line and "replace" not in line:
                 return line.split(" ")[-1].strip()
 
 def install():

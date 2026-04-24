@@ -18,6 +18,45 @@ protocol ApiRequestStreamDelegate: AnyObject {
 
 typealias ErrorString = String
 
+struct SmartNodeWeight: Decodable {
+    let name: String
+    let rank: String
+    let weight: Double
+    let lastUpdated: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case name, rank, weight, lastUpdated
+        case capitalizedName = "Name"
+        case capitalizedRank = "Rank"
+        case capitalizedWeight = "Weight"
+        case capitalizedLastUpdated = "LastUpdated"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? container.decodeIfPresent(String.self, forKey: .capitalizedName) ?? ""
+        rank = try container.decodeIfPresent(String.self, forKey: .rank) ?? container.decodeIfPresent(String.self, forKey: .capitalizedRank) ?? ""
+        weight = try container.decodeIfPresent(Double.self, forKey: .weight) ?? container.decodeIfPresent(Double.self, forKey: .capitalizedWeight) ?? 0
+        lastUpdated = try container.decodeIfPresent(Int.self, forKey: .lastUpdated) ?? container.decodeIfPresent(Int.self, forKey: .capitalizedLastUpdated) ?? 0
+    }
+}
+
+struct SmartWeightsResponse: Decodable {
+    let weights: [String: [SmartNodeWeight]]
+    let errors: [String: String]?
+    let message: String?
+}
+
+enum SmartEndpointResult {
+    case success
+    case unsupported
+    case failed
+}
+
+struct CoreVersionInfo: Decodable {
+    let version: String
+}
+
 class ApiRequest {
     static let shared = ApiRequest()
 
@@ -131,6 +170,7 @@ class ApiRequest {
 
         // NORMAL MODE: Use internal api
         clashRequestQueue.async {
+            Settings.syncSmartLightGBMOptionsToCore()
             let res = clashUpdateConfig(configPath.goStringBuffer())?.toString() ?? placeHolderErrorDesp
             DispatchQueue.main.async {
                 if res == "success" {
@@ -182,9 +222,8 @@ class ApiRequest {
                 case let .success(providerResp):
                     completeHandler?(providerResp)
                 case let .failure(err):
-                    Logger.log("\(err)")
+                    Logger.log("request proxy providers failed: \(err)", level: .warning)
                     completeHandler?(ClashProviderResp())
-                    assertionFailure()
                 }
             }
     }
@@ -197,6 +236,23 @@ class ApiRequest {
             encoding: JSONEncoding.default).response {
             _ in
             completeHandler?()
+        }
+    }
+
+    static func updateTun(enable: Bool, completeHandler: @escaping (Bool, ErrorString?) -> Void) {
+        req("/configs",
+            method: .patch,
+            parameters: ["tun": ["enable": enable]],
+            encoding: JSONEncoding.default).responseData { response in
+            if response.response?.statusCode == 204 {
+                completeHandler(true, nil)
+                return
+            }
+
+            let data = try? response.result.get()
+            let message = data.map { JSON($0)["message"].string } ?? nil
+            let fallback = response.error?.localizedDescription ?? NSLocalizedString("Failed to update TUN settings.", comment: "")
+            completeHandler(false, message ?? fallback)
         }
     }
 
@@ -227,12 +283,11 @@ class ApiRequest {
         var proxyInfo: ClashProxyResp?
 
         group.notify(queue: .main) {
-            guard let proxyInfo = proxyInfo, let proxyprovider = provider else {
-                assertionFailure()
+            guard let proxyInfo = proxyInfo else {
                 complete?(nil)
                 return
             }
-            proxyInfo.updateProvider(proxyprovider)
+            proxyInfo.updateProvider(provider ?? ClashProviderResp())
             complete?(proxyInfo)
         }
 
@@ -381,6 +436,70 @@ extension ApiRequest {
     static func resetFakeIpCache() {
         ApiRequest.req("/cache/fakeip/flush", method: .post).response { resp in
             Logger.log("flush fake ip: \(resp.response?.statusCode ?? -1)")
+        }
+    }
+
+    static func requestSmartWeights(completeHandler: @escaping (SmartWeightsResponse?) -> Void) {
+        req("/group/weights").responseDecodable(of: SmartWeightsResponse.self) { resp in
+            switch resp.result {
+            case let .success(weights):
+                completeHandler(weights)
+            case let .failure(err):
+                Logger.log("request smart weights failed: \(err)", level: .warning)
+                completeHandler(nil)
+            }
+        }
+    }
+
+    static func requestSmartWeights(group: String, completeHandler: @escaping ([SmartNodeWeight]) -> Void) {
+        req("/group/\(group.encoded)/weights").responseData { resp in
+            guard let data = try? resp.result.get() else {
+                completeHandler([])
+                return
+            }
+            let json = JSON(data)
+            let weights = json["weights"].arrayValue.compactMap {
+                try? JSONDecoder().decode(SmartNodeWeight.self, from: $0.rawData())
+            }
+            completeHandler(weights)
+        }
+    }
+
+    static func flushSmartCache(configName: String? = nil, completeHandler: ((Bool) -> Void)? = nil) {
+        let path = configName.map { "/cache/smart/flush/\($0.encoded)" } ?? "/cache/smart/flush"
+        req(path, method: .post).response { resp in
+            completeHandler?(resp.response?.statusCode == 204)
+        }
+    }
+
+    static func blockSmartConnection(_ id: String, completeHandler: ((Bool) -> Void)? = nil) {
+        req("/connections/smart/\(id)", method: .delete).response { resp in
+            completeHandler?(resp.response?.statusCode == 204)
+        }
+    }
+
+    static func updateSmartLightGBMModel(completeHandler: @escaping (SmartEndpointResult) -> Void) {
+        req("/upgrade/lgbm", method: .post).response { resp in
+            switch resp.response?.statusCode {
+            case 200:
+                completeHandler(.success)
+            case 400, 404:
+                completeHandler(.unsupported)
+            default:
+                completeHandler(.failed)
+            }
+        }
+    }
+
+    static func requestCoreVersion(completeHandler: @escaping (String?) -> Void) {
+        req("/version").responseDecodable(of: CoreVersionInfo.self) { response in
+            switch response.result {
+            case let .success(info):
+                completeHandler(info.version)
+            case let .failure(err):
+                Logger.log("request core version failed: \(err)", level: .warning)
+                completeHandler(nil)
+            }
         }
     }
 }

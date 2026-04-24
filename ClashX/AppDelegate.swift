@@ -435,6 +435,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if clash_checkSecret().toString().isEmpty || Settings.overrideConfigSecret {
             clash_setSecret(Settings.apiSecret.goStringBuffer())
         }
+        Settings.syncSmartLightGBMOptionsToCore()
 
         struct StartProxyResp: Codable {
             let externalController: String

@@ -4,6 +4,7 @@ package main
 #cgo CFLAGS: -x objective-c
 #cgo LDFLAGS: -framework Foundation
 #import <Foundation/Foundation.h>
+#include <stdlib.h>
 #import "UIHelper.h"
 */
 import "C"
@@ -12,7 +13,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -21,19 +21,23 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/Dreamacro/clash/component/mmdb"
-	"github.com/Dreamacro/clash/config"
-	"github.com/Dreamacro/clash/constant"
-	"github.com/Dreamacro/clash/hub/executor"
-	"github.com/Dreamacro/clash/hub/route"
-	"github.com/Dreamacro/clash/log"
-	"github.com/Dreamacro/clash/tunnel/statistic"
-	"github.com/oschwald/geoip2-golang"
-	"github.com/phayes/freeport"
+	"github.com/metacubex/mihomo/component/mmdb"
+	"github.com/metacubex/mihomo/component/updater"
+	"github.com/metacubex/mihomo/config"
+	"github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/hub"
+	"github.com/metacubex/mihomo/hub/executor"
+	"github.com/metacubex/mihomo/hub/route"
+	"github.com/metacubex/mihomo/log"
+	"github.com/metacubex/mihomo/tunnel/statistic"
 )
 
 var secretOverride string = ""
 var enableIPV6 bool = false
+var smartLightGBMOverride bool = false
+var smartLightGBMURL string = ""
+var smartLightGBMAutoUpdate bool = false
+var smartLightGBMUpdateInterval int = 72
 
 func isAddrValid(addr string) bool {
 	if addr != "" {
@@ -71,9 +75,20 @@ func checkPortAvailable(port int) bool {
 	return true
 }
 
+func getFreePort() (int, error) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port, nil
+}
+
 //export initClashCore
 func initClashCore() {
-	configFile := filepath.Join(constant.Path.HomeDir(), constant.Path.Config())
+	configHome := filepath.Join(os.Getenv("HOME"), ".config", "clash")
+	constant.SetHomeDir(configHome)
+	configFile := filepath.Join(configHome, "config.yaml")
 	constant.SetConfig(configFile)
 }
 
@@ -81,7 +96,7 @@ func readConfig(path string) ([]byte, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, err
 	}
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +113,19 @@ func getRawCfg() (*config.RawConfig, error) {
 	}
 
 	return config.UnmarshalRawConfig(buf)
+}
+
+func applySmartLightGBMOverrides(rawCfg *config.RawConfig) {
+	if !smartLightGBMOverride {
+		return
+	}
+	rawCfg.LgbmUrl = smartLightGBMURL
+	rawCfg.LgbmAutoUpdate = smartLightGBMAutoUpdate
+	if smartLightGBMUpdateInterval <= 0 {
+		rawCfg.LgbmUpdateInterval = 72
+	} else {
+		rawCfg.LgbmUpdateInterval = smartLightGBMUpdateInterval
+	}
 }
 
 func parseDefaultConfigThenStart(checkPort, allowLan, ipv6 bool, proxyPort uint32, externalController string) (*config.Config, error) {
@@ -147,7 +175,7 @@ func parseDefaultConfigThenStart(checkPort, allowLan, ipv6 bool, proxyPort uint3
 	}
 	if checkPort {
 		if !isAddrValid(rawCfg.ExternalController) {
-			port, err := freeport.GetFreePort()
+			port, err := getFreePort()
 			if err != nil {
 				return nil, err
 			}
@@ -157,18 +185,24 @@ func parseDefaultConfigThenStart(checkPort, allowLan, ipv6 bool, proxyPort uint3
 		rawCfg.AllowLan = allowLan
 
 		if !checkPortAvailable(rawCfg.MixedPort) {
-			if port, err := freeport.GetFreePort(); err == nil {
+			if port, err := getFreePort(); err == nil {
 				rawCfg.MixedPort = port
 			}
 		}
 	}
+	applySmartLightGBMOverrides(rawCfg)
 
 	cfg, err := config.ParseRawConfig(rawCfg)
 	if err != nil {
 		return nil, err
 	}
-	go route.Start(cfg.General.ExternalController, cfg.General.Secret)
-	executor.ApplyConfig(cfg, true)
+	hub.ApplyConfig(cfg)
+	if updater.GeoAutoUpdate() {
+		updater.RegisterGeoUpdater()
+	}
+	if updater.LgbmAutoUpdate() {
+		updater.RegisterLgbmUpdater()
+	}
 	return cfg, nil
 }
 
@@ -192,9 +226,8 @@ func clashSetupLogger() {
 	sub := log.Subscribe()
 	go func() {
 		for elm := range sub {
-			log := elm.(log.Event)
-			cs := C.CString(log.Payload)
-			cl := C.CString(log.Type())
+			cs := C.CString(elm.Payload)
+			cl := C.CString(elm.Type())
 			C.sendLogToUI(cs, cl)
 			C.free(unsafe.Pointer(cs))
 			C.free(unsafe.Pointer(cl))
@@ -234,6 +267,17 @@ func clash_setSecret(secret *C.char) {
 	secretOverride = C.GoString(secret)
 }
 
+//export clash_setLightGBMOptions
+func clash_setLightGBMOptions(enableOverride bool, url *C.char, autoUpdate bool, updateInterval int) {
+	smartLightGBMOverride = enableOverride
+	smartLightGBMURL = C.GoString(url)
+	smartLightGBMAutoUpdate = autoUpdate
+	if updateInterval <= 0 {
+		updateInterval = 72
+	}
+	smartLightGBMUpdateInterval = updateInterval
+}
+
 //export run
 func run(checkConfig, allowLan, ipv6 bool, portOverride uint32, externalController *C.char) *C.char {
 	cfg, err := parseDefaultConfigThenStart(checkConfig, allowLan, ipv6, portOverride, C.GoString(externalController))
@@ -242,8 +286,8 @@ func run(checkConfig, allowLan, ipv6 bool, portOverride uint32, externalControll
 	}
 
 	portInfo := map[string]string{
-		"externalController": cfg.General.ExternalController,
-		"secret":             cfg.General.Secret,
+		"externalController": cfg.Controller.ExternalController,
+		"secret":             cfg.Controller.Secret,
 	}
 
 	jsonString, err := json.Marshal(portInfo)
@@ -261,11 +305,21 @@ func setUIPath(path *C.char) {
 
 //export clashUpdateConfig
 func clashUpdateConfig(path *C.char) *C.char {
-	cfg, err := executor.ParseWithPath(C.GoString(path))
+	buf, err := readConfig(C.GoString(path))
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	rawCfg, err := config.UnmarshalRawConfig(buf)
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	applySmartLightGBMOverrides(rawCfg)
+	cfg, err := config.ParseRawConfig(rawCfg)
 	if err != nil {
 		return C.CString(err.Error())
 	}
 	cfg.General.IPv6 = enableIPV6
+	cfg.Profile.StoreSelected = false
 	executor.ApplyConfig(cfg, false)
 	return C.CString("success")
 }
@@ -282,15 +336,8 @@ func clashGetConfigs() *C.char {
 
 //export verifyGEOIPDataBase
 func verifyGEOIPDataBase() bool {
-	mmdb, err := geoip2.Open(constant.Path.MMDB())
-	if err != nil {
-		log.Warnln("mmdb fail:%s", err.Error())
-		return false
-	}
-
-	_, err = mmdb.Country(net.ParseIP("114.114.114.114"))
-	if err != nil {
-		log.Warnln("mmdb lookup fail:%s", err.Error())
+	if !mmdb.Verify(constant.Path.MMDB()) {
+		log.Warnln("mmdb verify fail:%s", constant.Path.MMDB())
 		return false
 	}
 	return true
@@ -298,19 +345,19 @@ func verifyGEOIPDataBase() bool {
 
 //export clash_getCountryForIp
 func clash_getCountryForIp(ip *C.char) *C.char {
-	record, _ := mmdb.Instance().Country(net.ParseIP(C.GoString(ip)))
-	if record != nil {
-		return C.CString(record.Country.IsoCode)
+	code := mmdb.IPInstance().LookupCode(net.ParseIP(C.GoString(ip)))
+	if len(code) > 0 {
+		return C.CString(strings.ToUpper(code[0]))
 	}
 	return C.CString("")
 }
 
 //export clash_closeAllConnections
 func clash_closeAllConnections() {
-	snapshot := statistic.DefaultManager.Snapshot()
-	for _, c := range snapshot.Connections {
-		c.Close()
-	}
+	statistic.DefaultManager.Range(func(c statistic.Tracker) bool {
+		_ = c.Close()
+		return true
+	})
 }
 
 //export clash_getProggressInfo

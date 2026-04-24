@@ -8,9 +8,36 @@
 
 import Foundation
 enum Settings {
-    static let defaultMmdbDownloadUrl = "https://github.com/Dreamacro/maxmind-geoip/releases/latest/download/Country.mmdb"
+    static let defaultMmdbDownloadUrl = "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb"
     @UserDefault("mmdbDownloadUrl", defaultValue: defaultMmdbDownloadUrl)
     static var mmdbDownloadUrl: String
+
+    static let defaultSmartLightGBMModelUrl = "https://github.com/vernesong/mihomo/releases/download/LightGBM-Model/Model.bin"
+    @UserDefault("smartLightGBMOverrideConfig", defaultValue: false)
+    static var smartLightGBMOverrideConfig: Bool
+
+    @UserDefault("smartLightGBMModelUrl", defaultValue: defaultSmartLightGBMModelUrl)
+    static var smartLightGBMModelUrl: String
+
+    @UserDefault("smartLightGBMAutoUpdate", defaultValue: false)
+    static var smartLightGBMAutoUpdate: Bool
+
+    @UserDefault("smartLightGBMUpdateIntervalHours", defaultValue: 72)
+    static var smartLightGBMUpdateIntervalHours: Int
+
+    static var effectiveSmartLightGBMModelUrl: String {
+        if smartLightGBMModelUrl.isEmpty {
+            return defaultSmartLightGBMModelUrl
+        }
+        return smartLightGBMModelUrl
+    }
+
+    static func syncSmartLightGBMOptionsToCore() {
+        clash_setLightGBMOptions(smartLightGBMOverrideConfig.goObject(),
+                                 effectiveSmartLightGBMModelUrl.goStringBuffer(),
+                                 smartLightGBMAutoUpdate.goObject(),
+                                 GoInt(smartLightGBMUpdateIntervalHours))
+    }
 
     @UserDefault("filterInterface", defaultValue: true)
     static var filterInterface: Bool
@@ -80,4 +107,28 @@ enum Settings {
 
     @UserDefault("kDisableRestoreProxy", defaultValue: false)
     static var disableRestoreProxy: Bool
+
+    static var embeddedCoreVersion: String {
+        Bundle.main.infoDictionary?["coreVersion"] as? String ?? "unknown"
+    }
+
+    static var embeddedCoreCommit: String {
+        Bundle.main.infoDictionary?["gitCommit"] as? String ?? "unknown"
+    }
+
+    static var embeddedCoreBranch: String {
+        Bundle.main.infoDictionary?["gitBranch"] as? String ?? "unknown"
+    }
+
+    static var embeddedCoreBuildTime: String {
+        Bundle.main.infoDictionary?["buildTime"] as? String ?? "unknown"
+    }
+
+    static var isUsingEmbeddedCore: Bool {
+        RemoteControlManager.selectConfig == nil && builtInApiMode
+    }
+
+    static var activeControllerURL: String {
+        ConfigManager.apiUrl
+    }
 }

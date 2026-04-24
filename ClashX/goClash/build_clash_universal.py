@@ -3,20 +3,31 @@ import datetime
 import plistlib
 import os
 import filecmp
+import shutil
 
 def get_version():
-    with open('./go.mod') as file:
-        for line in file.readlines():
-            if "clash" in line and "ClashX" not in line:
-                return line.split("-")[-1].strip()[:6]
-    return "unknown"
+    env_version = os.environ.get("MIHOMO_CORE_VERSION")
+    if env_version:
+        return env_version
+
+    try:
+        return subprocess.check_output(
+            [go_bin, "list", "-m", "-f", "{{.Version}}", "github.com/metacubex/mihomo"],
+            text=True,
+        ).strip()
+    except Exception:
+        with open("./go.mod") as file:
+            for line in file.readlines():
+                if line.strip().startswith("require github.com/metacubex/mihomo "):
+                    return line.split()[-1].strip()
+    return "vernesong-smart"
 
 go_bin = "go"
 
 def build_clash(version,build_time,arch):
     command = f"""
-{go_bin} build -trimpath -ldflags '-X "github.com/Dreamacro/clash/constant.Version={version}" \
--X "github.com/Dreamacro/clash/constant.BuildTime={build_time}"' \
+{go_bin} build -trimpath -ldflags '-X "github.com/metacubex/mihomo/constant.Version={version}" \
+-X "github.com/metacubex/mihomo/constant.BuildTime={build_time}"' \
 -buildmode=c-archive -o goClash_{arch}.a """
     envs = os.environ.copy()
     envs.update({
@@ -41,7 +52,7 @@ def clean():
 
 
 def write_to_info(version):
-    path = "../info.plist"
+    path = "../Info.plist"
 
     with open(path, 'rb') as f:
         contents = plistlib.load(f)
@@ -55,8 +66,10 @@ def write_to_info(version):
 
 
 def run():
+    if shutil.which(go_bin) is None:
+        raise RuntimeError("go is required to build the embedded Vernesong mihomo core, but it was not found on PATH")
     version = get_version()
-    print("current clash version:", version)
+    print("current mihomo smart core version:", version)
     build_time = datetime.datetime.now().strftime("%Y-%m-%d-%H%M")
     print("clean existing")
     subprocess.check_output("rm -f *Clash*.h *.a", shell=True)

@@ -128,6 +128,12 @@ extension ClashConnectionSnapShot {
         @objc let host: String
         let dnsMode: String
         let specialProxy: String?
+        let sourceGeoIP: [String]?
+        let destinationGeoIP: [String]?
+        let sourceIPASN: String?
+        let destinationIPASN: String?
+        let smartBlock: String?
+        let smartTarget: String?
         var processPath: String
 
         @objc var displayHost: String {
@@ -148,12 +154,18 @@ extension ClashConnectionSnapShot {
             case host
             case dnsMode
             case specialProxy
+            case sourceGeoIP
+            case destinationGeoIP
+            case sourceIPASN
+            case destinationIPASN
+            case smartBlock
+            case smartTarget
             case processPath
             case sourcePort
             case destinationPort
         }
 
-        init(network: String, type: String, sourceIP: String, destinationIP: String, sourcePort: String, destinationPort: String, host: String, dnsMode: String, specialProxy: String?, processPath: String, pid: String? = nil, processImage: NSImage? = nil, processName: String? = nil) {
+        init(network: String, type: String, sourceIP: String, destinationIP: String, sourcePort: String, destinationPort: String, host: String, dnsMode: String, specialProxy: String?, sourceGeoIP: [String]? = nil, destinationGeoIP: [String]? = nil, sourceIPASN: String? = nil, destinationIPASN: String? = nil, smartBlock: String? = nil, smartTarget: String? = nil, processPath: String, pid: String? = nil, processImage: NSImage? = nil, processName: String? = nil) {
             self.network = network
             self.type = type
             self.sourceIP = sourceIP
@@ -163,6 +175,12 @@ extension ClashConnectionSnapShot {
             self.host = host
             self.dnsMode = dnsMode
             self.specialProxy = specialProxy
+            self.sourceGeoIP = sourceGeoIP
+            self.destinationGeoIP = destinationGeoIP
+            self.sourceIPASN = sourceIPASN
+            self.destinationIPASN = destinationIPASN
+            self.smartBlock = smartBlock
+            self.smartTarget = smartTarget
             self.processPath = processPath
             self.pid = pid
             self.processImage = processImage

@@ -11,6 +11,7 @@ import Cocoa
 enum DashboardContentType: Int, CaseIterable {
     case allConnection
     case activeConnection
+    case smart
 
     var title: String {
         switch self {
@@ -18,6 +19,8 @@ enum DashboardContentType: Int, CaseIterable {
             return NSLocalizedString("Recent Connections", comment: "")
         case .activeConnection:
             return NSLocalizedString("Active Connections", comment: "")
+        case .smart:
+            return NSLocalizedString("Smart", comment: "")
         }
     }
 }
@@ -29,6 +32,7 @@ class DashboardViewController: NSViewController {
     private let searchField = NSSearchField()
 
     private let connectionVC = ConnectionsViewController()
+    private let smartVC = SmartDashboardViewController()
 
     private var currentContentVC: DashboardSubViewControllerProtocol?
 
@@ -75,6 +79,11 @@ class DashboardViewController: NSViewController {
             connectionVC.setActiveMode(enable: false)
         case .activeConnection:
             connectionVC.setActiveMode(enable: true)
+        case .smart:
+            setCurrentVC(smartVC)
+        }
+        if contentType != .smart {
+            setCurrentVC(connectionVC)
         }
     }
 }
@@ -117,7 +126,7 @@ extension DashboardViewController: NSToolbarDelegate {
             if #available(macOS 11.0, *) {
                 item.isNavigational = true
             }
-            item.minSize = CGSize(width: 300, height: 34)
+            item.minSize = CGSize(width: 420, height: 34)
             item.view = segmentControl
         }
 

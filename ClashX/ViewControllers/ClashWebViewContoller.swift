@@ -98,9 +98,25 @@ class ClashWebViewContoller: NSViewController {
             webview.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData, timeoutInterval: 0))
             return
         }
-        let defaultUrl = "http://127.0.0.1:\(ConfigManager.shared.apiPort)/ui/"
-        if let url = URL(string: defaultUrl) {
-            Logger.log("dashboard url:\(defaultUrl)")
+        var components = URLComponents()
+        components.scheme = "http"
+        components.host = "127.0.0.1"
+        components.port = Int(ConfigManager.shared.apiPort)
+        components.path = "/ui/"
+
+        let activeApiBaseURL = ConfigManager.apiUrl
+        let activeSecret = ConfigManager.shared.overrideSecret ?? ConfigManager.shared.apiSecret
+        var queryItems = [
+            URLQueryItem(name: "hostname", value: activeApiBaseURL),
+            URLQueryItem(name: "title", value: "ClashX")
+        ]
+        if !activeSecret.isEmpty {
+            queryItems.append(URLQueryItem(name: "secret", value: activeSecret))
+        }
+        components.queryItems = queryItems
+
+        if let url = components.url {
+            Logger.log("dashboard url:\(url.absoluteString)")
             webview.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData, timeoutInterval: 0))
             return
         }

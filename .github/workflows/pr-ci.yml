@@ -22,7 +22,7 @@ jobs:
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '26.3'
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -56,6 +56,14 @@ jobs:
           set -o pipefail
           bundle exec pod --version | tee .ci-logs/pod-version.log
           bundle exec pod install --repo-update | tee .ci-logs/pod-install.log
+
+      - name: Install dashboard resources
+        run: |
+          set -o pipefail
+          rm -rf ClashX/Resources/dashboard
+          git clone --depth 1 --branch gh-pages https://github.com/MetaCubeX/Yacd-meta.git ClashX/Resources/dashboard | tee .ci-logs/dashboard-clone.log
+          rm -rf ClashX/Resources/dashboard/.git
+          rm -f ClashX/Resources/dashboard/CNAME
 
       - name: Build go c-archive
         run: |

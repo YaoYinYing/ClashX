@@ -107,6 +107,7 @@ For mihomo-compatible config details, refer to mihomo documentation and rule res
 
 Developer note:
 - `AllowedClientCodeSigningRequirement` in helper metadata is currently a legacy placeholder.
+- `AllowedClientCodeSigningRequirement` and helper `SMAuthorizedClients` must track the app target bundle identifier (currently `com.doodlenet.ClashX`) or helper IPC/auth can fail for default builds.
 - For local Debug helper testing, replace it with your own signing requirement (or explicitly clear it only in Debug builds).
 - This PR does **not** complete signing identity migration.
 

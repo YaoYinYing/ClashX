@@ -593,6 +593,13 @@ extension AppDelegate {
     }
 
     @IBAction func actionAllowFromLan(_ sender: NSMenuItem) {
+        if !ConfigManager.allowConnectFromLan {
+            let alert = NSAlert()
+            alert.messageText = NSLocalizedString("Enabling LAN access will expose local proxy/controller services to your network. Only enable this when required, with authentication and restricted LAN ranges.", comment: "")
+            alert.addButton(withTitle: NSLocalizedString("Enable", comment: ""))
+            alert.addButton(withTitle: NSLocalizedString("Cancel", comment: ""))
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
         ApiRequest.updateAllowLan(allow: !ConfigManager.allowConnectFromLan) {
             [weak self] in
             guard let self = self else { return }
@@ -786,7 +793,12 @@ extension AppDelegate {
             return
         #else
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                AppCenter.start(withAppSecret: "dce6e9a3-b6e3-4fd2-9f2d-35c767a99663", services: [
+                let secret = Bundle.main.object(forInfoDictionaryKey: "AppCenterSecret") as? String ?? ""
+                guard !secret.isEmpty else {
+                    Logger.log("AppCenter disabled: AppCenterSecret is empty")
+                    return
+                }
+                AppCenter.start(withAppSecret: secret, services: [
                     Analytics.self,
                     Crashes.self
                 ])

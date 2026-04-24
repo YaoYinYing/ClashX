@@ -8,6 +8,8 @@
 
 #import "ProxyConfigHelper.h"
 #import <AppKit/AppKit.h>
+#import <Security/Security.h>
+#include <arpa/inet.h>
 #import "ProxyConfigRemoteProcessProtocol.h"
 #import "ProxySettingTool.h"
 
@@ -25,6 +27,10 @@ ProxyConfigRemoteProcessProtocol
 @end
 
 @implementation ProxyConfigHelper
+
+static NSUInteger const kMaxIgnoreListEntries = 64;
+static NSUInteger const kMaxIgnoreItemLength = 255;
+
 - (instancetype)init {
     
     if (self = [super init]) {
@@ -52,18 +58,113 @@ ProxyConfigRemoteProcessProtocol
     }
 }
 
+- (NSString *)allowedClientRequirement {
+    NSString *requirement = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"AllowedClientCodeSigningRequirement"];
+    if ([requirement isKindOfClass:[NSString class]]) {
+        requirement = [requirement stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    }
+    return requirement ?: @"";
+}
+
 - (BOOL)connectionIsVaild: (NSXPCConnection *)connection {
     NSRunningApplication *remoteApp =
     [NSRunningApplication runningApplicationWithProcessIdentifier:connection.processIdentifier];
-    return remoteApp != nil;
+    if (remoteApp == nil) {
+        return NO;
+    }
+
+    NSString *requirement = [self allowedClientRequirement];
+#if DEBUG
+    if (requirement.length == 0) {
+        return YES;
+    }
+#else
+    if (requirement.length == 0) {
+        return NO;
+    }
+#endif
+
+    NSDictionary *attributes = @{(__bridge NSString *)kSecGuestAttributePid : @(connection.processIdentifier)};
+    SecCodeRef guestCode = NULL;
+    OSStatus status = SecCodeCopyGuestWithAttributes(NULL, (__bridge CFDictionaryRef)attributes, kSecCSDefaultFlags, &guestCode);
+    if (status != errSecSuccess || guestCode == NULL) {
+        return NO;
+    }
+    SecRequirementRef secRequirement = NULL;
+    status = SecRequirementCreateWithString((__bridge CFStringRef)requirement, kSecCSDefaultFlags, &secRequirement);
+    if (status != errSecSuccess || secRequirement == NULL) {
+        if (guestCode != NULL) { CFRelease(guestCode); }
+        return NO;
+    }
+    status = SecCodeCheckValidity(guestCode, kSecCSDefaultFlags, secRequirement);
+    CFRelease(secRequirement);
+    CFRelease(guestCode);
+    return status == errSecSuccess;
+}
+
+- (BOOL)portIsValid:(int)port {
+    return port >= 1 && port <= 65535;
+}
+
+- (BOOL)isValidPacURL:(NSString *)pac {
+    if (pac == nil || pac.length == 0) {
+        return YES;
+    }
+    // PAC URL is written into system proxy preferences by a privileged helper.
+    // Restrict it to local loopback HTTP(S) endpoints controlled by the app.
+    NSURL *url = [NSURL URLWithString:pac];
+    if (url == nil || url.scheme == nil) {
+        return NO;
+    }
+    NSString *scheme = url.scheme.lowercaseString;
+    if (!([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"])) {
+        return NO;
+    }
+    NSString *host = url.host.lowercaseString ?: @"";
+    if ([host isEqualToString:@"localhost"]) {
+        return YES;
+    }
+    if ([host isEqualToString:@"127.0.0.1"] || [host isEqualToString:@"::1"]) {
+        return YES;
+    }
+    struct in_addr ipv4Addr;
+    if (inet_pton(AF_INET, host.UTF8String, &ipv4Addr) == 1) {
+        if ((ntohl(ipv4Addr.s_addr) >> 24) == 127) {
+            return YES;
+        }
+        return NO;
+    }
+    struct in6_addr ipv6Addr;
+    if (inet_pton(AF_INET6, host.UTF8String, &ipv6Addr) == 1 && IN6_IS_ADDR_LOOPBACK(&ipv6Addr)) {
+        return YES;
+    }
+    return NO;
+}
+
+- (BOOL)isValidIgnoreList:(NSArray<NSString *> *)ignoreList {
+    if (![ignoreList isKindOfClass:[NSArray class]] || ignoreList.count > kMaxIgnoreListEntries) {
+        return NO;
+    }
+    NSCharacterSet *invalidSet = [NSCharacterSet characterSetWithCharactersInString:@"\n\r\t"];
+    for (NSString *item in ignoreList) {
+        if (![item isKindOfClass:[NSString class]] || item.length == 0 || item.length > kMaxIgnoreItemLength) {
+            return NO;
+        }
+        if ([item rangeOfCharacterFromSet:invalidSet].location != NSNotFound) {
+            return NO;
+        }
+    }
+    return YES;
 }
 
 // MARK: - NSXPCListenerDelegate
 
 - (BOOL)listener:(NSXPCListener *)listener shouldAcceptNewConnection:(NSXPCConnection *)newConnection {
-//    if (![self connectionIsVaild:newConnection]) {
-//        return NO;
-//    }
+    // Trust boundary: this helper is privileged and must only serve the signed main app.
+    // It only manages system proxy preferences and must not be expanded to general operations.
+    if (![self connectionIsVaild:newConnection]) {
+        return NO;
+    }
     newConnection.exportedInterface = [NSXPCInterface interfaceWithProtocol:@protocol(ProxyConfigRemoteProcessProtocol)];
     newConnection.exportedObject = self;
     __weak NSXPCConnection *weakConnection = newConnection;
@@ -94,6 +195,18 @@ ProxyConfigRemoteProcessProtocol
             filterInterface:(BOOL)filterInterface
                  ignoreList:(NSArray<NSString *>*)ignoreList
             error:(stringReplyBlock)reply {
+    if (![self portIsValid:port] || ![self portIsValid:socksPort]) {
+        reply(@"Invalid proxy port");
+        return;
+    }
+    if (![self isValidPacURL:pac]) {
+        reply(@"Invalid PAC URL");
+        return;
+    }
+    if (![self isValidIgnoreList:ignoreList]) {
+        reply(@"Invalid ignore list");
+        return;
+    }
     dispatch_async(dispatch_get_main_queue(), ^{
         ProxySettingTool *tool = [ProxySettingTool new];
         [tool enableProxyWithport:port socksPort:socksPort pacUrl:pac filterInterface:filterInterface ignoreList:ignoreList];
@@ -115,6 +228,14 @@ ProxyConfigRemoteProcessProtocol
                                info:(NSDictionary *)dict
                     filterInterface:(BOOL)filterInterface
                               error:(stringReplyBlock)reply {
+    if (![self portIsValid:port] || ![self portIsValid:socksPort]) {
+        reply(@"Invalid proxy port");
+        return;
+    }
+    if (![dict isKindOfClass:[NSDictionary class]]) {
+        reply(@"Invalid restore payload");
+        return;
+    }
     dispatch_async(dispatch_get_main_queue(), ^{
         ProxySettingTool *tool = [ProxySettingTool new];
         [tool restoreProxySetting:dict currentPort:port currentSocksPort:socksPort filterInterface:filterInterface];

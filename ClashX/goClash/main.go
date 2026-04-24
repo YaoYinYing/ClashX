@@ -11,6 +11,7 @@ import "C"
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -82,6 +83,31 @@ func getFreePort() (int, error) {
 	}
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port, nil
+}
+
+func generateStrongSecret() (string, error) {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	for i := range buf {
+		buf[i] = letters[int(buf[i])%len(letters)]
+	}
+	return string(buf), nil
+}
+
+func controllerHostIsLoopback(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	host = strings.Trim(host, "[]")
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 //export initClashCore
@@ -174,13 +200,17 @@ func parseDefaultConfigThenStart(checkPort, allowLan, ipv6 bool, proxyPort uint3
 		rawCfg.ExternalController = externalController
 	}
 	if checkPort {
-		if !isAddrValid(rawCfg.ExternalController) {
+		if !isAddrValid(rawCfg.ExternalController) || (!allowLan && !controllerHostIsLoopback(rawCfg.ExternalController)) {
 			port, err := getFreePort()
 			if err != nil {
 				return nil, err
 			}
 			rawCfg.ExternalController = "127.0.0.1:" + strconv.Itoa(port)
-			rawCfg.Secret = ""
+		}
+		if rawCfg.Secret == "" {
+			if secret, err := generateStrongSecret(); err == nil {
+				rawCfg.Secret = secret
+			}
 		}
 		rawCfg.AllowLan = allowLan
 

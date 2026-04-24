@@ -97,6 +97,19 @@ func generateStrongSecret() (string, error) {
 	return string(buf), nil
 }
 
+func controllerHostIsLoopback(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	host = strings.Trim(host, "[]")
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
 //export initClashCore
 func initClashCore() {
 	configHome := filepath.Join(os.Getenv("HOME"), ".config", "clash")
@@ -187,7 +200,7 @@ func parseDefaultConfigThenStart(checkPort, allowLan, ipv6 bool, proxyPort uint3
 		rawCfg.ExternalController = externalController
 	}
 	if checkPort {
-		if !isAddrValid(rawCfg.ExternalController) || (!allowLan && !strings.HasPrefix(rawCfg.ExternalController, "127.0.0.1:")) {
+		if !isAddrValid(rawCfg.ExternalController) || (!allowLan && !controllerHostIsLoopback(rawCfg.ExternalController)) {
 			port, err := getFreePort()
 			if err != nil {
 				return nil, err

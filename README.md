@@ -6,9 +6,9 @@
 </h1>
 
 
-A rule based proxy client for macOS based on ClashX, with the SmartX `smartx` branch embedding the Vernesong Smart fork of mihomo through the Go c-archive bridge.
+A rule-based proxy client for macOS on the SmartX `smartx` branch, embedding the Vernesong Smart fork of mihomo through the existing Go c-archive bridge.
 
-ClashX 旨在提供一个简单轻量化的代理客户端，如果需要更多的定制化，可以考虑使用 [CFW Mac 版](https://github.com/Fndroid/clash_for_windows_pkg/releases) 
+This branch is for preview hardening and is not an official upstream ClashX/ClashX Pro release.
 
 
 ## SmartX branch status
@@ -18,6 +18,12 @@ ClashX 旨在提供一个简单轻量化的代理客户端，如果需要更多�
 - Legacy ClashX Pro branding/wording is obsolete in this branch.
 - The app keeps the legacy local config directory at `~/.config/clash/`, with additional safe-path validation for config names and writes.
 - Before any public distribution, replace signing identities, helper trust requirements, bundle metadata, and complete notarization/release hardening.
+
+## Security model
+- Config names are validated by a strict allowlist before building local file paths.
+- Remote configs are verified before replacement; failed updates must preserve the previous valid file.
+- The privileged helper is limited to system proxy management and must not launch binaries/download resources/write arbitrary files.
+- Public distribution requires replacing legacy signing identifiers and completing notarization.
 
 ## Features
 
@@ -56,7 +62,7 @@ The default configuration directory is `$HOME/.config/clash`
 The default name of the configuration file is `config.yaml`. You can use your custom config name and switch config in menu `Config` section.
 
 
-Checkout [Clash](https://github.com/Dreamacro/clash) or [SS-Rule-Snippet for Clash](https://github.com/Hackl0us/SS-Rule-Snippet/blob/master/LAZY_RULES/clash.yaml) or [lancellc's gitbook](https://lancellc.gitbook.io/clash/) for more detail.
+For mihomo-compatible config details, refer to mihomo documentation and rule resources compatible with your deployment.
 
 ## Advance Config
 
@@ -85,6 +91,14 @@ Checkout [Clash](https://github.com/Dreamacro/clash) or [SS-Rule-Snippet for Cla
   ```
   clash://update-config
   ```
+
+## Pre-distribution checklist (must be replaced for SmartX release)
+- Main bundle identifier.
+- Helper bundle identifier and Mach service name.
+- `SMAuthorizedClients` and `SMPrivilegedExecutables` requirements.
+- Team ID / Developer ID code-signing requirements used by helper trust validation.
+- Sparkle appcast URL and signing key material.
+- iCloud container identifiers (if iCloud is retained).
 
 ### Get process name
 

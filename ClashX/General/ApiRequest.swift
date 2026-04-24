@@ -145,7 +145,12 @@ class ApiRequest {
 
     static func requestConfigUpdate(configName: String, callback: @escaping ((ErrorString?) -> Void)) {
         ConfigManager.getConfigPath(configName: configName) {
-            requestConfigUpdate(configPath: $0, callback: callback)
+            switch $0 {
+            case let .success(path):
+                requestConfigUpdate(configPath: path, callback: callback)
+            case let .failure(error):
+                callback(error.localizedDescription)
+            }
         }
     }
 

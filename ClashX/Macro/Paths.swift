@@ -94,18 +94,35 @@ enum Paths {
         return target
     }
 
-    static func localConfigPath(for name: String) -> String {
-        guard let safeName = try? SafeConfigName(name),
-              let safeURL = try? localConfigURL(for: safeName) else {
-            return defaultConfigURL.path
-        }
-        return safeURL.path
+    static func safeLocalConfigURL(for rawName: String) throws -> URL {
+        let safeName = try SafeConfigName(rawName)
+        return try localConfigURL(for: safeName)
     }
 
-    static func configFileName(for name: String) -> String {
-        if let safeName = try? SafeConfigName(name) {
-            return configFileName(for: safeName)
+    static func safeConfigFileURL(for rawName: String, in baseDirectoryURL: URL) throws -> URL {
+        let safeName = try SafeConfigName(rawName)
+        return try configFileURL(for: safeName, in: baseDirectoryURL)
+    }
+
+    /// Compatibility wrapper for legacy call sites.
+    /// Security-sensitive code should use throwing URL APIs.
+    static func localConfigPath(for name: String) -> String {
+        do {
+            return try safeLocalConfigURL(for: name).path
+        } catch {
+            assertionFailure("Invalid config name in compatibility API: \(error)")
+            return ""
         }
-        return "config.yaml"
+    }
+
+    /// Compatibility wrapper for legacy call sites.
+    /// Security-sensitive code should use throwing URL APIs.
+    static func configFileName(for name: String) -> String {
+        do {
+            return configFileName(for: try SafeConfigName(name))
+        } catch {
+            assertionFailure("Invalid config name in compatibility API: \(error)")
+            return ""
+        }
     }
 }

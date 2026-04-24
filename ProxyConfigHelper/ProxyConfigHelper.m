@@ -27,7 +27,6 @@ ProxyConfigRemoteProcessProtocol
 
 @implementation ProxyConfigHelper
 
-static NSString * const kAllowedClientBundleIdentifier = @"com.west2online.ClashX";
 static NSUInteger const kMaxIgnoreListEntries = 64;
 static NSUInteger const kMaxIgnoreItemLength = 255;
 
@@ -58,6 +57,14 @@ static NSUInteger const kMaxIgnoreItemLength = 255;
     }
 }
 
+- (NSString *)allowedClientRequirement {
+    NSString *requirement = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"AllowedClientCodeSigningRequirement"];
+    if ([requirement isKindOfClass:[NSString class]]) {
+        requirement = [requirement stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    }
+    return requirement ?: @"";
+}
+
 - (BOOL)connectionIsVaild: (NSXPCConnection *)connection {
     NSRunningApplication *remoteApp =
     [NSRunningApplication runningApplicationWithProcessIdentifier:connection.processIdentifier];
@@ -65,15 +72,23 @@ static NSUInteger const kMaxIgnoreItemLength = 255;
         return NO;
     }
 
-    audit_token_t token = {};
-    [connection getAuditToken:&token];
-    NSDictionary *attributes = @{(__bridge NSString *)kSecGuestAttributeAudit : [NSData dataWithBytes:&token length:sizeof(token)]};
+    NSString *requirement = [self allowedClientRequirement];
+#if DEBUG
+    if (requirement.length == 0) {
+        return YES;
+    }
+#else
+    if (requirement.length == 0) {
+        return NO;
+    }
+#endif
+
+    NSDictionary *attributes = @{(__bridge NSString *)kSecGuestAttributePid : @(connection.processIdentifier)};
     SecCodeRef guestCode = NULL;
     OSStatus status = SecCodeCopyGuestWithAttributes(NULL, (__bridge CFDictionaryRef)attributes, kSecCSDefaultFlags, &guestCode);
     if (status != errSecSuccess || guestCode == NULL) {
         return NO;
     }
-    NSString *requirement = [NSString stringWithFormat:@"identifier \"%@\" and anchor apple generic", kAllowedClientBundleIdentifier];
     SecRequirementRef secRequirement = NULL;
     status = SecRequirementCreateWithString((__bridge CFStringRef)requirement, kSecCSDefaultFlags, &secRequirement);
     if (status != errSecSuccess || secRequirement == NULL) {

@@ -8,6 +8,7 @@
 
 import Alamofire
 import Cocoa
+import CryptoKit
 
 class RemoteConfigManager {
     var configs: [RemoteConfigModel] = []
@@ -39,7 +40,11 @@ class RemoteConfigManager {
     func migrateOldRemoteConfig() {
         if let url = UserDefaults.standard.string(forKey: "kRemoteConfigUrl"),
            let name = URL(string: url)?.host {
-            configs.append(RemoteConfigModel(url: url, name: name))
+            let safeName = (try? SafeConfigName(name).value) ?? RemoteConfigManager.deterministicFallbackName(sourceURL: url)
+            if safeName != name {
+                Logger.log("Migrated legacy remote config to a safe deterministic name", level: .warning)
+            }
+            configs.append(RemoteConfigModel(url: url, name: safeName))
             UserDefaults.standard.removeObject(forKey: "kRemoteConfigUrl")
             saveConfigs()
         }
@@ -165,8 +170,8 @@ class RemoteConfigManager {
                 return
             }
 
-            if let suggestName = suggestedFilename, config.isPlaceHolderName {
-                let name = safeNameFromSuggestedFilename(suggestName)
+            if config.isPlaceHolderName {
+                let name = safeNameFromSuggestedFilename(suggestedFilename, sourceURL: config.url)
                 if !shared.configs.contains(where: { $0.name == name }) {
                     config.name = name
                 }
@@ -182,8 +187,7 @@ class RemoteConfigManager {
 
             let saveAction: ((URL) -> Void) = { baseDir in
                 do {
-                    let safeName = try SafeConfigName(config.name)
-                    let saveURL = try Paths.configFileURL(for: safeName, in: baseDir)
+                    let saveURL = try Paths.safeConfigFileURL(for: config.name, in: baseDir)
                     try writeConfigAtomically(content: newConfig, targetURL: saveURL)
                     complete?(nil)
                 } catch {
@@ -205,18 +209,27 @@ class RemoteConfigManager {
         }
     }
 
-    static func safeNameFromSuggestedFilename(_ suggestedFilename: String) -> String {
-        let rawName = URL(fileURLWithPath: suggestedFilename).deletingPathExtension().lastPathComponent
-        if let safe = try? SafeConfigName(rawName) {
-            return safe.value
+    static func safeNameFromSuggestedFilename(_ suggestedFilename: String?, sourceURL: String) -> String {
+        if let suggestedFilename = suggestedFilename {
+            let rawName = URL(fileURLWithPath: suggestedFilename).deletingPathExtension().lastPathComponent
+            if let safe = try? SafeConfigName(rawName) {
+                return safe.value
+            }
         }
-        return "remote-config"
+        return deterministicFallbackName(sourceURL: sourceURL)
+    }
+
+    static func deterministicFallbackName(sourceURL: String) -> String {
+        let digest = SHA256.hash(data: Data(sourceURL.utf8))
+        let suffix = digest.prefix(4).map { String(format: "%02x", $0) }.joined()
+        return "remote-config-\(suffix)"
     }
 
     static func writeConfigAtomically(content: String, targetURL: URL) throws {
         let fileManager = FileManager.default
-        let baseDir = targetURL.deletingLastPathComponent().standardizedFileURL
-        guard targetURL.standardizedFileURL.path.hasPrefix(baseDir.path + "/") else {
+        let baseDir = targetURL.deletingLastPathComponent().standardizedFileURL.resolvingSymlinksInPath()
+        let safeTarget = targetURL.standardizedFileURL.resolvingSymlinksInPath()
+        guard safeTarget.path.hasPrefix(baseDir.path + "/") else {
             throw CocoaError(.fileWriteInvalidFileName)
         }
         let tempURL = baseDir.appendingPathComponent(".\(UUID().uuidString).tmp.yaml")
@@ -226,10 +239,16 @@ class RemoteConfigManager {
             try? fileManager.removeItem(at: tempURL)
             throw NSError(domain: "RemoteConfigManager", code: 1, userInfo: [NSLocalizedDescriptionKey: NSLocalizedString("Remote Config Format Error", comment: "") + ": " + (verifyResult ?? "")])
         }
-        _ = try? fileManager.replaceItemAt(targetURL, withItemAt: tempURL, backupItemName: nil, options: .usingNewMetadataOnly)
-        if fileManager.fileExists(atPath: tempURL.path) {
-            try? fileManager.removeItem(at: targetURL)
-            try fileManager.moveItem(at: tempURL, to: targetURL)
+        do {
+            if fileManager.fileExists(atPath: safeTarget.path) {
+                try fileManager.replaceItemAt(safeTarget, withItemAt: tempURL, backupItemName: nil, options: .usingNewMetadataOnly)
+            } else {
+                try fileManager.moveItem(at: tempURL, to: safeTarget)
+            }
+        } catch {
+            try? fileManager.removeItem(at: tempURL)
+            // A failed update must not destroy the last valid config file.
+            throw error
         }
     }
 

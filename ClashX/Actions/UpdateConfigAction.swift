@@ -20,7 +20,12 @@ enum UpdateConfigAction {
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
             ConfigManager.getConfigPath(configName: configName) {
-                NSWorkspace.shared.open(URL(fileURLWithPath: $0))
+                switch $0 {
+                case let .success(path):
+                    NSWorkspace.shared.open(URL(fileURLWithPath: path))
+                case let .failure(error):
+                    NSAlert.alert(with: error.localizedDescription)
+                }
             }
         }
     }

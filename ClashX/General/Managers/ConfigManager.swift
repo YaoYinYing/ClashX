@@ -57,17 +57,23 @@ class ConfigManager {
 
     static func watchCurrentConfigFile() {
         guard let safeName = try? SafeConfigName(selectConfigName) else {
-            ConfigFileManager.shared.watchFile(path: Paths.defaultConfigURL.path)
+            Logger.log("Skip watching config file due to invalid selected config name", level: .error)
             return
         }
         if ICloudManager.shared.useiCloud.value {
             ICloudManager.shared.getUrl { url in
                 guard let url = url else { return }
-                let configUrl = (try? Paths.configFileURL(for: safeName, in: url)) ?? Paths.defaultConfigURL
+                guard let configUrl = try? Paths.configFileURL(for: safeName, in: url) else {
+                    Logger.log("Skip watching iCloud config due to unsafe config path", level: .error)
+                    return
+                }
                 ConfigFileManager.shared.watchFile(path: configUrl.path)
             }
         } else {
-            let localPath = (try? Paths.localConfigURL(for: safeName).path) ?? Paths.defaultConfigURL.path
+            guard let localPath = try? Paths.localConfigURL(for: safeName).path else {
+                Logger.log("Skip watching local config due to unsafe config path", level: .error)
+                return
+            }
             ConfigFileManager.shared.watchFile(path: localPath)
         }
     }
@@ -151,22 +157,34 @@ class ConfigManager {
         }
     }
 
-    static func getConfigPath(configName: String, complete: ((String) -> Void)? = nil) {
-        guard let safeName = try? SafeConfigName(configName) else {
-            complete?(Paths.defaultConfigURL.path)
+    static func getConfigPath(configName: String, complete: ((Result<String, Error>) -> Void)? = nil) {
+        let safeName: SafeConfigName
+        do {
+            safeName = try SafeConfigName(configName)
+        } catch {
+            complete?(.failure(error))
             return
         }
         if ICloudManager.shared.useiCloud.value {
             ICloudManager.shared.getUrl { url in
                 guard let url = url else {
+                    complete?(.failure(NSError(domain: "ConfigManager", code: -1, userInfo: [NSLocalizedDescriptionKey: NSLocalizedString("iCloud not available", comment: "")])))
                     return
                 }
-                let configPath = (try? Paths.configFileURL(for: safeName, in: url).path) ?? Paths.defaultConfigURL.path
-                complete?(configPath)
+                do {
+                    let configPath = try Paths.configFileURL(for: safeName, in: url).path
+                    complete?(.success(configPath))
+                } catch {
+                    complete?(.failure(error))
+                }
             }
         } else {
-            let filePath = (try? Paths.localConfigURL(for: safeName).path) ?? Paths.defaultConfigURL.path
-            complete?(filePath)
+            do {
+                let filePath = try Paths.localConfigURL(for: safeName).path
+                complete?(.success(filePath))
+            } catch {
+                complete?(.failure(error))
+            }
         }
     }
 }

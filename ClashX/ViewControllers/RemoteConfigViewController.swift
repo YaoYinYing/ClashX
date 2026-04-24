@@ -268,7 +268,8 @@ class RemoteConfigAddView: NSView, NibLoadable {
         guard urlTextField.stringValue.isUrlVaild() else { return }
         let urlString = urlTextField.stringValue
         let host = URL(string: urlString)?.host ?? "unknown"
-        configNameTextField.placeholderString = (try? SafeConfigName(host).value) ?? "remote-config"
+        configNameTextField.placeholderString = (try? SafeConfigName(host).value)
+            ?? RemoteConfigManager.deterministicFallbackName(sourceURL: urlString)
     }
 }
 

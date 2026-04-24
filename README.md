@@ -54,6 +54,11 @@ Build from source on this branch for preview validation. Legacy public AppCenter
 
 - Build and run.
 
+## CI for pull requests
+- PR CI runs on macOS GitHub Actions and performs unsigned Debug builds (`CODE_SIGNING_ALLOWED=NO`).
+- CI compile-checks the app, embedded go c-archive build, and helper source path, plus runs a lightweight security harness.
+- CI does not prove notarization or privileged helper installation behavior; local signed validation is still required.
+
 ## Config
 
 

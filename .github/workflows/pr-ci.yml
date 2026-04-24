@@ -1,0 +1,100 @@
+name: PR CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  macos-build-and-security-checks:
+    runs-on: macos-14
+    env:
+      CI: true
+      NSUnbufferedIO: YES
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go 1.21
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.x'
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Show toolchain versions
+        run: |
+          mkdir -p .ci-logs
+          {
+            echo "::group::xcodebuild -version"
+            xcodebuild -version
+            echo "::endgroup::"
+            echo "::group::swift --version"
+            swift --version
+            echo "::endgroup::"
+            echo "::group::go version"
+            go version
+            echo "::endgroup::"
+            echo "::group::ruby --version"
+            ruby --version
+            echo "::endgroup::"
+            echo "::group::bundle --version"
+            bundle --version
+            echo "::endgroup::"
+          } | tee .ci-logs/tool-versions.log
+
+      - name: Install CocoaPods
+        run: |
+          set -o pipefail
+          bundle exec pod --version | tee .ci-logs/pod-version.log
+          bundle exec pod install --repo-update | tee .ci-logs/pod-install.log
+
+      - name: Build go c-archive
+        run: |
+          set -o pipefail
+          cd ClashX/goClash
+          python3 build_clash_universal.py | tee ../../.ci-logs/go-build.log
+
+      - name: Resolve Swift package dependencies
+        run: |
+          set -o pipefail
+          xcodebuild -resolvePackageDependencies \
+            -workspace ClashX.xcworkspace \
+            -scheme ClashX \
+            | tee .ci-logs/spm-resolve.log
+
+      - name: List workspace schemes
+        run: |
+          set -o pipefail
+          xcodebuild -list -workspace ClashX.xcworkspace | tee .ci-logs/xcodebuild-list.log
+
+      - name: Build ClashX (Debug, unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace ClashX.xcworkspace \
+            -scheme ClashX \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath .derivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY= \
+            build | tee .ci-logs/xcodebuild-build.log
+
+      - name: Security harness checks
+        run: |
+          set -o pipefail
+          swift Tests/SecurityHarness/security_harness.swift | tee .ci-logs/security-harness.log
+
+      - name: Upload CI logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-ci-logs
+          path: |
+            .ci-logs/**
+            .derivedData/Logs/**
+          if-no-files-found: warn

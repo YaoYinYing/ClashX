@@ -119,7 +119,7 @@ enum Paths {
     /// Security-sensitive code should use throwing URL APIs.
     static func configFileName(for name: String) -> String {
         do {
-            return configFileName(for: try SafeConfigName(name))
+            return try configFileName(for: SafeConfigName(name))
         } catch {
             assertionFailure("Invalid config name in compatibility API: \(error)")
             return ""

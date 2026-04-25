@@ -11,15 +11,6 @@ import Cocoa
 class SettingTabViewController: NSTabViewController, NibLoadable {
     override func viewDidLoad() {
         super.viewDidLoad()
-        if !tabViewItems.contains(where: { $0.identifier as? String == "Core" }) {
-            let item = NSTabViewItem(viewController: CoreSettingViewController())
-            item.label = NSLocalizedString("Core", comment: "")
-            item.identifier = "Core"
-            if #available(macOS 11.0, *) {
-                item.image = NSImage(systemSymbolName: "cpu", accessibilityDescription: item.label)
-            }
-            addTabViewItem(item)
-        }
         tabStyle = .toolbar
         if #unavailable(macOS 10.11) {
             tabStyle = .segmentedControlOnTop

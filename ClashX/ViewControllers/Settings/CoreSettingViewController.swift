@@ -189,27 +189,24 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func makeSection(title: String, rows: [NSView]) -> NSView {
-        let box = NSBox()
-        box.boxType = .custom
-        box.borderType = .lineBorder
-        box.cornerRadius = 6
-        box.titlePosition = .noTitle
-        box.contentViewMargins = NSSize(width: 14, height: 14)
-
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
-        box.contentView?.addSubview(stack)
-        stack.makeConstraintsToBindToSuperview()
+        stack.edgeInsets = NSEdgeInsets(top: 12, left: 14, bottom: 12, right: 14)
+        stack.wantsLayer = true
+        stack.layer?.cornerRadius = 6
+        stack.layer?.borderWidth = 1
+        stack.layer?.borderColor = NSColor.separatorColor.cgColor
+        stack.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.35).cgColor
 
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stack.addArrangedSubview(titleLabel)
         rows.forEach { stack.addArrangedSubview($0) }
 
-        box.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
-        return box
+        stack.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
+        return stack
     }
 
     private func labeledRow(title: String, view: NSView) -> NSView {
@@ -227,6 +224,9 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func applyLoadingState() {
+        if Settings.isUsingEmbeddedCore {
+            lightGBMEndpointSupported = nil
+        }
         modeLabel.stringValue = NSLocalizedString("unknown", comment: "")
         versionLabel.stringValue = NSLocalizedString("unknown", comment: "")
         buildLabel.stringValue = NSLocalizedString("unknown", comment: "")
@@ -417,14 +417,15 @@ class CoreSettingViewController: NSViewController {
         }
         modelPathLabel.stringValue = path
 
+        let manualUpdateSupported = Settings.isUsingEmbeddedCore || lightGBMEndpointSupported != false
         if !ConfigManager.shared.isRunning {
             modelEndpointLabel.stringValue = NSLocalizedString("unavailable while the core is stopped", comment: "")
+        } else if Settings.isUsingEmbeddedCore {
+            modelEndpointLabel.stringValue = NSLocalizedString("appears available for the embedded core", comment: "")
         } else if lightGBMEndpointSupported == false {
             modelEndpointLabel.stringValue = NSLocalizedString("unsupported by the current controller", comment: "")
         } else if lightGBMEndpointSupported == true {
             modelEndpointLabel.stringValue = NSLocalizedString("appears available", comment: "")
-        } else if Settings.isUsingEmbeddedCore {
-            modelEndpointLabel.stringValue = NSLocalizedString("appears available for the embedded core", comment: "")
         } else {
             modelEndpointLabel.stringValue = NSLocalizedString("not checked yet", comment: "")
         }
@@ -433,7 +434,7 @@ class CoreSettingViewController: NSViewController {
         let autoUpdateStatus = Settings.smartLightGBMAutoUpdate ? NSLocalizedString("auto update on", comment: "") : NSLocalizedString("auto update off", comment: "")
         modelOverrideStatusLabel.stringValue = "\(overrideStatus), \(autoUpdateStatus), \(Settings.smartLightGBMUpdateIntervalHours)h"
 
-        updateModelButton.isEnabled = ConfigManager.shared.isRunning && lightGBMEndpointSupported != false
+        updateModelButton.isEnabled = ConfigManager.shared.isRunning && manualUpdateSupported
     }
 
     private func updateModelSettingsUI() {

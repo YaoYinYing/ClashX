@@ -9,9 +9,14 @@ import Alamofire
 import Cocoa
 
 class CoreSettingViewController: NSViewController {
+    private let pageHorizontalPadding: CGFloat = 24
+    private let pageVerticalPadding: CGFloat = 16
+    private let maxReadableContentWidth: CGFloat = 720
+    private let rowTitleWidth: CGFloat = 120
+
     private let scrollView = NSScrollView()
+    private let documentView = NSView()
     private let contentStack = NSStackView()
-    private var didLogInitialLayoutStats = false
 
     private let summaryLabel = CoreSettingViewController.makeWrapLabel()
 
@@ -72,18 +77,15 @@ class CoreSettingViewController: NSViewController {
 
     override func viewDidLayout() {
         super.viewDidLayout()
-        let contentWidth = max(scrollView.contentSize.width, 320)
-        contentStack.frame = NSRect(x: 0, y: 0, width: contentWidth, height: 1)
+        let documentWidth = max(scrollView.contentSize.width, 320)
+        let contentWidth = max(min(documentWidth - (pageHorizontalPadding * 2), maxReadableContentWidth), 280)
+
+        documentView.frame = NSRect(x: 0, y: 0, width: documentWidth, height: scrollView.contentSize.height)
+        contentStack.frame = NSRect(x: pageHorizontalPadding, y: pageVerticalPadding, width: contentWidth, height: 1)
         contentStack.layoutSubtreeIfNeeded()
-        let contentHeight = max(contentStack.fittingSize.height, scrollView.contentSize.height)
-        contentStack.frame = NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight)
-        if !didLogInitialLayoutStats {
-            didLogInitialLayoutStats = true
-            Logger.log("[Core Settings] layout stats: view=\(view.frame) content=\(contentStack.frame) arranged=\(contentStack.arrangedSubviews.count)", level: .debug)
-            for (index, subview) in contentStack.arrangedSubviews.enumerated() {
-                Logger.log("[Core Settings] arranged[\(index)] fittingHeight=\(subview.fittingSize.height)", level: .debug)
-            }
-        }
+        let contentHeight = contentStack.fittingSize.height
+        contentStack.frame = NSRect(x: pageHorizontalPadding, y: pageVerticalPadding, width: contentWidth, height: contentHeight)
+        documentView.frame = NSRect(x: 0, y: 0, width: documentWidth, height: max(contentHeight + (pageVerticalPadding * 2), scrollView.contentSize.height))
     }
 
     private static func makeWrapLabel() -> NSTextField {
@@ -91,6 +93,8 @@ class CoreSettingViewController: NSViewController {
         label.lineBreakMode = .byWordWrapping
         label.maximumNumberOfLines = 0
         label.textColor = .secondaryLabelColor
+        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return label
     }
 
@@ -103,17 +107,20 @@ class CoreSettingViewController: NSViewController {
     private func setupView() {
         scrollView.drawsBackground = false
         scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
         view.addSubview(scrollView)
         scrollView.makeConstraintsToBindToSuperview()
 
-        scrollView.documentView = contentStack
+        scrollView.documentView = documentView
+        documentView.addSubview(contentStack)
         contentStack.orientation = .vertical
-        contentStack.spacing = 12
+        contentStack.spacing = 16
         contentStack.alignment = .leading
-        contentStack.edgeInsets = NSEdgeInsets(top: 16, left: 20, bottom: 16, right: 20)
 
         summaryLabel.stringValue = NSLocalizedString("Core settings are a status and control surface. Unsupported controller endpoints should degrade gracefully instead of leaving this page blank.", comment: "")
         contentStack.addArrangedSubview(summaryLabel)
+        summaryLabel.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
 
         contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Core Info", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("Mode", comment: ""), view: modeLabel),
@@ -187,36 +194,56 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func makeSection(title: String, rows: [NSView]) -> NSView {
+        let container = NSView()
+        container.wantsLayer = true
+        container.layer?.cornerRadius = 8
+        container.layer?.borderWidth = 1
+        container.layer?.borderColor = NSColor.separatorColor.cgColor
+        container.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.35).cgColor
+
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 10
-        stack.edgeInsets = NSEdgeInsets(top: 12, left: 14, bottom: 12, right: 14)
-        stack.wantsLayer = true
-        stack.layer?.cornerRadius = 6
-        stack.layer?.borderWidth = 1
-        stack.layer?.borderColor = NSColor.separatorColor.cgColor
-        stack.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.35).cgColor
+        stack.spacing = 12
+        container.addSubview(stack)
+        stack.makeConstraints {
+            [
+                $0.topAnchor.constraint(equalTo: container.topAnchor, constant: 14),
+                $0.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+                $0.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+                $0.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -14)
+            ]
+        }
 
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stack.addArrangedSubview(titleLabel)
-        rows.forEach { stack.addArrangedSubview($0) }
+        titleLabel.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        rows.forEach {
+            stack.addArrangedSubview($0)
+            $0.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        }
 
-        return stack
+        container.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
+        return container
     }
 
     private func labeledRow(title: String, view: NSView) -> NSView {
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         titleLabel.textColor = .labelColor
-        titleLabel.widthAnchor.constraint(equalToConstant: 96).isActive = true
+        titleLabel.lineBreakMode = .byWordWrapping
+        titleLabel.maximumNumberOfLines = 0
+        titleLabel.widthAnchor.constraint(equalToConstant: rowTitleWidth).isActive = true
 
         let row = NSStackView(views: [titleLabel, view])
         row.orientation = .horizontal
         row.alignment = .top
         row.spacing = 8
+        row.distribution = .fill
         row.detachesHiddenViews = true
+        view.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return row
     }
 

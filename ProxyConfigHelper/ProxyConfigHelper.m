@@ -30,6 +30,8 @@ ProxyConfigRemoteProcessProtocol
 
 static NSUInteger const kMaxIgnoreListEntries = 64;
 static NSUInteger const kMaxIgnoreItemLength = 255;
+static NSString * const kAllowedClientRequirementInfoKey = @"AllowedClientCodeSigningRequirement";
+static NSString * const kHelperLogPrefix = @"[ProxyConfigHelper]";
 
 - (instancetype)init {
     
@@ -59,7 +61,7 @@ static NSUInteger const kMaxIgnoreItemLength = 255;
 }
 
 - (NSString *)allowedClientRequirement {
-    NSString *requirement = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"AllowedClientCodeSigningRequirement"];
+    NSString *requirement = [[NSBundle mainBundle] objectForInfoDictionaryKey:kAllowedClientRequirementInfoKey];
     if ([requirement isKindOfClass:[NSString class]]) {
         requirement = [requirement stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     }
@@ -70,16 +72,19 @@ static NSUInteger const kMaxIgnoreItemLength = 255;
     NSRunningApplication *remoteApp =
     [NSRunningApplication runningApplicationWithProcessIdentifier:connection.processIdentifier];
     if (remoteApp == nil) {
+        NSLog(@"%@ rejecting connection: missing remote app for pid=%d", kHelperLogPrefix, connection.processIdentifier);
         return NO;
     }
 
     NSString *requirement = [self allowedClientRequirement];
 #if DEBUG
     if (requirement.length == 0) {
+        NSLog(@"%@ allowing pid=%d in Debug because %@ is empty", kHelperLogPrefix, connection.processIdentifier, kAllowedClientRequirementInfoKey);
         return YES;
     }
 #else
     if (requirement.length == 0) {
+        NSLog(@"%@ rejecting pid=%d in Release because %@ is empty", kHelperLogPrefix, connection.processIdentifier, kAllowedClientRequirementInfoKey);
         return NO;
     }
 #endif
@@ -88,17 +93,22 @@ static NSUInteger const kMaxIgnoreItemLength = 255;
     SecCodeRef guestCode = NULL;
     OSStatus status = SecCodeCopyGuestWithAttributes(NULL, (__bridge CFDictionaryRef)attributes, kSecCSDefaultFlags, &guestCode);
     if (status != errSecSuccess || guestCode == NULL) {
+        NSLog(@"%@ rejecting pid=%d: SecCodeCopyGuestWithAttributes failed status=%d", kHelperLogPrefix, connection.processIdentifier, (int)status);
         return NO;
     }
     SecRequirementRef secRequirement = NULL;
     status = SecRequirementCreateWithString((__bridge CFStringRef)requirement, kSecCSDefaultFlags, &secRequirement);
     if (status != errSecSuccess || secRequirement == NULL) {
+        NSLog(@"%@ rejecting pid=%d: invalid signing requirement status=%d", kHelperLogPrefix, connection.processIdentifier, (int)status);
         if (guestCode != NULL) { CFRelease(guestCode); }
         return NO;
     }
     status = SecCodeCheckValidity(guestCode, kSecCSDefaultFlags, secRequirement);
     CFRelease(secRequirement);
     CFRelease(guestCode);
+    if (status != errSecSuccess) {
+        NSLog(@"%@ rejecting pid=%d: SecCodeCheckValidity failed status=%d", kHelperLogPrefix, connection.processIdentifier, (int)status);
+    }
     return status == errSecSuccess;
 }
 
@@ -163,18 +173,26 @@ static NSUInteger const kMaxIgnoreItemLength = 255;
     // Trust boundary: this helper is privileged and must only serve the signed main app.
     // It only manages system proxy preferences and must not be expanded to general operations.
     if (![self connectionIsVaild:newConnection]) {
+        NSLog(@"%@ rejected XPC connection for pid=%d", kHelperLogPrefix, newConnection.processIdentifier);
         return NO;
     }
+    NSLog(@"%@ accepted XPC connection for pid=%d", kHelperLogPrefix, newConnection.processIdentifier);
     newConnection.exportedInterface = [NSXPCInterface interfaceWithProtocol:@protocol(ProxyConfigRemoteProcessProtocol)];
     newConnection.exportedObject = self;
     __weak NSXPCConnection *weakConnection = newConnection;
     __weak ProxyConfigHelper *weakSelf = self;
     newConnection.invalidationHandler = ^{
+        NSLog(@"%@ connection invalidated for pid=%d", kHelperLogPrefix, weakConnection.processIdentifier);
         [weakSelf.connections removeObject:weakConnection];
         if (weakSelf.connections.count == 0) {
             weakSelf.shouldQuit = YES;
         }
     };
+    if ([newConnection respondsToSelector:@selector(setInterruptionHandler:)]) {
+        newConnection.interruptionHandler = ^{
+            NSLog(@"%@ connection interrupted for pid=%d", kHelperLogPrefix, weakConnection.processIdentifier);
+        };
+    }
     [self.connections addObject:newConnection];
     [newConnection resume];
     return YES;

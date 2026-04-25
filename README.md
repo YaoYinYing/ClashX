@@ -106,10 +106,45 @@ For mihomo-compatible config details, refer to mihomo documentation and rule res
 - iCloud container identifiers (if iCloud is retained).
 
 Developer note:
-- `AllowedClientCodeSigningRequirement` in helper metadata is currently a legacy placeholder.
+- `AllowedClientCodeSigningRequirement` in helper metadata is now driven by `SMARTX_ALLOWED_CLIENT_REQUIREMENT`.
+- Debug helper builds intentionally set `SMARTX_ALLOWED_CLIENT_REQUIREMENT` to an empty string. The helper accepts that only in `#if DEBUG`, and logs when the Debug-only bypass is used.
+- That Debug override only affects helper XPC trust after the helper is already installed.
+- It does **not** make `SMJobBless` succeed for unsigned or ad-hoc local Debug builds.
+- Because `SMAuthorizedClients` and `SMPrivilegedExecutables` still contain legacy signing requirements, local Debug builds may still need the legacy install path until identity migration is done.
+- Full `SMJobBless` support for SmartX requires a separate identity/signing migration PR.
+- Release helper builds must keep `SMARTX_ALLOWED_CLIENT_REQUIREMENT` non-empty. An empty Release value is rejected fail-closed by the helper.
 - `AllowedClientCodeSigningRequirement` and helper `SMAuthorizedClients` must track the app target bundle identifier (currently `com.doodlenet.ClashX`) or helper IPC/auth can fail for default builds.
-- For local Debug helper testing, replace it with your own signing requirement (or explicitly clear it only in Debug builds).
 - This PR does **not** complete signing identity migration.
+
+### SmartX local helper development
+
+- Xcode Debug builds may use an empty helper client requirement for local development only.
+- That empty Debug requirement only allows the installed helper to accept the app over XPC; it does not satisfy the reciprocal `SMJobBless` signing checks.
+- Release builds reject an empty helper client requirement and still run `SecCodeCheckValidity`.
+- Unsigned or ad-hoc CI artifacts are not suitable for privileged helper testing.
+- Copying the app to `/Applications` does not install the helper by itself.
+- Helper installation still requires `SMJobBless` or the legacy root install path, and unsigned/ad-hoc Debug builds may still need the legacy path until helper/app signing metadata is migrated.
+- Public distribution still requires final Developer ID signing, notarization, final bundle identifiers, final helper identifiers, and final `SMAuthorizedClients` / `SMPrivilegedExecutables`.
+
+Current helper metadata still under later migration review:
+- App bundle identifier: `com.doodlenet.ClashX`
+- Helper bundle identifier: `com.west2online.ClashX.ProxyConfigHelper`
+- Mach service name: `com.west2online.ClashX.ProxyConfigHelper`
+- Helper `SMAuthorizedClients`: legacy West2Online requirement
+- App `SMPrivilegedExecutables`: helper requirement still points at West2Online helper identity
+- Team ID / signing requirement placeholder in Release: `MEWHFZ92DY`
+
+Manual test expectations for this PR:
+- Debug: build from Xcode, copy to `/Applications` if needed, launch, trigger helper install, confirm helper installs through `SMJobBless` or the legacy install path, confirm system proxy enable/disable works, and confirm logs show the Debug bypass only when `SMARTX_ALLOWED_CLIENT_REQUIREMENT` is empty.
+- Release: build Release with an empty or invalid `SMARTX_ALLOWED_CLIENT_REQUIREMENT`, confirm helper install/connect is rejected, and confirm Release does not accept arbitrary unsigned clients.
+
+Minimal verification for the helper requirement expansion:
+- After building, inspect the processed helper plist or embedded `__TEXT,__info_plist` section.
+- Example processed plist check:
+  `plutil -p ~/Library/Developer/Xcode/DerivedData/<DerivedData>/Build/Intermediates.noindex/ClashX.build/Debug/com.west2online.ClashX.ProxyConfigHelper.build/Objects-normal/arm64/Processed-Info.plist | rg AllowedClientCodeSigningRequirement`
+- Example embedded binary check:
+  `strings ~/Library/Developer/Xcode/DerivedData/<DerivedData>/Build/Products/Debug/com.west2online.ClashX.ProxyConfigHelper | rg 'AllowedClientCodeSigningRequirement|com.doodlenet.ClashX|MEWHFZ92DY'`
+- Expected result: Debug expands to an empty `AllowedClientCodeSigningRequirement`; Release expands to a non-empty placeholder requirement.
 
 ### Get process name
 

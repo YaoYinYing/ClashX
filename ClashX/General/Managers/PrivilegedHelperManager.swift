@@ -19,6 +19,7 @@ class PrivilegedHelperManager {
     private var authRef: AuthorizationRef?
     private var connection: NSXPCConnection?
     private var _helper: ProxyConfigRemoteProcessProtocol?
+    private let helperRequirementInfoKey = "AllowedClientCodeSigningRequirement"
     #if PRO_VERSION
         static let machServiceName = "com.west2online.ClashXPro.ProxyConfigHelper"
     #else
@@ -125,9 +126,12 @@ class PrivilegedHelperManager {
         // Launch the privileged helper using SMJobBless tool
         var error: Unmanaged<CFError>?
         if SMJobBless(kSMDomainSystemLaunchd, PrivilegedHelperManager.machServiceName as CFString, authRef, &error) == false {
-            let blessError = error!.takeRetainedValue() as Error
-            Logger.log("Bless Error: \(blessError)", level: .error)
-            return .blessError((blessError as NSError).code)
+            let nsError = (error?.takeRetainedValue() as Error?) as NSError?
+            Logger.log("SMJobBless failed for \(PrivilegedHelperManager.machServiceName): domain=\(nsError?.domain ?? "unknown") code=\(nsError?.code ?? -1) userInfo=\(nsError?.userInfo ?? [:])", level: .error)
+            #if DEBUG
+                Logger.log("Debug helper trust override only affects XPC after installation. Unsigned or ad-hoc local Debug builds may still fail SMJobBless because SMAuthorizedClients and SMPrivilegedExecutables still use legacy identity metadata; falling back to the legacy install path is expected until SmartX signing migration is done.", level: .warning)
+            #endif
+            return .blessError(nsError?.code ?? -1)
         }
 
         Logger.log("\(PrivilegedHelperManager.machServiceName) installed successfully", level: .info)
@@ -135,16 +139,23 @@ class PrivilegedHelperManager {
     }
 
     func helper(failture: (() -> Void)? = nil) -> ProxyConfigRemoteProcessProtocol? {
+        Logger.log("opening privileged XPC connection to \(PrivilegedHelperManager.machServiceName)", level: .debug)
         connection = NSXPCConnection(machServiceName: PrivilegedHelperManager.machServiceName, options: NSXPCConnection.Options.privileged)
         connection?.remoteObjectInterface = NSXPCInterface(with: ProxyConfigRemoteProcessProtocol.self)
         connection?.invalidationHandler = {
-            Logger.log("XPC Connection Invalidated")
+            Logger.log("privileged helper XPC connection invalidated", level: .warning)
+        }
+        connection?.interruptionHandler = {
+            Logger.log("privileged helper XPC connection interrupted", level: .warning)
         }
         connection?.resume()
         guard let helper = connection?.remoteObjectProxyWithErrorHandler({ error in
-            Logger.log("Helper connection was closed with error: \(error)")
+            Logger.log("privileged helper remote proxy error: \(error)", level: .error)
             failture?()
-        }) as? ProxyConfigRemoteProcessProtocol else { return nil }
+        }) as? ProxyConfigRemoteProcessProtocol else {
+            Logger.log("failed to create privileged helper remote proxy", level: .error)
+            return nil
+        }
         return helper
     }
 
@@ -169,12 +180,25 @@ class PrivilegedHelperManager {
         guard
             let helperBundleInfo = CFBundleCopyInfoDictionaryForURL(helperURL as CFURL) as? [String: Any],
             let helperVersion = helperBundleInfo["CFBundleShortVersionString"] as? String else {
-            Logger.log("check helper status fail")
+            Logger.log("helper metadata missing from bundled helper at \(helperURL.path)", level: .error)
             reply(.noFound)
             return
         }
+        if let requirement = helperBundleInfo[helperRequirementInfoKey] as? String {
+            let trimmedRequirement = requirement.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedRequirement.isEmpty {
+                #if DEBUG
+                    Logger.log("bundled helper uses empty \(helperRequirementInfoKey) in Debug; helper trust falls back to the Debug-only bypass", level: .warning)
+                #else
+                    Logger.log("bundled helper has empty \(helperRequirementInfoKey) outside Debug; Release installation should fail closed", level: .error)
+                #endif
+            }
+        } else {
+            Logger.log("bundled helper metadata is missing \(helperRequirementInfoKey)", level: .error)
+        }
         let helperFileExists = FileManager.default.fileExists(atPath: "/Library/PrivilegedHelperTools/\(PrivilegedHelperManager.machServiceName)")
         if !helperFileExists {
+            Logger.log("installed helper missing at /Library/PrivilegedHelperTools/\(PrivilegedHelperManager.machServiceName)", level: .warning)
             reply(.noFound)
             return
         }
@@ -182,7 +206,7 @@ class PrivilegedHelperManager {
         let time = Date()
 
         timer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { _ in
-            Logger.log("check helper timeout time: \(timeout)")
+            Logger.log("timed out waiting \(timeout)s for helper version check on \(PrivilegedHelperManager.machServiceName)", level: .warning)
             reply(.noFound)
         }
 
@@ -191,6 +215,9 @@ class PrivilegedHelperManager {
             timer = nil
             Logger.log("helper version \(installedHelperVersion ?? "") require version \(helperVersion)", level: .debug)
             let versionMatch = installedHelperVersion == helperVersion
+            if !versionMatch {
+                Logger.log("helper version mismatch: installed=\(installedHelperVersion ?? "nil") bundled=\(helperVersion)", level: .warning)
+            }
             let interval = Date().timeIntervalSince(time)
             Logger.log("check helper using time: \(interval)")
             reply(versionMatch ? .installed : .needUpdate)
@@ -208,6 +235,7 @@ extension PrivilegedHelperManager {
 
         if useLegacyInstall {
             useLegacyInstall = false
+            Logger.log("falling back to legacy helper install path for \(PrivilegedHelperManager.machServiceName)", level: .warning)
             legacyInstallHelper()
             if !cancelInstallCheck {
                 checkInstall()

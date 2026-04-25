@@ -4,12 +4,12 @@
 
 The `smartx` branch integrates the Vernesong mihomo Smart fork through the existing Go c-archive bridge.
 
-The key wiring is in [`ClashX/goClash/go.mod`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/go.mod):
+The key wiring is in [`ClashX/goClash/go.mod`](../../ClashX/goClash/go.mod):
 
 - the required module path remains `github.com/metacubex/mihomo`
 - the source is replaced with `github.com/vernesong/mihomo`
 
-That works because the Vernesong fork still declares the `github.com/metacubex/mihomo` module path, so existing imports in [`ClashX/goClash/main.go`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/main.go) continue to compile unchanged.
+That works because the Vernesong fork still declares the `github.com/metacubex/mihomo` module path, so existing imports in [`ClashX/goClash/main.go`](../../ClashX/goClash/main.go) continue to compile unchanged.
 
 In practice, SmartX therefore behaves like:
 
@@ -22,7 +22,7 @@ This is important memory for future work because the branch is not using a separ
 
 ## Current LightGBM Integration
 
-The current user-facing LightGBM settings live in [`ClashX/General/Managers/Settings.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/Settings.swift).
+The current user-facing LightGBM settings live in [`ClashX/General/Managers/Settings.swift`](../../ClashX/General/Managers/Settings.swift).
 
 Current settings are:
 
@@ -38,7 +38,7 @@ The intent is:
 - when override is enabled, SmartX supplies its own model URL and update policy
 - if the stored model URL is empty, `effectiveSmartLightGBMModelUrl` falls back to the default Vernesong release URL
 
-These values are passed from Swift to Go through the exported bridge function `clash_setLightGBMOptions`, which is defined in [`ClashX/goClash/main.go`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/main.go) and called by `Settings.syncSmartLightGBMOptionsToCore()`.
+These values are passed from Swift to Go through the exported bridge function `clash_setLightGBMOptions`, which is defined in [`ClashX/goClash/main.go`](../../ClashX/goClash/main.go) and called by `Settings.syncSmartLightGBMOptionsToCore()`.
 
 On the Go side, the current state is stored in:
 
@@ -62,7 +62,7 @@ That means SmartX’s LightGBM override is part of the effective runtime config 
 
 ## File Paths
 
-Current Smart-related file paths are defined in [`ClashX/Macro/Paths.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Macro/Paths.swift).
+Current Smart-related file paths are defined in [`ClashX/Macro/Paths.swift`](../../ClashX/Macro/Paths.swift).
 
 They are:
 
@@ -84,7 +84,7 @@ Future work will likely need a `CoreHome` or equivalent abstraction because:
 
 ## Smart API Endpoints
 
-The current app uses or assumes the following Smart-related controller endpoints in [`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift):
+The current app uses or assumes the following Smart-related controller endpoints in [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift):
 
 - `/group/weights`
 - `/group/:group/weights`
@@ -128,7 +128,7 @@ That is a reasonable first pass, but it is still endpoint-specific rather than a
 
 Smart is already represented in the proxy model as a first-class proxy-group type.
 
-[`ClashX/Models/ClashProxy.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashProxy.swift) defines:
+[`ClashX/Models/ClashProxy.swift`](../../ClashX/Models/ClashProxy.swift) defines:
 
 - `ClashProxyType.smart = "Smart"`
 
@@ -243,4 +243,4 @@ Smart support can be considered product-ready only when all of the following are
 
 ## Source of Truth
 
-This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`ClashX/goClash/go.mod`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/go.mod), [`ClashX/goClash/main.go`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/main.go), [`ClashX/General/Managers/Settings.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/Settings.swift), [`ClashX/Macro/Paths.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Macro/Paths.swift), [`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift), [`ClashX/Models/ClashProxy.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashProxy.swift), [`ClashX/Models/ClashConnection.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashConnection.swift), [`ClashX/ViewControllers/Settings/CoreSettingViewController.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Settings/CoreSettingViewController.swift), and [`ClashX/ViewControllers/Connections/SmartDashboardViewController.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections/SmartDashboardViewController.swift). Update this memory document when Smart endpoint coverage or LightGBM integration changes.
+This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`ClashX/goClash/go.mod`](../../ClashX/goClash/go.mod), [`ClashX/goClash/main.go`](../../ClashX/goClash/main.go), [`ClashX/General/Managers/Settings.swift`](../../ClashX/General/Managers/Settings.swift), [`ClashX/Macro/Paths.swift`](../../ClashX/Macro/Paths.swift), [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift), [`ClashX/Models/ClashProxy.swift`](../../ClashX/Models/ClashProxy.swift), [`ClashX/Models/ClashConnection.swift`](../../ClashX/Models/ClashConnection.swift), [`ClashX/ViewControllers/Settings/CoreSettingViewController.swift`](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift), and [`ClashX/ViewControllers/Connections/SmartDashboardViewController.swift`](../../ClashX/ViewControllers/Connections/SmartDashboardViewController.swift). Update this memory document when Smart endpoint coverage or LightGBM integration changes.

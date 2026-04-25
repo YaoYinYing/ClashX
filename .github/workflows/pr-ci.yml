@@ -51,25 +51,10 @@ jobs:
             echo "::endgroup::"
           } | tee .ci-logs/tool-versions.log
 
-      - name: Install CocoaPods
+      - name: Install dependencies and resources
         run: |
           set -o pipefail
-          bundle exec pod --version | tee .ci-logs/pod-version.log
-          bundle exec pod install --repo-update | tee .ci-logs/pod-install.log
-
-      - name: Install dashboard resources
-        run: |
-          set -o pipefail
-          rm -rf ClashX/Resources/dashboard
-          git clone --depth 1 --branch gh-pages https://github.com/MetaCubeX/Yacd-meta.git ClashX/Resources/dashboard | tee .ci-logs/dashboard-clone.log
-          rm -rf ClashX/Resources/dashboard/.git
-          rm -f ClashX/Resources/dashboard/CNAME
-
-      - name: Build go c-archive
-        run: |
-          set -o pipefail
-          cd ClashX/goClash
-          python3 build_clash_universal.py | tee ../../.ci-logs/go-build.log
+          bash install_dependency.sh | tee .ci-logs/install-dependency.log
 
       - name: Resolve Swift package dependencies
         run: |
@@ -83,6 +68,20 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild -list -workspace ClashX.xcworkspace | tee .ci-logs/xcodebuild-list.log
+
+      - name: Verify helper Release requirement is fail-closed
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ClashX.xcodeproj \
+            -target 'com.west2online.ClashX.ProxyConfigHelper' \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            -showBuildSettings \
+            | tee .ci-logs/helper-release-build-settings.log
+          python3 scripts/check_helper_requirement.py .ci-logs/helper-release-build-settings.log Release | tee .ci-logs/helper-release-check.log
 
       - name: Build ClashX (Debug, unsigned)
         run: |

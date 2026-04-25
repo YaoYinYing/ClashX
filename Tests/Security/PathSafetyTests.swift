@@ -20,10 +20,25 @@ final class PathSafetyTests: XCTestCase {
 
     func testSuggestedFilenameFallback() {
         XCTAssertEqual(RemoteConfigManager.safeNameFromSuggestedFilename("clean-name.yaml", sourceURL: "https://a.example/config"), "clean-name")
-        XCTAssertEqual(
-            RemoteConfigManager.safeNameFromSuggestedFilename("../../evil.yaml", sourceURL: "https://a.example/config"),
-            RemoteConfigManager.safeNameFromSuggestedFilename(nil, sourceURL: "https://a.example/config")
-        )
+        let fallback = RemoteConfigManager.safeNameFromSuggestedFilename(nil, sourceURL: "https://a.example/config")
+        [
+            "../../evil.yaml",
+            "../evil.yaml",
+            "/tmp/evil.yaml",
+            "config/evil.yaml",
+            "config\\evil.yaml",
+            ".hidden.yaml",
+            ".yaml",
+            "",
+            "   ",
+            "bad\nname.yaml"
+        ].forEach { suggestedFilename in
+            XCTAssertEqual(
+                RemoteConfigManager.safeNameFromSuggestedFilename(suggestedFilename, sourceURL: "https://a.example/config"),
+                fallback,
+                "Expected fallback for suggested filename: \(suggestedFilename.debugDescription)"
+            )
+        }
     }
 
     func testSuggestedFilenameFallbackIsDeterministicAndDifferentPerURL() {

@@ -2,7 +2,7 @@
 
 ## Current Architecture
 
-`smartx` currently embeds the Vernesong mihomo smart core through Go c-archive integration. The Go module declared in [ClashX/goClash/go.mod](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/go.mod) depends on `github.com/metacubex/mihomo`, but the branch redirects that dependency with:
+`smartx` currently embeds the Vernesong mihomo smart core through Go c-archive integration. The Go module declared in [ClashX/goClash/go.mod](../../ClashX/goClash/go.mod) depends on `github.com/metacubex/mihomo`, but the branch redirects that dependency with:
 
 ```go
 replace github.com/metacubex/mihomo => github.com/vernesong/mihomo ...
@@ -10,9 +10,9 @@ replace github.com/metacubex/mihomo => github.com/vernesong/mihomo ...
 
 This means the embedded core is effectively the Vernesong fork, but imported through the upstream mihomo module path because the fork declares that same path.
 
-The native app embeds the core as a static Go c-archive built by [ClashX/goClash/build_clash_universal.py](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/build_clash_universal.py). That script builds `arm64` and `amd64` archives with `-buildmode=c-archive`, merges them with `lipo`, and writes version metadata into [ClashX/Info.plist](/Users/yyy/Documents/protein_design/ClashX/ClashX/Info.plist) in CI environments.
+The native app embeds the core as a static Go c-archive built by [ClashX/goClash/build_clash_universal.py](../../ClashX/goClash/build_clash_universal.py). That script builds `arm64` and `amd64` archives with `-buildmode=c-archive`, merges them with `lipo`, and writes version metadata into [ClashX/Info.plist](../../ClashX/Info.plist) in CI environments.
 
-The Swift-to-Go boundary is implemented through exported C-callable symbols in [ClashX/goClash/main.go](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/main.go). Current exported functions include:
+The Swift-to-Go boundary is implemented through exported C-callable symbols in [ClashX/goClash/main.go](../../ClashX/goClash/main.go). Current exported functions include:
 
 - `initClashCore`
 - `run`
@@ -32,16 +32,16 @@ The Swift-to-Go boundary is implemented through exported C-callable symbols in [
 
 The macOS app uses these through the existing Swift and Objective-C bridge layer. Relevant app-side usage appears in:
 
-- [ClashX/AppDelegate.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/AppDelegate.swift)
-- [ClashX/General/ApiRequest.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift)
-- [ClashX/General/Managers/Settings.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/Settings.swift)
+- [ClashX/AppDelegate.swift](../../ClashX/AppDelegate.swift)
+- [ClashX/General/ApiRequest.swift](../../ClashX/General/ApiRequest.swift)
+- [ClashX/General/Managers/Settings.swift](../../ClashX/General/Managers/Settings.swift)
 
 The effective runtime model is:
 
 1. Swift launches the embedded core through `initClashCore()` and `run(...)`.
 2. The Go side reads `~/.config/clash/config.yaml`, mutates `RawConfig`, parses it, and applies it in-process.
 3. The app reads config either through direct Go bridge calls like `clashGetConfigs()` or through controller HTTP APIs, depending on `Settings.builtInApiMode` and override state.
-4. Traffic and log callbacks can be delivered directly from the embedded core to the Swift UI through callback hooks configured in [ClashX/AppDelegate.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/AppDelegate.swift).
+4. Traffic and log callbacks can be delivered directly from the embedded core to the Swift UI through callback hooks configured in [ClashX/AppDelegate.swift](../../ClashX/AppDelegate.swift).
 
 ## Embedded Core Strengths
 
@@ -50,7 +50,7 @@ Embedded core integration remains attractive for a ClashX-style macOS client bec
 Current strengths include:
 
 - Fewer moving parts. The app and core are distributed together rather than coordinated as separate executables.
-- Native lifecycle fit. [ClashX/AppDelegate.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/AppDelegate.swift) can initialize, start, configure, and tear down the core using the same menu-bar app lifecycle it already uses.
+- Native lifecycle fit. [ClashX/AppDelegate.swift](../../ClashX/AppDelegate.swift) can initialize, start, configure, and tear down the core using the same menu-bar app lifecycle it already uses.
 - Direct log and traffic callbacks. `clashSetupLogger` and `clashSetupTraffic` allow the app to receive core signals without standing up separate IPC layers.
 - Compatibility with existing ClashX architecture. The current app already expects a built-in mode with direct bridge calls and an optional external-controller mode. The embedded smart core keeps that dual-mode pattern intact rather than replacing it.
 - Lower coordination overhead for Smart settings. Features such as `clash_setLightGBMOptions` let Swift push LightGBM settings straight into the in-process core configuration path.
@@ -83,7 +83,7 @@ This approach would make several things easier:
 - updating or swapping cores without rebuilding the app
 - aligning with modern mihomo client patterns that treat the core as a managed service rather than a library
 
-It would also fit the branch’s growing use of controller-facing capabilities in [ClashX/General/ApiRequest.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift), where Smart weights, cache flush, core version queries, and TUN config updates already assume an API-oriented interaction model.
+It would also fit the branch’s growing use of controller-facing capabilities in [ClashX/General/ApiRequest.swift](../../ClashX/General/ApiRequest.swift), where Smart weights, cache flush, core version queries, and TUN config updates already assume an API-oriented interaction model.
 
 That said, sidecar mode would add its own complexity:
 
@@ -101,7 +101,7 @@ A reasonable migration strategy is hybrid rather than abrupt.
   The current branch already has working embedded-core wiring, direct callbacks, and LightGBM override injection. That path should remain the reference implementation until SmartX behavior is stable enough to compare alternatives.
 
 - Phase 2: add metadata and capability detection.
-  The app should clearly track which core build is running, which APIs it exposes, and which capabilities are available. Some of this already exists in [ClashX/General/Managers/Settings.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/Settings.swift) and [ClashX/Info.plist](/Users/yyy/Documents/protein_design/ClashX/ClashX/Info.plist), but it is incomplete.
+  The app should clearly track which core build is running, which APIs it exposes, and which capabilities are available. Some of this already exists in [ClashX/General/Managers/Settings.swift](../../ClashX/General/Managers/Settings.swift) and [ClashX/Info.plist](../../ClashX/Info.plist), but it is incomplete.
 
 - Phase 3: add optional external/sidecar core mode.
   Rather than replacing embedded mode immediately, the app could introduce an explicitly supported sidecar mode that uses the external controller API as its primary contract.
@@ -111,7 +111,7 @@ A reasonable migration strategy is hybrid rather than abrupt.
 
 ## Core Metadata
 
-The branch already records some core metadata through [ClashX/Info.plist](/Users/yyy/Documents/protein_design/ClashX/ClashX/Info.plist) and exposes it through [ClashX/General/Managers/Settings.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/Settings.swift):
+The branch already records some core metadata through [ClashX/Info.plist](../../ClashX/Info.plist) and exposes it through [ClashX/General/Managers/Settings.swift](../../ClashX/General/Managers/Settings.swift):
 
 - `coreVersion`
 - `gitCommit`

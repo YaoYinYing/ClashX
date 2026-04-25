@@ -146,6 +146,7 @@ class RemoteConfigManager {
         guard var urlRequest = try? URLRequest(url: config.url, method: .get) else {
             assertionFailure()
             Logger.log("[getRemoteConfigData] url incorrect,\(config.name) \(config.url)")
+            complete(nil, nil)
             return
         }
         urlRequest.cachePolicy = .reloadIgnoringCacheData
@@ -210,13 +211,28 @@ class RemoteConfigManager {
     }
 
     static func safeNameFromSuggestedFilename(_ suggestedFilename: String?, sourceURL: String) -> String {
-        if let suggestedFilename = suggestedFilename {
-            let rawName = URL(fileURLWithPath: suggestedFilename).deletingPathExtension().lastPathComponent
+        if let suggestedFilename,
+           isPlainSuggestedFilename(suggestedFilename) {
+            let rawName = (suggestedFilename as NSString).deletingPathExtension
             if let safe = try? SafeConfigName(rawName) {
                 return safe.value
             }
         }
         return deterministicFallbackName(sourceURL: sourceURL)
+    }
+
+    private static func isPlainSuggestedFilename(_ suggestedFilename: String) -> Bool {
+        let trimmed = suggestedFilename.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        guard !trimmed.contains("/") else { return false }
+        guard !trimmed.contains("\\") else { return false }
+        guard !trimmed.contains(":") else { return false }
+
+        let components = (trimmed as NSString).pathComponents
+        guard components.count == 1 else { return false }
+        guard components.first == trimmed else { return false }
+
+        return true
     }
 
     static func deterministicFallbackName(sourceURL: String) -> String {

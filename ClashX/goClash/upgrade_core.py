@@ -1,31 +1,27 @@
 import subprocess
+import sys
 from build_clash_universal import run
 
 
-def upgrade_version(current_version):
-    string = open('go.mod').read()
-    string = string.replace(current_version, "v0.0.0")
-    file = open("go.mod", "w")
-    file.write(string)
-
-
-def get_full_version():
-    with open('./go.mod') as file:
-        for line in file.readlines():
-            if "github.com/metacubex/mihomo" in line and "replace" not in line:
-                return line.split(" ")[-1].strip()
-
-def install():
-    subprocess.check_output("go mod download", shell=True)
-    subprocess.check_output("go mod tidy", shell=True)
+def fail(message):
+    print(message, file=sys.stderr)
+    sys.exit(1)
 
 
 if __name__ == '__main__':
-    print("start")
-    current = get_full_version()
-    print("current version:", current)
-    upgrade_version(current)
-    install()
-    new_version = get_full_version()
-    print("new version:", new_version, ",start building")
-    run()
+    if len(sys.argv) != 2:
+        fail(
+            "This helper is intentionally conservative on the smartx branch.\n"
+            "Refusing to edit go.mod without an explicit target version or commit.\n"
+            "The embedded core currently uses require + replace module wiring:\n"
+            "  require github.com/metacubex/mihomo ...\n"
+            "  replace github.com/metacubex/mihomo => github.com/vernesong/mihomo ...\n"
+            "Update go.mod manually to the desired github.com/vernesong/mihomo revision,\n"
+            "then run build_clash_universal.py. This script does not perform automatic upgrades yet."
+        )
+
+    fail(
+        f"Refusing to perform an automatic core upgrade to {sys.argv[1]!r}.\n"
+        "On the smartx branch, core upgrades must currently be done manually in go.mod\n"
+        "so the require + replace layout can be reviewed before rebuilding."
+    )

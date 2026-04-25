@@ -21,6 +21,7 @@ This branch is for preview hardening and is not an official upstream ClashX/Clas
 
 ## Security model
 - Config names are validated by a strict allowlist before building local file paths.
+- Suggested remote filenames must be plain basenames. If a suggested filename includes any path component, separator, traversal-like structure, hidden basename, or other invalid form, SmartX falls back to a deterministic SHA256-based `remote-config-<hash>` name instead of salvaging the basename.
 - Remote configs are verified before replacement; failed updates must preserve the previous valid file.
 - The privileged helper is limited to system proxy management and must not launch binaries/download resources/write arbitrary files.
 - Public distribution requires replacing legacy signing identifiers and completing notarization.
@@ -56,7 +57,8 @@ Build from source on this branch for preview validation. Legacy public AppCenter
 
 ## CI for pull requests
 - PR CI runs on macOS GitHub Actions and performs unsigned Debug builds (`CODE_SIGNING_ALLOWED=NO`).
-- CI compile-checks the app, embedded go c-archive build, and helper source path, plus runs a lightweight security harness.
+- PR CI now uses the same `bash install_dependency.sh` path as local setup, so dashboard resources, `Country.mmdb.gz`, Pods, and the Go c-archive are installed the same way in CI and local environments.
+- CI compile-checks the app, embedded go c-archive build, and helper source path, verifies that the Release helper client requirement stays fail-closed, and runs a lightweight security harness.
 - CI does not prove notarization or privileged helper installation behavior; local signed validation is still required.
 
 ## Config
@@ -112,7 +114,7 @@ Developer note:
 - It does **not** make `SMJobBless` succeed for unsigned or ad-hoc local Debug builds.
 - Because `SMAuthorizedClients` and `SMPrivilegedExecutables` still contain legacy signing requirements, local Debug builds may still need the legacy install path until identity migration is done.
 - Full `SMJobBless` support for SmartX requires a separate identity/signing migration PR.
-- Release helper builds must keep `SMARTX_ALLOWED_CLIENT_REQUIREMENT` non-empty. An empty Release value is rejected fail-closed by the helper.
+- Release helper builds must keep `SMARTX_ALLOWED_CLIENT_REQUIREMENT` non-empty. An empty or unresolved Release value is rejected fail-closed by the helper, and CI now checks this build setting explicitly.
 - `AllowedClientCodeSigningRequirement` and helper `SMAuthorizedClients` must track the app target bundle identifier (currently `com.doodlenet.ClashX`) or helper IPC/auth can fail for default builds.
 - This PR does **not** complete signing identity migration.
 

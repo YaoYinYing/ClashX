@@ -181,6 +181,20 @@ jobs:
             -scheme ClashX \
             | tee .ci-logs/spm-resolve.log
 
+      - name: Verify helper Release requirement is fail-closed
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ClashX.xcodeproj \
+            -target 'com.west2online.ClashX.ProxyConfigHelper' \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            -showBuildSettings \
+            | tee .ci-logs/helper-release-build-settings.log
+          python3 scripts/check_helper_requirement.py .ci-logs/helper-release-build-settings.log Release | tee .ci-logs/helper-release-check.log
+
       - name: Add build metadata
         run: |
           set -o pipefail

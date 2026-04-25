@@ -14,6 +14,7 @@
                         <tabViewItem label="General" identifier="general" image="gearshape" catalog="system" id="Ltt-Vq-Hh1"/>
                         <tabViewItem image="keyboard" catalog="system" id="gnz-rO-Jv7"/>
                         <tabViewItem label="Debug" identifier="Debug" image="hammer" catalog="system" id="3Om-yT-A83"/>
+                        <tabViewItem label="Core" identifier="Core" image="cpu" catalog="system" id="gtH-fR-0Jw"/>
                     </tabViewItems>
                     <tabView key="tabView" type="noTabsNoBorder" id="81C-Yt-rOb">
                         <rect key="frame" x="0.0" y="0.0" width="379" height="300"/>
@@ -28,6 +29,7 @@
                         <segue destination="kma-mp-ncL" kind="relationship" relationship="tabItems" id="sab-cs-oab"/>
                         <segue destination="wKZ-TE-sf8" kind="relationship" relationship="tabItems" id="T1L-JQ-EKQ"/>
                         <segue destination="kdV-Em-qBi" kind="relationship" relationship="tabItems" id="Mkx-Wo-vD6"/>
+                        <segue destination="0Nh-bT-c8l" kind="relationship" relationship="tabItems" id="z0d-T3-i8q"/>
                     </connections>
                 </tabViewController>
                 <customObject id="bpW-G9-2N4" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
@@ -2042,9 +2044,23 @@
             </objects>
             <point key="canvasLocation" x="893.5" y="1939"/>
         </scene>
+        <!--Core-->
+        <scene sceneID="Dde-3K-R2U">
+            <objects>
+                <viewController title="Core" showSeguePresentationStyle="single" id="0Nh-bT-c8l" customClass="CoreSettingViewController" customModule="ClashX" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" id="j1Y-pQ-8bP">
+                        <rect key="frame" x="0.0" y="0.0" width="560" height="460"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </view>
+                </viewController>
+                <customObject id="3am-7Q-B6n" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="892" y="2427"/>
+        </scene>
     </scenes>
     <resources>
         <image name="AppIcon" width="128" height="128"/>
+        <image name="cpu" catalog="system" width="19" height="18"/>
         <image name="gearshape" catalog="system" width="16" height="16"/>
         <image name="hammer" catalog="system" width="19" height="18"/>
         <image name="keyboard" catalog="system" width="19" height="13"/>

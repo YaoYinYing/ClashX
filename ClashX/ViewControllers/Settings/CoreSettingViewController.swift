@@ -5,23 +5,38 @@
 //  Created by Codex on 2026/4/24.
 //
 
+import Alamofire
 import Cocoa
 
 class CoreSettingViewController: NSViewController {
     private let scrollView = NSScrollView()
+    private let documentContentView = NSView()
     private let contentStack = NSStackView()
 
-    private let modeLabel = NSTextField(labelWithString: "")
-    private let controllerLabel = NSTextField(labelWithString: "")
-    private let versionLabel = NSTextField(labelWithString: "")
-    private let buildLabel = NSTextField(labelWithString: "")
+    private let summaryLabel = CoreSettingViewController.makeWrapLabel()
 
-    private let tunStatusLabel = NSTextField(labelWithString: "")
-    private let tunDetailLabel = NSTextField(labelWithString: "")
+    private let modeLabel = CoreSettingViewController.makeWrapLabel()
+    private let versionLabel = CoreSettingViewController.makeWrapLabel()
+    private let buildLabel = CoreSettingViewController.makeWrapLabel()
+
+    private let controllerStateLabel = CoreSettingViewController.makeWrapLabel()
+    private let controllerURLLabel = CoreSettingViewController.makeWrapLabel()
+    private let controllerDetailLabel = CoreSettingViewController.makeWrapLabel()
+
+    private let configStatusLabel = CoreSettingViewController.makeWrapLabel()
+    private let configSourceLabel = CoreSettingViewController.makeWrapLabel()
+    private let configDetailLabel = CoreSettingViewController.makeWrapLabel()
+
+    private let tunStatusLabel = CoreSettingViewController.makeWrapLabel()
+    private let tunDetailLabel = CoreSettingViewController.makeWrapLabel()
+    private let tunNoteLabel = CoreSettingViewController.makeSecondaryWrapLabel()
     private let tunEnabledButton = NSButton(checkboxWithTitle: NSLocalizedString("Enable TUN", comment: ""), target: nil, action: nil)
 
-    private let modelStatusLabel = NSTextField(labelWithString: "")
-    private let modelPathLabel = NSTextField(labelWithString: "")
+    private let modelStatusLabel = CoreSettingViewController.makeWrapLabel()
+    private let modelModifiedLabel = CoreSettingViewController.makeWrapLabel()
+    private let modelPathLabel = CoreSettingViewController.makeWrapLabel()
+    private let modelEndpointLabel = CoreSettingViewController.makeWrapLabel()
+    private let modelOverrideStatusLabel = CoreSettingViewController.makeWrapLabel()
     private let modelOverrideButton = NSButton(checkboxWithTitle: NSLocalizedString("Use ClashX LightGBM Settings", comment: ""), target: nil, action: nil)
     private let modelAutoUpdateButton = NSButton(checkboxWithTitle: NSLocalizedString("Auto Update", comment: ""), target: nil, action: nil)
     private let modelUrlField = NSTextField(string: "")
@@ -31,16 +46,22 @@ class CoreSettingViewController: NSViewController {
     private let openConfigFolderButton = NSButton(title: NSLocalizedString("Open Config Folder", comment: ""), target: nil, action: nil)
 
     private var currentTunEnabled = false
-    private var lightGBMEndpointAvailable = true
+    private var lightGBMEndpointSupported: Bool?
+
+    private var tunSupportNote: String {
+        NSLocalizedString("TUN is shown from the current mihomo config. Full macOS TUN support may require additional privileges and is not completed in this branch.", comment: "")
+    }
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 420))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 560, height: 460))
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         title = NSLocalizedString("Core", comment: "")
+        Logger.log("[Core Settings] page loaded", level: .debug)
         setupView()
+        applyLoadingState()
         refreshAll()
     }
 
@@ -49,54 +70,77 @@ class CoreSettingViewController: NSViewController {
         refreshAll()
     }
 
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        let contentWidth = max(scrollView.contentSize.width, 320)
+        documentContentView.frame = NSRect(x: 0, y: 0, width: contentWidth, height: documentContentView.frame.height)
+        documentContentView.layoutSubtreeIfNeeded()
+        let contentHeight = max(contentStack.fittingSize.height + 32, scrollView.contentSize.height)
+        documentContentView.frame = NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight)
+    }
+
+    private static func makeWrapLabel() -> NSTextField {
+        let label = NSTextField(labelWithString: "")
+        label.lineBreakMode = .byWordWrapping
+        label.maximumNumberOfLines = 0
+        label.textColor = .secondaryLabelColor
+        return label
+    }
+
+    private static func makeSecondaryWrapLabel() -> NSTextField {
+        let label = makeWrapLabel()
+        label.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        return label
+    }
+
     private func setupView() {
         scrollView.drawsBackground = false
         scrollView.hasVerticalScroller = true
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
-        NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
+        scrollView.makeConstraintsToBindToSuperview()
 
-        let contentView = NSView()
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.documentView = contentView
+        scrollView.documentView = documentContentView
 
+        documentContentView.addSubview(contentStack)
         contentStack.orientation = .vertical
-        contentStack.spacing = 14
+        contentStack.spacing = 12
         contentStack.alignment = .leading
-        contentStack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(contentStack)
-
-        NSLayoutConstraint.activate([
-            contentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor),
-            contentStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 18),
-            contentStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            contentStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            contentStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
-        ])
-
-        [modeLabel, controllerLabel, versionLabel, buildLabel, tunStatusLabel, tunDetailLabel, modelStatusLabel, modelPathLabel].forEach {
-            $0.lineBreakMode = .byTruncatingMiddle
-            $0.maximumNumberOfLines = 2
-            $0.textColor = .secondaryLabelColor
+        contentStack.makeConstraints {
+            [
+                $0.topAnchor.constraint(equalTo: documentContentView.topAnchor, constant: 16),
+                $0.leadingAnchor.constraint(equalTo: documentContentView.leadingAnchor, constant: 20),
+                $0.trailingAnchor.constraint(equalTo: documentContentView.trailingAnchor, constant: -20),
+                $0.bottomAnchor.constraint(equalTo: documentContentView.bottomAnchor, constant: -16)
+            ]
         }
+
+        summaryLabel.stringValue = NSLocalizedString("Core settings are a status and control surface. Unsupported controller endpoints should degrade gracefully instead of leaving this page blank.", comment: "")
+        contentStack.addArrangedSubview(summaryLabel)
 
         contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Core Info", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("Mode", comment: ""), view: modeLabel),
-            labeledRow(title: NSLocalizedString("Controller", comment: ""), view: controllerLabel),
             labeledRow(title: NSLocalizedString("Version", comment: ""), view: versionLabel),
             labeledRow(title: NSLocalizedString("Build", comment: ""), view: buildLabel)
         ]))
 
+        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Controller", comment: ""), rows: [
+            labeledRow(title: NSLocalizedString("State", comment: ""), view: controllerStateLabel),
+            labeledRow(title: NSLocalizedString("URL", comment: ""), view: controllerURLLabel),
+            labeledRow(title: NSLocalizedString("Details", comment: ""), view: controllerDetailLabel)
+        ]))
+
+        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Config Status", comment: ""), rows: [
+            labeledRow(title: NSLocalizedString("Status", comment: ""), view: configStatusLabel),
+            labeledRow(title: NSLocalizedString("Source", comment: ""), view: configSourceLabel),
+            labeledRow(title: NSLocalizedString("Details", comment: ""), view: configDetailLabel)
+        ]))
+
         tunEnabledButton.target = self
         tunEnabledButton.action = #selector(actionToggleTun)
-        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("TUN", comment: ""), rows: [
+        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("TUN Status", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("State", comment: ""), view: tunStatusLabel),
             labeledRow(title: NSLocalizedString("Details", comment: ""), view: tunDetailLabel),
+            tunNoteLabel,
             tunEnabledButton
         ]))
 
@@ -132,9 +176,12 @@ class CoreSettingViewController: NSViewController {
         modelButtons.orientation = .horizontal
         modelButtons.spacing = 8
 
-        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("LightGBM", comment: ""), rows: [
-            labeledRow(title: NSLocalizedString("Model", comment: ""), view: modelStatusLabel),
+        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Smart / LightGBM Status", comment: ""), rows: [
+            labeledRow(title: NSLocalizedString("Model.bin", comment: ""), view: modelStatusLabel),
+            labeledRow(title: NSLocalizedString("Modified", comment: ""), view: modelModifiedLabel),
             labeledRow(title: NSLocalizedString("Path", comment: ""), view: modelPathLabel),
+            labeledRow(title: NSLocalizedString("Manual Update", comment: ""), view: modelEndpointLabel),
+            labeledRow(title: NSLocalizedString("App Override", comment: ""), view: modelOverrideStatusLabel),
             modelControls,
             labeledRow(title: NSLocalizedString("Model URL", comment: ""), view: modelURLControls),
             modelButtons
@@ -153,20 +200,14 @@ class CoreSettingViewController: NSViewController {
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
-        stack.translatesAutoresizingMaskIntoConstraints = false
+        box.contentView?.addSubview(stack)
+        stack.makeConstraintsToBindToSuperview()
 
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stack.addArrangedSubview(titleLabel)
         rows.forEach { stack.addArrangedSubview($0) }
 
-        box.contentView?.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: box.contentView!.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: box.contentView!.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: box.contentView!.trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: box.contentView!.bottomAnchor)
-        ])
         box.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
         return box
     }
@@ -175,45 +216,169 @@ class CoreSettingViewController: NSViewController {
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         titleLabel.textColor = .labelColor
-        titleLabel.widthAnchor.constraint(equalToConstant: 78).isActive = true
+        titleLabel.widthAnchor.constraint(equalToConstant: 96).isActive = true
 
         let row = NSStackView(views: [titleLabel, view])
         row.orientation = .horizontal
-        row.alignment = .centerY
+        row.alignment = .top
         row.spacing = 8
         row.detachesHiddenViews = true
         return row
     }
 
+    private func applyLoadingState() {
+        modeLabel.stringValue = NSLocalizedString("unknown", comment: "")
+        versionLabel.stringValue = NSLocalizedString("unknown", comment: "")
+        buildLabel.stringValue = NSLocalizedString("unknown", comment: "")
+
+        controllerStateLabel.stringValue = NSLocalizedString("not connected", comment: "")
+        controllerURLLabel.stringValue = Settings.activeControllerURL
+        controllerDetailLabel.stringValue = NSLocalizedString("Waiting for controller status.", comment: "")
+
+        configStatusLabel.stringValue = NSLocalizedString("not loaded", comment: "")
+        configSourceLabel.stringValue = NSLocalizedString("not checked", comment: "")
+        configDetailLabel.stringValue = NSLocalizedString("Config status is not available yet.", comment: "")
+
+        tunStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
+        tunDetailLabel.stringValue = NSLocalizedString("Current mihomo config has not been loaded yet.", comment: "")
+        tunNoteLabel.stringValue = tunSupportNote
+        tunEnabledButton.state = .off
+        tunEnabledButton.isEnabled = false
+
+        modelStatusLabel.stringValue = NSLocalizedString("missing or not checked", comment: "")
+        modelModifiedLabel.stringValue = NSLocalizedString("not checked", comment: "")
+        modelPathLabel.stringValue = Paths.smartLightGBMModelPath
+        modelEndpointLabel.stringValue = NSLocalizedString("not checked", comment: "")
+        modelOverrideStatusLabel.stringValue = NSLocalizedString("disabled", comment: "")
+        updateModelSettingsUI()
+    }
+
     private func refreshAll() {
+        applyLoadingState()
         refreshCoreInfo()
-        refreshTunInfo()
+        refreshConfigStatus()
         refreshLightGBMInfo()
     }
 
     private func refreshCoreInfo() {
-        modeLabel.stringValue = Settings.isUsingEmbeddedCore ? NSLocalizedString("Embedded Vernesong mihomo", comment: "") : NSLocalizedString("External Controller", comment: "")
-        controllerLabel.stringValue = Settings.activeControllerURL
+        let isEmbedded = Settings.isUsingEmbeddedCore
+        modeLabel.stringValue = isEmbedded ? NSLocalizedString("Embedded mihomo", comment: "") : NSLocalizedString("External controller", comment: "")
+        buildLabel.stringValue = isEmbedded
+            ? "\(Settings.embeddedCoreCommit) @ \(Settings.embeddedCoreBranch) \(Settings.embeddedCoreBuildTime)"
+            : NSLocalizedString("Bundle build metadata is only available for the embedded core.", comment: "")
 
-        if Settings.isUsingEmbeddedCore {
+        controllerURLLabel.stringValue = Settings.activeControllerURL
+
+        if !ConfigManager.shared.isRunning {
+            controllerStateLabel.stringValue = NSLocalizedString("not connected", comment: "")
+            controllerDetailLabel.stringValue = NSLocalizedString("Core is stopped or the active controller is unavailable.", comment: "")
+            if isEmbedded {
+                versionLabel.stringValue = Settings.embeddedCoreVersion
+            }
+            Logger.log("[Core Settings] core info refresh unavailable: controller not running", level: .warning)
+            return
+        }
+
+        controllerStateLabel.stringValue = NSLocalizedString("checking", comment: "")
+        controllerDetailLabel.stringValue = NSLocalizedString("Refreshing /version from the active controller.", comment: "")
+        if isEmbedded {
             versionLabel.stringValue = Settings.embeddedCoreVersion
-            buildLabel.stringValue = "\(Settings.embeddedCoreCommit) @ \(Settings.embeddedCoreBranch) \(Settings.embeddedCoreBuildTime)"
-        } else {
-            buildLabel.stringValue = NSLocalizedString("Remote core metadata is not trusted from the embedded bundle.", comment: "")
-            ApiRequest.requestCoreVersion { [weak self] version in
-                guard let self else { return }
-                self.versionLabel.stringValue = version ?? NSLocalizedString("unknown", comment: "")
+        }
+
+        ApiRequest.requestCoreVersion { [weak self] version in
+            guard let self else { return }
+            if let version, !version.isEmpty {
+                self.versionLabel.stringValue = version
+                self.controllerStateLabel.stringValue = NSLocalizedString("connected", comment: "")
+                self.controllerDetailLabel.stringValue = NSLocalizedString("/version responded successfully.", comment: "")
+                Logger.log("[Core Settings] core info refresh succeeded: version=\(version)", level: .debug)
+            } else {
+                self.controllerStateLabel.stringValue = NSLocalizedString("not connected", comment: "")
+                self.controllerDetailLabel.stringValue = NSLocalizedString("/version is unavailable for the active controller.", comment: "")
+                Logger.log("[Core Settings] core info refresh failed: /version unavailable", level: .warning)
             }
         }
     }
 
-    private func refreshTunInfo() {
-        let tun = ConfigManager.shared.currentConfig?.tun
+    private func refreshConfigStatus() {
+        let fallbackConfig = ConfigManager.shared.currentConfig
+        if let fallbackConfig {
+            applyConfig(fallbackConfig, source: NSLocalizedString("app state", comment: ""), detail: NSLocalizedString("Using the last config known by ClashX.", comment: ""))
+        }
+
+        if !ConfigManager.shared.isRunning {
+            if fallbackConfig == nil {
+                configStatusLabel.stringValue = NSLocalizedString("not loaded", comment: "")
+                configSourceLabel.stringValue = NSLocalizedString("controller stopped", comment: "")
+                configDetailLabel.stringValue = NSLocalizedString("Core is stopped, so /configs is unavailable.", comment: "")
+                refreshTunInfo(using: nil, detail: NSLocalizedString("Core is stopped, so TUN status is unavailable.", comment: ""))
+            }
+            Logger.log("[Core Settings] config refresh unavailable: core not running", level: .warning)
+            return
+        }
+
+        guard !ApiRequest.useDirectApi() else {
+            if fallbackConfig == nil {
+                configStatusLabel.stringValue = NSLocalizedString("not loaded", comment: "")
+                configSourceLabel.stringValue = NSLocalizedString("app state", comment: "")
+                configDetailLabel.stringValue = NSLocalizedString("No decoded config is cached for the embedded core.", comment: "")
+                refreshTunInfo(using: nil, detail: NSLocalizedString("No tun section is available because the current config is missing.", comment: ""))
+                Logger.log("[Core Settings] config refresh unavailable: no cached config for embedded mode", level: .warning)
+            } else {
+                Logger.log("[Core Settings] config refresh succeeded from app state", level: .debug)
+            }
+            return
+        }
+
+        requestRemoteConfig { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case let .success(config):
+                self.applyConfig(config, source: "/configs", detail: NSLocalizedString("Loaded from the active controller.", comment: ""))
+                Logger.log("[Core Settings] config refresh succeeded from /configs", level: .debug)
+            case let .failure(message):
+                Logger.log("[Core Settings] config refresh unavailable: \(message)", level: .warning)
+                if let fallbackConfig {
+                    self.applyConfig(fallbackConfig,
+                                     source: NSLocalizedString("app state fallback", comment: ""),
+                                     detail: String(format: NSLocalizedString("/configs unavailable: %@", comment: ""), message))
+                } else {
+                    self.configStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
+                    self.configSourceLabel.stringValue = "/configs"
+                    self.configDetailLabel.stringValue = message
+                    self.refreshTunInfo(using: nil, detail: String(format: NSLocalizedString("TUN status is unavailable because /configs failed: %@", comment: ""), message))
+                }
+            }
+        }
+    }
+
+    private func requestRemoteConfig(completeHandler: @escaping (Result<ClashConfig, String>) -> Void) {
+        AF.request(ConfigManager.apiUrl + "/configs", headers: ApiRequest.authHeader())
+            .validate(statusCode: 200 ..< 300)
+            .responseDecodable(of: ClashConfig.self) { response in
+                switch response.result {
+                case let .success(config):
+                    completeHandler(.success(config))
+                case let .failure(error):
+                    completeHandler(.failure(error.localizedDescription))
+                }
+            }
+    }
+
+    private func applyConfig(_ config: ClashConfig, source: String, detail: String) {
+        configStatusLabel.stringValue = NSLocalizedString("loaded", comment: "")
+        configSourceLabel.stringValue = source
+        configDetailLabel.stringValue = "\(detail)  mode=\(config.mode.name)  http=\(config.usedHttpPort)  socks=\(config.usedSocksPort)"
+        refreshTunInfo(using: config, detail: nil)
+    }
+
+    private func refreshTunInfo(using config: ClashConfig?, detail: String?) {
+        let tun = config?.tun
         currentTunEnabled = tun?.enable ?? false
         tunEnabledButton.state = currentTunEnabled ? .on : .off
 
         if let tun {
-            tunStatusLabel.stringValue = tun.enable ? NSLocalizedString("Enabled", comment: "") : NSLocalizedString("Disabled", comment: "")
+            tunStatusLabel.stringValue = tun.enable ? NSLocalizedString("enabled in config", comment: "") : NSLocalizedString("disabled in config", comment: "")
             let dnsHijack = (tun.dnsHijack ?? []).joined(separator: ", ")
             let detailParts = [
                 tun.device.map { "device=\($0)" },
@@ -221,17 +386,56 @@ class CoreSettingViewController: NSViewController {
                 tun.autoRoute.map { "auto-route=\($0 ? "true" : "false")" },
                 dnsHijack.isEmpty ? nil : "dns-hijack=\(dnsHijack)"
             ].compactMap { $0 }
-            tunDetailLabel.stringValue = detailParts.isEmpty ? NSLocalizedString("No additional TUN details from the current config.", comment: "") : detailParts.joined(separator: "  ")
+            tunDetailLabel.stringValue = detailParts.isEmpty
+                ? NSLocalizedString("TUN section is present but no extra fields were reported.", comment: "")
+                : detailParts.joined(separator: "  ")
         } else {
-            tunStatusLabel.stringValue = NSLocalizedString("Unavailable", comment: "")
-            tunDetailLabel.stringValue = NSLocalizedString("This controller does not expose a tun section in /configs.", comment: "")
+            tunStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
+            tunDetailLabel.stringValue = detail ?? NSLocalizedString("No tun section was found in the current mihomo config.", comment: "")
         }
 
-        let canEditTun = RemoteControlManager.selectConfig == nil ? tun != nil : tun != nil
-        tunEnabledButton.isEnabled = canEditTun
+        tunNoteLabel.stringValue = tunSupportNote
+        tunEnabledButton.isEnabled = ConfigManager.shared.isRunning && tun != nil
     }
 
     private func refreshLightGBMInfo() {
+        updateModelSettingsUI()
+
+        let path = Paths.smartLightGBMModelPath
+        let attributes = try? FileManager.default.attributesOfItem(atPath: path)
+        if let size = attributes?[.size] as? NSNumber {
+            modelStatusLabel.stringValue = String(format: NSLocalizedString("present (%@)", comment: ""), ByteCountFormatter.string(fromByteCount: size.int64Value, countStyle: .file))
+            let modified = attributes?[.modificationDate] as? Date
+            modelModifiedLabel.stringValue = modified.map {
+                DateFormatter.localizedString(from: $0, dateStyle: .short, timeStyle: .medium)
+            } ?? NSLocalizedString("unknown", comment: "")
+        } else {
+            modelStatusLabel.stringValue = NSLocalizedString("missing", comment: "")
+            modelModifiedLabel.stringValue = NSLocalizedString("not available", comment: "")
+            Logger.log("[Core Settings] model file missing at \(path)", level: .warning)
+        }
+        modelPathLabel.stringValue = path
+
+        if !ConfigManager.shared.isRunning {
+            modelEndpointLabel.stringValue = NSLocalizedString("unavailable while the core is stopped", comment: "")
+        } else if lightGBMEndpointSupported == false {
+            modelEndpointLabel.stringValue = NSLocalizedString("unsupported by the current controller", comment: "")
+        } else if lightGBMEndpointSupported == true {
+            modelEndpointLabel.stringValue = NSLocalizedString("appears available", comment: "")
+        } else if Settings.isUsingEmbeddedCore {
+            modelEndpointLabel.stringValue = NSLocalizedString("appears available for the embedded core", comment: "")
+        } else {
+            modelEndpointLabel.stringValue = NSLocalizedString("not checked yet", comment: "")
+        }
+
+        let overrideStatus = Settings.smartLightGBMOverrideConfig ? NSLocalizedString("enabled", comment: "") : NSLocalizedString("disabled", comment: "")
+        let autoUpdateStatus = Settings.smartLightGBMAutoUpdate ? NSLocalizedString("auto update on", comment: "") : NSLocalizedString("auto update off", comment: "")
+        modelOverrideStatusLabel.stringValue = "\(overrideStatus), \(autoUpdateStatus), \(Settings.smartLightGBMUpdateIntervalHours)h"
+
+        updateModelButton.isEnabled = ConfigManager.shared.isRunning && lightGBMEndpointSupported != false
+    }
+
+    private func updateModelSettingsUI() {
         modelOverrideButton.state = Settings.smartLightGBMOverrideConfig ? .on : .off
         modelAutoUpdateButton.state = Settings.smartLightGBMAutoUpdate ? .on : .off
         modelUrlField.stringValue = Settings.effectiveSmartLightGBMModelUrl
@@ -242,23 +446,6 @@ class CoreSettingViewController: NSViewController {
         modelUrlField.isEnabled = enabled
         modelIntervalField.isEnabled = enabled
         resetModelUrlButton.isEnabled = enabled
-
-        let path = Paths.smartLightGBMModelPath
-        let attributes = try? FileManager.default.attributesOfItem(atPath: path)
-        if let size = attributes?[.size] as? NSNumber {
-            let modified = attributes?[.modificationDate] as? Date
-            let modifiedText = modified.map {
-                DateFormatter.localizedString(from: $0, dateStyle: .short, timeStyle: .medium)
-            } ?? NSLocalizedString("unknown", comment: "")
-            modelStatusLabel.stringValue = String(format: NSLocalizedString("Model.bin: %@, modified %@", comment: ""), ByteCountFormatter.string(fromByteCount: size.int64Value, countStyle: .file), modifiedText)
-        } else {
-            modelStatusLabel.stringValue = NSLocalizedString("Model.bin: missing", comment: "")
-        }
-        modelPathLabel.stringValue = path
-
-        let isManualUpdateSupported = Settings.isUsingEmbeddedCore || lightGBMEndpointAvailable
-        updateModelButton.isHidden = !isManualUpdateSupported
-        updateModelButton.isEnabled = ConfigManager.shared.isRunning && isManualUpdateSupported
     }
 
     @objc private func actionToggleTun() {
@@ -266,14 +453,14 @@ class CoreSettingViewController: NSViewController {
         ApiRequest.updateTun(enable: targetState) { [weak self] success, message in
             guard let self else { return }
             if success {
-                Logger.log("[TUN] updated enable=\(targetState)")
+                Logger.log("[Core Settings] TUN updated enable=\(targetState)", level: .debug)
                 AppDelegate.shared.syncConfig {
-                    self.refreshTunInfo()
+                    self.refreshConfigStatus()
                 }
             } else {
                 self.tunEnabledButton.state = self.currentTunEnabled ? .on : .off
                 let info = message ?? NSLocalizedString("Failed to update TUN settings.", comment: "")
-                Logger.log("[TUN] \(info)", level: .error)
+                Logger.log("[Core Settings] TUN update failure: \(info)", level: .error)
                 NSUserNotificationCenter.default.post(title: "TUN", info: info)
             }
         }
@@ -291,12 +478,16 @@ class CoreSettingViewController: NSViewController {
             guard let self else { return }
             switch result {
             case .success:
-                Logger.log("[Smart] LightGBM model update requested")
+                self.lightGBMEndpointSupported = true
+                Logger.log("[Core Settings] LightGBM model update requested", level: .debug)
             case .unsupported:
-                self.lightGBMEndpointAvailable = false
-                Logger.log("[Smart] LightGBM model update is not supported by this core", level: .warning)
+                self.lightGBMEndpointSupported = false
+                Logger.log("[Core Settings] LightGBM endpoint unsupported", level: .warning)
             case .failed:
-                Logger.log("[Smart] LightGBM model update failed", level: .warning)
+                if self.lightGBMEndpointSupported == nil {
+                    self.lightGBMEndpointSupported = true
+                }
+                Logger.log("[Core Settings] LightGBM model update failed", level: .warning)
             }
             self.refreshLightGBMInfo()
         }
@@ -304,6 +495,7 @@ class CoreSettingViewController: NSViewController {
 
     @objc private func actionResetModelURL() {
         Settings.smartLightGBMModelUrl = Settings.defaultSmartLightGBMModelUrl
+        modelUrlField.stringValue = Settings.defaultSmartLightGBMModelUrl
         saveLightGBMSettings()
         refreshLightGBMInfo()
     }

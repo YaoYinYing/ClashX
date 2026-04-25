@@ -146,6 +146,23 @@ Minimal verification for the helper requirement expansion:
   `strings ~/Library/Developer/Xcode/DerivedData/<DerivedData>/Build/Products/Debug/com.west2online.ClashX.ProxyConfigHelper | rg 'AllowedClientCodeSigningRequirement|com.doodlenet.ClashX|MEWHFZ92DY'`
 - Expected result: Debug expands to an empty `AllowedClientCodeSigningRequirement`; Release expands to a non-empty placeholder requirement.
 
+### SmartX Core Settings page
+
+- Settings -> Core is currently a status and control surface. It should remain informative even when the core is stopped, `/configs` is unavailable, the helper is missing, or Smart / LightGBM endpoints are unsupported.
+- TUN status in this page reflects the current mihomo config only. It does **not** mean full macOS TUN routing support is finished in this branch.
+- Helper installation, helper signing migration, and full TUN routing are separate follow-up work.
+- Unsupported mihomo endpoints should degrade gracefully with visible status text instead of leaving the page blank.
+
+Manual test checklist for Settings -> Core:
+- Open Settings -> Core before starting the core.
+- Open Settings -> Core after starting the embedded core.
+- Use a config without `tun`.
+- Use a config with `tun.enable: false`.
+- Use a config with `tun.enable: true`.
+- Stop the core or break `/configs`; the page should still show an error state, not a blank view.
+- Delete or rename `Model.bin`; the page should show the model as missing.
+- Try manual LightGBM update when the endpoint is unsupported; the button should disable or the status should show unsupported.
+
 ### Get process name
 
 You can add the follow config in your config file, and set your proxy mode to rule. Then open the log via help menu in ClashX.

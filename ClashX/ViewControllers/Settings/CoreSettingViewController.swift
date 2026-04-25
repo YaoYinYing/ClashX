@@ -102,22 +102,21 @@ class CoreSettingViewController: NSViewController {
         ])
 
         summaryLabel.stringValue = NSLocalizedString("Core settings are a status and control surface. Unsupported controller endpoints should degrade gracefully instead of leaving this page blank.", comment: "")
-        contentStack.addArrangedSubview(summaryLabel)
-        summaryLabel.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
+        addFullWidthArrangedSubview(summaryLabel)
 
-        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Core Info", comment: ""), rows: [
+        addFullWidthArrangedSubview(makeSection(title: NSLocalizedString("Core Info", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("Mode", comment: ""), view: modeLabel),
             labeledRow(title: NSLocalizedString("Version", comment: ""), view: versionLabel),
             labeledRow(title: NSLocalizedString("Build", comment: ""), view: buildLabel)
         ]))
 
-        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Controller", comment: ""), rows: [
+        addFullWidthArrangedSubview(makeSection(title: NSLocalizedString("Controller", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("State", comment: ""), view: controllerStateLabel),
             labeledRow(title: NSLocalizedString("URL", comment: ""), view: controllerURLLabel),
             labeledRow(title: NSLocalizedString("Details", comment: ""), view: controllerDetailLabel)
         ]))
 
-        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Config Status", comment: ""), rows: [
+        addFullWidthArrangedSubview(makeSection(title: NSLocalizedString("Config Status", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("Status", comment: ""), view: configStatusLabel),
             labeledRow(title: NSLocalizedString("Source", comment: ""), view: configSourceLabel),
             labeledRow(title: NSLocalizedString("Details", comment: ""), view: configDetailLabel)
@@ -125,7 +124,7 @@ class CoreSettingViewController: NSViewController {
 
         tunEnabledButton.target = self
         tunEnabledButton.action = #selector(actionToggleTun)
-        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("TUN Status", comment: ""), rows: [
+        addFullWidthArrangedSubview(makeSection(title: NSLocalizedString("TUN Status", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("State", comment: ""), view: tunStatusLabel),
             labeledRow(title: NSLocalizedString("Details", comment: ""), view: tunDetailLabel),
             tunNoteLabel,
@@ -161,7 +160,7 @@ class CoreSettingViewController: NSViewController {
         modelButtons.orientation = .horizontal
         modelButtons.spacing = 8
 
-        contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Smart / LightGBM Status", comment: ""), rows: [
+        addFullWidthArrangedSubview(makeSection(title: NSLocalizedString("Smart / LightGBM Status", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("Model.bin", comment: ""), view: modelStatusLabel),
             labeledRow(title: NSLocalizedString("Modified", comment: ""), view: modelModifiedLabel),
             labeledRow(title: NSLocalizedString("Manual Update", comment: ""), view: modelEndpointLabel),
@@ -181,6 +180,12 @@ class CoreSettingViewController: NSViewController {
         modelUrlField.placeholderString = NSLocalizedString("Custom model URL", comment: "")
     }
 
+    private func addFullWidthArrangedSubview(_ subview: NSView) {
+        contentStack.addArrangedSubview(subview)
+        subview.translatesAutoresizingMaskIntoConstraints = false
+        subview.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
+    }
+
     private func makeSection(title: String, rows: [NSView]) -> NSView {
         let stack = NSStackView()
         stack.orientation = .vertical
@@ -190,33 +195,42 @@ class CoreSettingViewController: NSViewController {
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stack.addArrangedSubview(titleLabel)
-        titleLabel.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-        rows.forEach {
-            stack.addArrangedSubview($0)
-            $0.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        rows.forEach { row in
+            stack.addArrangedSubview(row)
+            row.translatesAutoresizingMaskIntoConstraints = false
+            row.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
 
-        stack.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
         return stack
     }
 
     private func labeledRow(title: String, view: NSView) -> NSView {
+        let row = NSView()
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         titleLabel.textColor = .labelColor
-        titleLabel.lineBreakMode = .byWordWrapping
-        titleLabel.maximumNumberOfLines = 0
-        titleLabel.widthAnchor.constraint(equalToConstant: rowTitleWidth).isActive = true
+        titleLabel.alignment = .left
 
-        let row = NSStackView(views: [titleLabel, view])
-        row.orientation = .horizontal
-        row.alignment = .top
-        row.spacing = 8
-        row.distribution = .fill
-        row.detachesHiddenViews = true
-        row.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
+        row.addSubview(titleLabel)
+        row.addSubview(view)
+
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.translatesAutoresizingMaskIntoConstraints = false
         view.setContentHuggingPriority(.defaultLow, for: .horizontal)
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: row.leadingAnchor),
+            titleLabel.topAnchor.constraint(equalTo: row.topAnchor),
+            titleLabel.widthAnchor.constraint(equalToConstant: rowTitleWidth),
+
+            view.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 8),
+            view.topAnchor.constraint(equalTo: row.topAnchor),
+            view.trailingAnchor.constraint(lessThanOrEqualTo: row.trailingAnchor),
+
+            row.bottomAnchor.constraint(greaterThanOrEqualTo: titleLabel.bottomAnchor),
+            row.bottomAnchor.constraint(greaterThanOrEqualTo: view.bottomAnchor)
+        ])
         return row
     }
 

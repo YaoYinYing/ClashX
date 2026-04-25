@@ -1310,6 +1310,7 @@
 				CODE_SIGN_ENTITLEMENTS = ProxyConfigHelper/com.west2online.ClashX.ProxyConfigHelper.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				DEVELOPMENT_TEAM = MEWHFZ92DY;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "$(SRCROOT)/ProxyConfigHelper/Helper-Info.plist";
@@ -1320,16 +1321,13 @@
 				OTHER_LDFLAGS = (
 					"-sectcreate",
 					__TEXT,
-					__info_plist,
-					"\"$(SRCROOT)/ProxyConfigHelper/Helper-Info.plist\"",
-					"-sectcreate",
-					__TEXT,
 					__launchd_plist,
 					"\"$(SRCROOT)/ProxyConfigHelper/Helper-Launchd.plist\"",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.west2online.ClashX.ProxyConfigHelper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SMARTX_ALLOWED_CLIENT_REQUIREMENT = "";
 				SKIP_INSTALL = YES;
 			};
 			name = Debug;
@@ -1341,6 +1339,7 @@
 				CODE_SIGN_ENTITLEMENTS = ProxyConfigHelper/com.west2online.ClashX.ProxyConfigHelper.entitlements;
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				DEPLOYMENT_POSTPROCESSING = YES;
 				DEVELOPMENT_TEAM = MEWHFZ92DY;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1351,16 +1350,13 @@
 				OTHER_LDFLAGS = (
 					"-sectcreate",
 					__TEXT,
-					__info_plist,
-					"\"$(SRCROOT)/ProxyConfigHelper/Helper-Info.plist\"",
-					"-sectcreate",
-					__TEXT,
 					__launchd_plist,
 					"\"$(SRCROOT)/ProxyConfigHelper/Helper-Launchd.plist\"",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.west2online.ClashX.ProxyConfigHelper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SMARTX_ALLOWED_CLIENT_REQUIREMENT = "identifier \"com.doodlenet.ClashX\" and anchor apple generic and certificate leaf[subject.OU] = \"MEWHFZ92DY\"";
 				SKIP_INSTALL = YES;
 			};
 			name = Release;

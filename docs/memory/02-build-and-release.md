@@ -26,7 +26,7 @@ The current repository implies the following local build flow.
 
 ### 1. Clone repository
 
-Cloning should produce the app source, the Go c-archive source under [`ClashX/goClash/`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash), the Xcode project/workspace, CocoaPods manifests, and the current GitHub workflow definitions.
+Cloning should produce the app source, the Go c-archive source under [`ClashX/goClash/`](../../ClashX/goClash), the Xcode project/workspace, CocoaPods manifests, and the current GitHub workflow definitions.
 
 ### 2. Checkout `smartx`
 
@@ -36,10 +36,10 @@ The branch selection matters because the Smart core integration, Core settings U
 
 The inspected files imply these toolchains are expected:
 
-- Go `1.21` family from [`ClashX/goClash/go.mod`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/go.mod)
+- Go `1.21` family from [`ClashX/goClash/go.mod`](../../ClashX/goClash/go.mod)
 - Ruby `3.2` in current GitHub Actions workflows
-- Bundler for the [`Gemfile`](/Users/yyy/Documents/protein_design/ClashX/Gemfile)
-- CocoaPods for the [`Podfile`](/Users/yyy/Documents/protein_design/ClashX/Podfile)
+- Bundler for the [`Gemfile`](../../Gemfile)
+- CocoaPods for the [`Podfile`](../../Podfile)
 - Xcode with SwiftPM support and macOS SDK compatible with the project
 
 The `Gemfile` currently pins:
@@ -50,7 +50,7 @@ The `Gemfile` currently pins:
 
 ### 4. Run `install_dependency.sh`
 
-[`install_dependency.sh`](/Users/yyy/Documents/protein_design/ClashX/install_dependency.sh) currently performs four main jobs:
+[`install_dependency.sh`](../../install_dependency.sh) currently performs four main jobs:
 
 - builds the Go core by running `python3 build_clash_universal.py` inside `ClashX/goClash`
 - runs `bundle install`
@@ -93,11 +93,11 @@ In unsigned local or CI builds, `xcodebuild` is typically invoked with signing d
 
 ## Go Core Build Flow
 
-The embedded core build is defined by [`ClashX/goClash/build_clash_universal.py`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/build_clash_universal.py).
+The embedded core build is defined by [`ClashX/goClash/build_clash_universal.py`](../../ClashX/goClash/build_clash_universal.py).
 
 ### Current module wiring
 
-[`ClashX/goClash/go.mod`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/go.mod) declares:
+[`ClashX/goClash/go.mod`](../../ClashX/goClash/go.mod) declares:
 
 - module: `github.com/yichengchen/clashX/ClashX`
 - required mihomo module: `github.com/metacubex/mihomo`
@@ -153,13 +153,13 @@ That means successful universal output requires:
 
 ### Info.plist metadata update
 
-In CI contexts, the script writes `coreVersion` into [`ClashX/Info.plist`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Info.plist). The branch also reads `gitCommit`, `gitBranch`, and `buildTime` from the app bundle at runtime, so release-quality metadata generation still depends on additional steps outside the Go build script.
+In CI contexts, the script writes `coreVersion` into [`ClashX/Info.plist`](../../ClashX/Info.plist). The branch also reads `gitCommit`, `gitBranch`, and `buildTime` from the app bundle at runtime, so release-quality metadata generation still depends on additional steps outside the Go build script.
 
 ## Dependency Management
 
 ### CocoaPods
 
-The current [`Podfile`](/Users/yyy/Documents/protein_design/ClashX/Podfile) pulls in:
+The current [`Podfile`](../../Podfile) pulls in:
 
 - `LetsMove`
 - `Alamofire`
@@ -176,11 +176,11 @@ The current [`Podfile`](/Users/yyy/Documents/protein_design/ClashX/Podfile) pull
 - `SwiftLint`
 - `SwiftFormat/CLI`
 
-[`Podfile.lock`](/Users/yyy/Documents/protein_design/ClashX/Podfile.lock) currently pins concrete versions and checksums, so CocoaPods resolution is reasonably reproducible as long as the podspec sources remain available.
+[`Podfile.lock`](../../Podfile.lock) currently pins concrete versions and checksums, so CocoaPods resolution is reasonably reproducible as long as the podspec sources remain available.
 
 ### SwiftPM
 
-The project also uses SwiftPM for `KeyboardShortcuts`. [`ClashX.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`](/Users/yyy/Documents/protein_design/ClashX/ClashX.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved) pins:
+The project also uses SwiftPM for `KeyboardShortcuts`. [`ClashX.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`](../../ClashX.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved) pins:
 
 - package: `KeyboardShortcuts`
 - version: `1.17.0`
@@ -199,7 +199,7 @@ That means two builds from the same Git commit can still end up with different r
 
 ### Project integration
 
-[`ClashX.xcodeproj/project.pbxproj`](/Users/yyy/Documents/protein_design/ClashX/ClashX.xcodeproj/project.pbxproj) shows that the app target links:
+[`ClashX.xcodeproj/project.pbxproj`](../../ClashX.xcodeproj/project.pbxproj) shows that the app target links:
 
 - `goClash.a`
 - `KeyboardShortcuts`
@@ -211,8 +211,8 @@ This is why the Go archive build, `pod install`, and SwiftPM resolution all need
 
 The repository already contains GitHub Actions workflows:
 
-- [`.github/workflows/main.yml`](/Users/yyy/Documents/protein_design/ClashX/.github/workflows/main.yml)
-- [`.github/workflows/pr-ci.yml`](/Users/yyy/Documents/protein_design/ClashX/.github/workflows/pr-ci.yml)
+- [`.github/workflows/main.yml`](../../.github/workflows/main.yml)
+- [`.github/workflows/pr-ci.yml`](../../.github/workflows/pr-ci.yml)
 
 They already perform unsigned SmartX builds, including Go archive creation and `xcodebuild` Debug builds. A future stable SmartX CI plan should keep that direction and standardize on the following pipeline:
 
@@ -256,7 +256,7 @@ The current project has placeholders and historical identities mixed together. A
 
 ### bundle identifier migration
 
-The main app target in `project.pbxproj` now uses `com.doodlenet.ClashX`, but [`ClashX/Info.plist`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Info.plist) still contains legacy URL names, iCloud container IDs, and helper authorization strings tied to older identities. These need a coherent final SmartX release identity.
+The main app target in `project.pbxproj` now uses `com.doodlenet.ClashX`, but [`ClashX/Info.plist`](../../ClashX/Info.plist) still contains legacy URL names, iCloud container IDs, and helper authorization strings tied to older identities. These need a coherent final SmartX release identity.
 
 ### privileged helper signing
 

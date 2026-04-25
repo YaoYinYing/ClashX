@@ -2,7 +2,7 @@
 
 ## Current API Surface
 
-The `smartx` branch already talks to the mihomo controller in more places than the original ClashX branch, but the current API layer is still endpoint-centric rather than capability-centric. The main integration point is [`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift), with view controllers such as [`ClashX/ViewControllers/Connections/SmartDashboardViewController.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections/SmartDashboardViewController.swift) and [`ClashX/ViewControllers/Settings/CoreSettingViewController.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Settings/CoreSettingViewController.swift) consuming the results.
+The `smartx` branch already talks to the mihomo controller in more places than the original ClashX branch, but the current API layer is still endpoint-centric rather than capability-centric. The main integration point is [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift), with view controllers such as [`ClashX/ViewControllers/Connections/SmartDashboardViewController.swift`](../../ClashX/ViewControllers/Connections/SmartDashboardViewController.swift) and [`ClashX/ViewControllers/Settings/CoreSettingViewController.swift`](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift) consuming the results.
 
 ### configs
 
@@ -34,7 +34,7 @@ Current proxy APIs include:
 - `getMergedProxyData`
 - `getProxyDelay`
 
-The proxy model in [`ClashX/Models/ClashProxy.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashProxy.swift) already recognizes newer mihomo proxy and group types such as `Smart`, `Wireguard`, `Hysteria`, `Hysteria2`, `Tuic`, `AnyTLS`, `Masque`, `TrustTunnel`, and `Vless`.
+The proxy model in [`ClashX/Models/ClashProxy.swift`](../../ClashX/Models/ClashProxy.swift) already recognizes newer mihomo proxy and group types such as `Smart`, `Wireguard`, `Hysteria`, `Hysteria2`, `Tuic`, `AnyTLS`, `Masque`, `TrustTunnel`, and `Vless`.
 
 ### providers
 
@@ -45,7 +45,7 @@ Current provider APIs include:
 - `updateProvider`
 - `healthCheck`
 
-Provider decoding in [`ClashX/Models/ClashProvider.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashProvider.swift) is intentionally tolerant of current mihomo naming differences such as lowercase values and missing provider names.
+Provider decoding in [`ClashX/Models/ClashProvider.swift`](../../ClashX/Models/ClashProvider.swift) is intentionally tolerant of current mihomo naming differences such as lowercase values and missing provider names.
 
 There is still a legacy split between proxy providers and rule providers. `requestExternalProviderNames` only requests `/providers/rules` under `#if PRO_VERSION`, which no longer matches the real mihomo capability boundary.
 
@@ -66,7 +66,7 @@ Current connection APIs include:
 - `closeAllConnection`
 - `blockSmartConnection`
 
-[`ClashX/Models/ClashConnection.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashConnection.swift) has already been extended to carry smart-specific metadata such as:
+[`ClashX/Models/ClashConnection.swift`](../../ClashX/Models/ClashConnection.swift) has already been extended to carry smart-specific metadata such as:
 
 - `smartBlock`
 - `smartTarget`
@@ -89,7 +89,7 @@ Current stream APIs include:
 Current TUN handling is intentionally narrow:
 
 - `updateTun(enable:)` only performs `PATCH /configs` with `{"tun":{"enable":...}}`
-- [`ClashX/Models/ClashConfig.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashConfig.swift) only models a subset of the `tun` block: `enable`, `device`, `stack`, `dns-hijack`, and `auto-route`
+- [`ClashX/Models/ClashConfig.swift`](../../ClashX/Models/ClashConfig.swift) only models a subset of the `tun` block: `enable`, `device`, `stack`, `dns-hijack`, and `auto-route`
 - `CoreSettingViewController` gates TUN UI separately from helper installation state
 
 This is config-patching support, not end-to-end TUN lifecycle support.
@@ -132,7 +132,7 @@ This is used by both `SmartDashboardViewController` and `CoreSettingViewControll
 Current version handling is:
 
 - `requestCoreVersion()` for `GET /version`
-- embedded bundle metadata via `Settings.embeddedCoreVersion`, `embeddedCoreCommit`, `embeddedCoreBranch`, and `embeddedCoreBuildTime` in [`ClashX/General/Managers/Settings.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/Settings.swift)
+- embedded bundle metadata via `Settings.embeddedCoreVersion`, `embeddedCoreCommit`, `embeddedCoreBranch`, and `embeddedCoreBuildTime` in [`ClashX/General/Managers/Settings.swift`](../../ClashX/General/Managers/Settings.swift)
 
 That means SmartX already has two version concepts:
 
@@ -305,11 +305,11 @@ Legacy `PRO_VERSION` assumptions are now one of the biggest architectural mismat
 
 ### Rule providers
 
-In [`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift), `/providers/rules` is still requested only under `#if PRO_VERSION`. That made sense in the older ClashX product split, but it conflicts with modern mihomo behavior where rule providers are normal controller features.
+In [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift), `/providers/rules` is still requested only under `#if PRO_VERSION`. That made sense in the older ClashX product split, but it conflicts with modern mihomo behavior where rule providers are normal controller features.
 
 ### Script assumptions
 
-[`ClashX/Models/ClashConfig.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashConfig.swift) still puts `.script` mode behind `#if PRO_VERSION`. That is another example where product-tier history may not match current core capability. If the active core reports script mode through `/configs`, the client should decide from capability and response data, not compile-time branding.
+[`ClashX/Models/ClashConfig.swift`](../../ClashX/Models/ClashConfig.swift) still puts `.script` mode behind `#if PRO_VERSION`. That is another example where product-tier history may not match current core capability. If the active core reports script mode through `/configs`, the client should decide from capability and response data, not compile-time branding.
 
 ### Practical cleanup direction
 
@@ -381,4 +381,4 @@ SmartX has a mature mihomo API layer when all of the following are true:
 
 ## Source of Truth
 
-This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift) and the associated models and view controllers. Update this memory document when the API layer or capability strategy changes.
+This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift) and the associated models and view controllers. Update this memory document when the API layer or capability strategy changes.

@@ -410,21 +410,19 @@ extension ApiRequest {
             group.leave()
         }
 
-        #if PRO_VERSION
-            group.enter()
-            ApiRequest.req("/providers/rules").responseData { resp in
-                switch resp.result {
-                case let .success(res):
-                    let json = JSON(res)
-                    let provoders = json["providers"].dictionaryValue
-                        .filter { $0.value["vehicleType"] == "HTTP" }.map(\.key)
-                    providers.rules = provoders
-                case let .failure(err):
-                    Logger.log(err.localizedDescription, level: .warning)
-                }
-                group.leave()
+        group.enter()
+        ApiRequest.req("/providers/rules").responseData { resp in
+            switch resp.result {
+            case let .success(res):
+                let json = JSON(res)
+                let provoders = json["providers"].dictionaryValue
+                    .filter { $0.value["vehicleType"] == "HTTP" }.map(\.key)
+                providers.rules = provoders
+            case let .failure(err):
+                Logger.log("request rule providers failed: \(err.localizedDescription)", level: .warning)
             }
-        #endif
+            group.leave()
+        }
         group.notify(queue: .main) {
             completeHandler(providers)
         }
@@ -554,7 +552,7 @@ extension ApiRequest {
         trafficWebSocketRetryTimer = nil
         trafficWebSocket?.disconnect(forceTimeout: 0.5)
 
-        let socket = WebSocket(url: URL(string: ConfigManager.apiUrl.appending("/traffic"))!)
+        let socket = WebSocket(url: URL(string: ConfigManager.webSocketUrl.appending("/traffic"))!)
 
         for header in ApiRequest.authHeader() {
             socket.request.setValue(header.value, forHTTPHeaderField: header.name)
@@ -574,7 +572,7 @@ extension ApiRequest {
         loggingWebSocket?.disconnect(forceTimeout: 1)
 
         let uriString = "/logs?level=".appending(ConfigManager.selectLoggingApiLevel.rawValue)
-        let socket = WebSocket(url: URL(string: ConfigManager.apiUrl.appending(uriString))!)
+        let socket = WebSocket(url: URL(string: ConfigManager.webSocketUrl.appending(uriString))!)
         for header in ApiRequest.authHeader() {
             socket.request.setValue(header.value, forHTTPHeaderField: header.name)
         }

@@ -8,20 +8,20 @@ SmartX already has a meaningful diagnostics base, but it is split across several
 
 Current logging has two layers:
 
-- app-side file logging through [`ClashX/Basic/Logger.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Basic/Logger.swift)
-- core/controller log streaming through [`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift)
+- app-side file logging through [`ClashX/Basic/Logger.swift`](../../ClashX/Basic/Logger.swift)
+- core/controller log streaming through [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift)
 
 `Logger` uses CocoaLumberjack and keeps rolling log files. In Debug it also logs to the OS logger.
 
 `ApiRequest` supports real-time log streaming through `/logs` over WebSocket when SmartX is talking to an HTTP controller. It also supports reconnect backoff for the log stream.
 
-There is a second diagnostic log path in [`ClashX/ViewControllers/Connections/Requests/StructedLogReq.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections/Requests/StructedLogReq.swift), which connects to `/logs?format=structured&level=...` and parses structured log events into temporary connection-like records.
+There is a second diagnostic log path in [`ClashX/ViewControllers/Connections/Requests/StructedLogReq.swift`](../../ClashX/ViewControllers/Connections/Requests/StructedLogReq.swift), which connects to `/logs?format=structured&level=...` and parses structured log events into temporary connection-like records.
 
 ### Traffic
 
 Current traffic diagnostics also split by controller mode:
 
-- embedded core mode uses direct Go-to-Swift callbacks set in [`ClashX/AppDelegate.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/AppDelegate.swift) via `clash_setTrafficBlock` and `clashSetupTraffic()`
+- embedded core mode uses direct Go-to-Swift callbacks set in [`ClashX/AppDelegate.swift`](../../ClashX/AppDelegate.swift) via `clash_setTrafficBlock` and `clashSetupTraffic()`
 - external controller mode uses `/traffic` over WebSocket in `ApiRequest.requestTrafficInfo()`
 
 This is already an important architectural distinction:
@@ -35,10 +35,10 @@ Current connection diagnostics are reasonably strong for an older ClashX-derived
 
 The main pieces are:
 
-- [`ClashX/ViewControllers/Connections/Requests/ConnectionsReq.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections/Requests/ConnectionsReq.swift), which connects to `/connections` over WebSocket
-- [`ClashX/ViewControllers/Connections/ViewModels/ConnectionsViewModel.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections/ViewModels/ConnectionsViewModel.swift), which merges live snapshots with process attribution and structured-log fallbacks
-- [`ClashX/ViewControllers/Connections/ConnectionsViewController.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections/ConnectionsViewController.swift), which renders recent and active connections
-- [`ClashX/ViewControllers/Connections/ViewModels/ConnectionDetailViewModel.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections/ViewModels/ConnectionDetailViewModel.swift), which prepares detail state for the selected connection
+- [`ClashX/ViewControllers/Connections/Requests/ConnectionsReq.swift`](../../ClashX/ViewControllers/Connections/Requests/ConnectionsReq.swift), which connects to `/connections` over WebSocket
+- [`ClashX/ViewControllers/Connections/ViewModels/ConnectionsViewModel.swift`](../../ClashX/ViewControllers/Connections/ViewModels/ConnectionsViewModel.swift), which merges live snapshots with process attribution and structured-log fallbacks
+- [`ClashX/ViewControllers/Connections/ConnectionsViewController.swift`](../../ClashX/ViewControllers/Connections/ConnectionsViewController.swift), which renders recent and active connections
+- [`ClashX/ViewControllers/Connections/ViewModels/ConnectionDetailViewModel.swift`](../../ClashX/ViewControllers/Connections/ViewModels/ConnectionDetailViewModel.swift), which prepares detail state for the selected connection
 
 SmartX currently supports:
 
@@ -51,13 +51,13 @@ SmartX currently supports:
 
 ### Dashboard behavior
 
-The current dashboard container in [`ClashX/ViewControllers/Connections/DashboardViewController.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections/DashboardViewController.swift) exposes three modes:
+The current dashboard container in [`ClashX/ViewControllers/Connections/DashboardViewController.swift`](../../ClashX/ViewControllers/Connections/DashboardViewController.swift) exposes three modes:
 
 - Recent Connections
 - Active Connections
 - Smart
 
-The Smart view is [`ClashX/ViewControllers/Connections/SmartDashboardViewController.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections/SmartDashboardViewController.swift), which already surfaces:
+The Smart view is [`ClashX/ViewControllers/Connections/SmartDashboardViewController.swift`](../../ClashX/ViewControllers/Connections/SmartDashboardViewController.swift), which already surfaces:
 
 - Smart groups
 - node weights
@@ -77,7 +77,7 @@ That means SmartX diagnostics are already partly capability-dependent even befor
 
 ## Connection Model
 
-The current connection model lives in [`ClashX/Models/ClashConnection.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashConnection.swift).
+The current connection model lives in [`ClashX/Models/ClashConnection.swift`](../../ClashX/Models/ClashConnection.swift).
 
 The richer connection snapshot type includes:
 
@@ -333,4 +333,4 @@ Diagnostics can be considered mature only when all of the following are true:
 
 ## Source of Truth
 
-This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift), [`ClashX/Models/ClashConnection.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashConnection.swift), [`ClashX/ViewControllers/Connections/`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections), [`ClashX/Basic/Logger.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Basic/Logger.swift), and [`ClashX/AppDelegate.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/AppDelegate.swift). Update this memory document when SmartX diagnostics or mihomo observability integration changes.
+This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift), [`ClashX/Models/ClashConnection.swift`](../../ClashX/Models/ClashConnection.swift), [`ClashX/ViewControllers/Connections/`](../../ClashX/ViewControllers/Connections), [`ClashX/Basic/Logger.swift`](../../ClashX/Basic/Logger.swift), and [`ClashX/AppDelegate.swift`](../../ClashX/AppDelegate.swift). Update this memory document when SmartX diagnostics or mihomo observability integration changes.

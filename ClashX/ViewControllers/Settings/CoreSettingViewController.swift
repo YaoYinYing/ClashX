@@ -9,6 +9,10 @@ import Alamofire
 import Cocoa
 
 class CoreSettingViewController: NSViewController {
+    private final class FlippedView: NSView {
+        override var isFlipped: Bool { true }
+    }
+
     private enum TunCapability {
         case unsupported(String)
         case guardedUpdateAvailable(String)
@@ -18,6 +22,8 @@ class CoreSettingViewController: NSViewController {
     private let pageVerticalPadding: CGFloat = 16
     private let rowTitleWidth: CGFloat = 120
 
+    private let scrollView = NSScrollView()
+    private let documentView = FlippedView()
     private let contentStack = NSStackView()
 
     private let summaryLabel = CoreSettingViewController.makeWrapLabel()
@@ -97,16 +103,40 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func setupView() {
-        view.addSubview(contentStack)
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.drawsBackground = false
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scrollView)
+        scrollView.documentView = documentView
+
+        documentView.translatesAutoresizingMaskIntoConstraints = false
+        documentView.addSubview(contentStack)
+
         contentStack.orientation = .vertical
         contentStack.spacing = 14
         contentStack.alignment = .leading
         contentStack.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
-            contentStack.topAnchor.constraint(equalTo: view.topAnchor, constant: pageVerticalPadding),
-            contentStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: pageHorizontalPadding),
-            contentStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -pageHorizontalPadding),
-            contentStack.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -pageVerticalPadding)
+            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            documentView.topAnchor.constraint(equalTo: scrollView.contentView.topAnchor),
+            documentView.leadingAnchor.constraint(equalTo: scrollView.contentView.leadingAnchor),
+            documentView.trailingAnchor.constraint(equalTo: scrollView.contentView.trailingAnchor),
+            documentView.bottomAnchor.constraint(greaterThanOrEqualTo: scrollView.contentView.bottomAnchor),
+            documentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor),
+            documentView.heightAnchor.constraint(greaterThanOrEqualTo: scrollView.contentView.heightAnchor),
+
+            contentStack.topAnchor.constraint(equalTo: documentView.topAnchor, constant: pageVerticalPadding),
+            contentStack.leadingAnchor.constraint(equalTo: documentView.leadingAnchor, constant: pageHorizontalPadding),
+            contentStack.trailingAnchor.constraint(equalTo: documentView.trailingAnchor, constant: -pageHorizontalPadding),
+            contentStack.bottomAnchor.constraint(equalTo: documentView.bottomAnchor, constant: -pageVerticalPadding)
         ])
 
         summaryLabel.stringValue = NSLocalizedString("Core settings are a status and control surface. Unsupported controller endpoints should degrade gracefully instead of leaving this page blank.", comment: "")
@@ -168,11 +198,19 @@ class CoreSettingViewController: NSViewController {
         modelButtons.orientation = .horizontal
         modelButtons.spacing = 8
 
+        let modelURLControls = NSStackView(views: [modelUrlField, resetModelUrlButton])
+        modelURLControls.orientation = .horizontal
+        modelURLControls.alignment = .centerY
+        modelURLControls.spacing = 8
+        modelURLControls.setHuggingPriority(.defaultLow, for: .horizontal)
+
         addFullWidthArrangedSubview(makeSection(title: NSLocalizedString("Smart / LightGBM Status", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("Model.bin", comment: ""), view: modelStatusLabel),
             labeledRow(title: NSLocalizedString("Modified", comment: ""), view: modelModifiedLabel),
+            labeledRow(title: NSLocalizedString("Path", comment: ""), view: modelPathLabel),
             labeledRow(title: NSLocalizedString("Manual Update", comment: ""), view: modelEndpointLabel),
             labeledRow(title: NSLocalizedString("App Override", comment: ""), view: modelOverrideStatusLabel),
+            labeledRow(title: NSLocalizedString("Model URL", comment: ""), view: modelURLControls),
             modelControls,
             modelButtons
         ]))
@@ -234,7 +272,7 @@ class CoreSettingViewController: NSViewController {
 
             view.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 8),
             view.topAnchor.constraint(equalTo: row.topAnchor),
-            view.trailingAnchor.constraint(lessThanOrEqualTo: row.trailingAnchor),
+            view.trailingAnchor.constraint(equalTo: row.trailingAnchor),
 
             row.bottomAnchor.constraint(greaterThanOrEqualTo: titleLabel.bottomAnchor),
             row.bottomAnchor.constraint(greaterThanOrEqualTo: view.bottomAnchor)

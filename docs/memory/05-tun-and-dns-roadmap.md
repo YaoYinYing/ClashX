@@ -4,7 +4,7 @@
 
 SmartX currently has limited TUN awareness, not full TUN feature support.
 
-The current Swift-side TUN model lives in [`ClashX/Models/ClashConfig.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashConfig.swift) as `ClashConfig.Tun`. It currently models only these fields:
+The current Swift-side TUN model lives in [`ClashX/Models/ClashConfig.swift`](../../ClashX/Models/ClashConfig.swift) as `ClashConfig.Tun`. It currently models only these fields:
 
 - `enable`
 - `device`
@@ -12,14 +12,14 @@ The current Swift-side TUN model lives in [`ClashX/Models/ClashConfig.swift`](/U
 - `dns-hijack`
 - `auto-route`
 
-The current Core settings UI in [`ClashX/ViewControllers/Settings/CoreSettingViewController.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Settings/CoreSettingViewController.swift) can:
+The current Core settings UI in [`ClashX/ViewControllers/Settings/CoreSettingViewController.swift`](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift) can:
 
 - show whether a `tun` section exists
 - show limited details for `device`, `stack`, `auto-route`, and `dns-hijack`
 - show whether `tun.enable` is currently true or false in config
 - attempt a guarded `tun.enable` patch only for an external controller that exposed `tun` through `/configs`
 
-The current update path in [`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift) is intentionally narrow:
+The current update path in [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift) is intentionally narrow:
 
 - `updateTun(enable:)` only sends `PATCH /configs` with `{"tun":{"enable":...}}`
 
@@ -135,7 +135,7 @@ The current inspected files show:
 
 What exists today is mostly indirect:
 
-- the core reads `~/.config/clash/config.yaml` in [`ClashX/goClash/main.go`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/main.go)
+- the core reads `~/.config/clash/config.yaml` in [`ClashX/goClash/main.go`](../../ClashX/goClash/main.go)
 - SmartX can inspect the general config and patch a limited TUN value through `/configs`
 - `ApiRequest.swift` does not currently expose DNS-specific API helpers such as `/dns/query` or `/cache/dns/flush`
 
@@ -237,4 +237,4 @@ TUN and DNS support can be called mature only when all of the following are true
 
 ## Source of Truth
 
-This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`ClashX/Models/ClashConfig.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashConfig.swift), [`ClashX/ViewControllers/Settings/CoreSettingViewController.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Settings/CoreSettingViewController.swift), [`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift), and [`ClashX/goClash/main.go`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/main.go). Update this memory document when the TUN or DNS model changes.
+This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`ClashX/Models/ClashConfig.swift`](../../ClashX/Models/ClashConfig.swift), [`ClashX/ViewControllers/Settings/CoreSettingViewController.swift`](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift), [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift), and [`ClashX/goClash/main.go`](../../ClashX/goClash/main.go). Update this memory document when the TUN or DNS model changes.

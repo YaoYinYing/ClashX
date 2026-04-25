@@ -318,4 +318,4 @@ This roadmap does not claim these phases are already complete unless current cod
 
 ## Source of Truth
 
-This document is descriptive, not normative. It is based on the current SmartX memory docs under [`docs/memory/`](/Users/yyy/Documents/protein_design/ClashX/docs/memory) and the source tree in this repository. Update it when branch priorities or implementation reality changes.
+This document is descriptive, not normative. It is based on the current SmartX memory docs under [`docs/memory/`](../../docs/memory) and the source tree in this repository. Update it when branch priorities or implementation reality changes.

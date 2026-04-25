@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 enum NameError: Error { case invalid }
@@ -16,19 +17,28 @@ func safeConfigName(_ raw: String) throws -> String {
     return candidate
 }
 
+func isPlainSuggestedFilename(_ suggestedFilename: String) -> Bool {
+    let trimmed = suggestedFilename.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return false }
+    guard !trimmed.contains("/") else { return false }
+    guard !trimmed.contains("\\") else { return false }
+    guard !trimmed.contains(":") else { return false }
+
+    let components = (trimmed as NSString).pathComponents
+    guard components.count == 1 else { return false }
+    guard components.first == trimmed else { return false }
+    return true
+}
+
 func deterministicFallbackName(sourceURL: String) -> String {
-    var hash: UInt64 = 1469598103934665603
-    for byte in sourceURL.utf8 {
-        hash ^= UInt64(byte)
-        hash &*= 1099511628211
-    }
-    let suffix = String(format: "%08llx", hash & 0xFFFFFFFF)
+    let digest = SHA256.hash(data: Data(sourceURL.utf8))
+    let suffix = digest.prefix(8).map { String(format: "%02x", $0) }.joined()
     return "remote-config-\(suffix)"
 }
 
 func safeNameFromSuggestedFilename(_ suggested: String?, sourceURL: String) -> String {
-    if let suggested {
-        let base = URL(fileURLWithPath: suggested).deletingPathExtension().lastPathComponent
+    if let suggested, isPlainSuggestedFilename(suggested) {
+        let base = (suggested as NSString).deletingPathExtension
         if let safe = try? safeConfigName(base) {
             return safe
         }
@@ -52,6 +62,8 @@ func writeConfigAtomically(content: String, targetURL: URL, verify: (String) -> 
     }
 }
 
+// This harness is a temporary smoke test for CI. It mirrors current production
+// semantics, but it does not replace a real XCTest target.
 func assertPass(_ condition: @autoclosure () -> Bool, _ message: String) {
     if !condition() {
         fputs("FAIL: \(message)\n", stderr)
@@ -82,6 +94,9 @@ let deterministicA = safeNameFromSuggestedFilename(nil, sourceURL: "https://one.
 let deterministicB = safeNameFromSuggestedFilename(nil, sourceURL: "https://two.example/sub")
 assertPass(deterministicA == safeNameFromSuggestedFilename(nil, sourceURL: "https://one.example/sub"), "fallback should be deterministic")
 assertPass(deterministicA != deterministicB, "different source URLs should have different fallback names")
+assertPass(safeNameFromSuggestedFilename("config/evil.yaml", sourceURL: "https://one.example/sub") == deterministicA, "path components should force fallback")
+assertPass(safeNameFromSuggestedFilename("config\\\\evil.yaml", sourceURL: "https://one.example/sub") == deterministicA, "backslash-separated paths should force fallback")
+assertPass(safeNameFromSuggestedFilename(".hidden.yaml", sourceURL: "https://one.example/sub") == deterministicA, "hidden basenames should force fallback")
 
 let tempDir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true).appendingPathComponent("security-harness-\(UUID().uuidString)", isDirectory: true)
 try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)

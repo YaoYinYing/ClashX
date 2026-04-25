@@ -5,7 +5,7 @@ import os
 
 
 def write_to_info():
-    path = "info.plist"
+    path = "Info.plist"
 
     with open(path, 'rb') as f:
         contents = plistlib.load(f)

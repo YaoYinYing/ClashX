@@ -8,12 +8,12 @@
 
 Compared with `main`, the current `smartx` branch work includes:
 
-- Go core replacement and build-path changes under [ClashX/goClash/go.mod](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/go.mod), [ClashX/goClash/main.go](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/main.go), and [ClashX/goClash/build_clash_universal.py](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/build_clash_universal.py), moving from Dreamacro Clash integration toward a Vernesong mihomo smart build path.
-- Smart LightGBM settings and smart API additions in [ClashX/General/ApiRequest.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift) and [ClashX/General/Managers/Settings.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/Settings.swift).
-- TUN/Core settings UI work in [ClashX/ViewControllers/Settings/CoreSettingViewController.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Settings/CoreSettingViewController.swift), including status presentation, capability gating, and diagnostics.
-- Smart dashboard work in [ClashX/ViewControllers/Connections/SmartDashboardViewController.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/ViewControllers/Connections/SmartDashboardViewController.swift).
-- Updated proxy, provider, config, and connection models in [ClashX/Models/ClashConfig.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashConfig.swift), [ClashX/Models/ClashProxy.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashProxy.swift), [ClashX/Models/ClashProvider.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashProvider.swift), and [ClashX/Models/ClashConnection.swift](/Users/yyy/Documents/protein_design/ClashX/ClashX/Models/ClashConnection.swift).
-- Build, dependency, and packaging adjustments in [ClashX/Info.plist](/Users/yyy/Documents/protein_design/ClashX/ClashX/Info.plist), [install_dependency.sh](/Users/yyy/Documents/protein_design/ClashX/install_dependency.sh), and [Podfile](/Users/yyy/Documents/protein_design/ClashX/Podfile).
+- Go core replacement and build-path changes under [ClashX/goClash/go.mod](../../ClashX/goClash/go.mod), [ClashX/goClash/main.go](../../ClashX/goClash/main.go), and [ClashX/goClash/build_clash_universal.py](../../ClashX/goClash/build_clash_universal.py), moving from Dreamacro Clash integration toward a Vernesong mihomo smart build path.
+- Smart LightGBM settings and smart API additions in [ClashX/General/ApiRequest.swift](../../ClashX/General/ApiRequest.swift) and [ClashX/General/Managers/Settings.swift](../../ClashX/General/Managers/Settings.swift).
+- TUN/Core settings UI work in [ClashX/ViewControllers/Settings/CoreSettingViewController.swift](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift), including status presentation, capability gating, and diagnostics.
+- Smart dashboard work in [ClashX/ViewControllers/Connections/SmartDashboardViewController.swift](../../ClashX/ViewControllers/Connections/SmartDashboardViewController.swift).
+- Updated proxy, provider, config, and connection models in [ClashX/Models/ClashConfig.swift](../../ClashX/Models/ClashConfig.swift), [ClashX/Models/ClashProxy.swift](../../ClashX/Models/ClashProxy.swift), [ClashX/Models/ClashProvider.swift](../../ClashX/Models/ClashProvider.swift), and [ClashX/Models/ClashConnection.swift](../../ClashX/Models/ClashConnection.swift).
+- Build, dependency, and packaging adjustments in [ClashX/Info.plist](../../ClashX/Info.plist), [install_dependency.sh](../../install_dependency.sh), and [Podfile](../../Podfile).
 
 This index is intentionally high level. Future topic documents should separate what is already implemented from what is only intended.
 

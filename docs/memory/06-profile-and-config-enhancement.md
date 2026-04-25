@@ -10,8 +10,8 @@ The current config home is still `~/.config/clash/`.
 
 This is enforced in two places:
 
-- [`ClashX/Macro/Paths.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Macro/Paths.swift), which defines `kConfigFolderPath`, `kDefaultConfigFilePath`, and `Paths.configDirectoryURL`
-- [`ClashX/goClash/main.go`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/main.go), where `initClashCore()` sets the mihomo home directory and config path to `~/.config/clash/config.yaml`
+- [`ClashX/Macro/Paths.swift`](../../ClashX/Macro/Paths.swift), which defines `kConfigFolderPath`, `kDefaultConfigFilePath`, and `Paths.configDirectoryURL`
+- [`ClashX/goClash/main.go`](../../ClashX/goClash/main.go), where `initClashCore()` sets the mihomo home directory and config path to `~/.config/clash/config.yaml`
 
 ### Default config file
 
@@ -23,7 +23,7 @@ The default active config file is still `config.yaml`.
 
 Config switching is filename-based, not profile-based.
 
-[`ClashX/General/Managers/ConfigManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/ConfigManager.swift) stores the active selection as `selectConfigName`, and the app treats that value as the selected local config name. The selected config is resolved to:
+[`ClashX/General/Managers/ConfigManager.swift`](../../ClashX/General/Managers/ConfigManager.swift) stores the active selection as `selectConfigName`, and the app treats that value as the selected local config name. The selected config is resolved to:
 
 - `~/.config/clash/<name>.yaml` for local mode
 - an iCloud path when iCloud config storage is enabled
@@ -32,7 +32,7 @@ The config list is derived by enumerating `.yaml` files under the config directo
 
 ### Remote config update
 
-[`ClashX/General/Managers/RemoteConfigManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/RemoteConfigManager.swift) implements remote config updates by:
+[`ClashX/General/Managers/RemoteConfigManager.swift`](../../ClashX/General/Managers/RemoteConfigManager.swift) implements remote config updates by:
 
 - storing a list of `RemoteConfigModel` entries in user defaults
 - downloading remote YAML text
@@ -50,7 +50,7 @@ Important current behaviors:
 
 ### Direct config reload
 
-[`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift) and [`ClashX/AppDelegate.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/AppDelegate.swift) still implement reload as “take a file path and reload it into the active core.”
+[`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift) and [`ClashX/AppDelegate.swift`](../../ClashX/AppDelegate.swift) still implement reload as “take a file path and reload it into the active core.”
 
 Current reload paths:
 
@@ -70,7 +70,7 @@ The `install-config` scheme currently opens the remote config UI flow and inject
 
 ### External controller entries
 
-[`ClashX/General/Managers/RemoteControlManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/RemoteControlManager.swift) stores external controller connections separately from local config files. Those entries are runtime controller targets, not local profiles. That distinction matters for the future model.
+[`ClashX/General/Managers/RemoteControlManager.swift`](../../ClashX/General/Managers/RemoteControlManager.swift) stores external controller connections separately from local config files. Those entries are runtime controller targets, not local profiles. That distinction matters for the future model.
 
 ## Problem Statement
 
@@ -359,4 +359,4 @@ Profile management can be called mature only when all of the following are true:
 
 ## Source of Truth
 
-This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`ClashX/General/Managers/ConfigManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/ConfigManager.swift), [`ClashX/General/Managers/RemoteConfigManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/RemoteConfigManager.swift), [`ClashX/General/ApiRequest.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/ApiRequest.swift), [`ClashX/Macro/Paths.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Macro/Paths.swift), [`ClashX/goClash/main.go`](/Users/yyy/Documents/protein_design/ClashX/ClashX/goClash/main.go), and [`ClashX/AppDelegate.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/AppDelegate.swift). Update this memory document when profile management evolves.
+This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`ClashX/General/Managers/ConfigManager.swift`](../../ClashX/General/Managers/ConfigManager.swift), [`ClashX/General/Managers/RemoteConfigManager.swift`](../../ClashX/General/Managers/RemoteConfigManager.swift), [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift), [`ClashX/Macro/Paths.swift`](../../ClashX/Macro/Paths.swift), [`ClashX/goClash/main.go`](../../ClashX/goClash/main.go), and [`ClashX/AppDelegate.swift`](../../ClashX/AppDelegate.swift). Update this memory document when profile management evolves.

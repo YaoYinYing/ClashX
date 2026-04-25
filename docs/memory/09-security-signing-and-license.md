@@ -2,7 +2,7 @@
 
 ## Current License
 
-The repository is currently licensed under the GNU Affero General Public License v3, as shown in [`LICENSE`](/Users/yyy/Documents/protein_design/ClashX/LICENSE).
+The repository is currently licensed under the GNU Affero General Public License v3, as shown in [`LICENSE`](../../LICENSE).
 
 ### Practical implications
 
@@ -28,11 +28,11 @@ System proxy modification in SmartX depends on privileged helper behavior.
 
 The relevant components are:
 
-- [`ProxyConfigHelper/ProxyConfigHelper.m`](/Users/yyy/Documents/protein_design/ClashX/ProxyConfigHelper/ProxyConfigHelper.m)
-- [`ProxyConfigHelper/Helper-Info.plist`](/Users/yyy/Documents/protein_design/ClashX/ProxyConfigHelper/Helper-Info.plist)
-- [`ClashX/General/Managers/PrivilegedHelperManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/PrivilegedHelperManager.swift)
-- [`ClashX/General/Managers/PrivilegedHelperManager+Legacy.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/PrivilegedHelperManager+Legacy.swift)
-- [`ClashX/General/Managers/SystemProxyManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/SystemProxyManager.swift)
+- [`ProxyConfigHelper/ProxyConfigHelper.m`](../../ProxyConfigHelper/ProxyConfigHelper.m)
+- [`ProxyConfigHelper/Helper-Info.plist`](../../ProxyConfigHelper/Helper-Info.plist)
+- [`ClashX/General/Managers/PrivilegedHelperManager.swift`](../../ClashX/General/Managers/PrivilegedHelperManager.swift)
+- [`ClashX/General/Managers/PrivilegedHelperManager+Legacy.swift`](../../ClashX/General/Managers/PrivilegedHelperManager+Legacy.swift)
+- [`ClashX/General/Managers/SystemProxyManager.swift`](../../ClashX/General/Managers/SystemProxyManager.swift)
 
 ### Current trust boundary
 
@@ -118,7 +118,7 @@ The current branch still contains several inherited identities and metadata that
 
 Examples visible in the current repository:
 
-- old ClashX URL-type names in [`ClashX/Info.plist`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Info.plist)
+- old ClashX URL-type names in [`ClashX/Info.plist`](../../ClashX/Info.plist)
 - old iCloud container `iCloud.com.west2online.ClashX`
 - old helper bundle identifier and Mach service name
 - old helper authorization strings
@@ -207,8 +207,8 @@ Sparkle and release updates need a clean SmartX security model. The current code
 
 Relevant files:
 
-- [`ClashX/General/Managers/AutoUpgardeManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/AutoUpgardeManager.swift)
-- [`ClashX/Info.plist`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Info.plist)
+- [`ClashX/General/Managers/AutoUpgardeManager.swift`](../../ClashX/General/Managers/AutoUpgardeManager.swift)
+- [`ClashX/Info.plist`](../../ClashX/Info.plist)
 
 Required future update-security rules:
 
@@ -359,4 +359,4 @@ SmartX is ready for a stable release only when:
 
 ## Source of Truth
 
-This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`LICENSE`](/Users/yyy/Documents/protein_design/ClashX/LICENSE), [`README.md`](/Users/yyy/Documents/protein_design/ClashX/README.md), [`ClashX/Info.plist`](/Users/yyy/Documents/protein_design/ClashX/ClashX/Info.plist), [`ClashX/AppDelegate.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/AppDelegate.swift), [`Podfile`](/Users/yyy/Documents/protein_design/ClashX/Podfile), [`ProxyConfigHelper/`](/Users/yyy/Documents/protein_design/ClashX/ProxyConfigHelper), [`ClashX/General/Managers/SystemProxyManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/SystemProxyManager.swift), [`ClashX/General/Managers/PrivilegedHelperManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/PrivilegedHelperManager.swift), and [`ClashX/General/Managers/AutoUpgardeManager.swift`](/Users/yyy/Documents/protein_design/ClashX/ClashX/General/Managers/AutoUpgardeManager.swift). Update this memory document when SmartX security, signing, or release policy changes.
+This document is descriptive, not normative. The current implementation is defined by the source files in this repository, especially [`LICENSE`](../../LICENSE), [`README.md`](../../README.md), [`ClashX/Info.plist`](../../ClashX/Info.plist), [`ClashX/AppDelegate.swift`](../../ClashX/AppDelegate.swift), [`Podfile`](../../Podfile), [`ProxyConfigHelper/`](../../ProxyConfigHelper), [`ClashX/General/Managers/SystemProxyManager.swift`](../../ClashX/General/Managers/SystemProxyManager.swift), [`ClashX/General/Managers/PrivilegedHelperManager.swift`](../../ClashX/General/Managers/PrivilegedHelperManager.swift), and [`ClashX/General/Managers/AutoUpgardeManager.swift`](../../ClashX/General/Managers/AutoUpgardeManager.swift). Update this memory document when SmartX security, signing, or release policy changes.

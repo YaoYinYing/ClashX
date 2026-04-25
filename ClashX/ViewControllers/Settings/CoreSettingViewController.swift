@@ -56,12 +56,13 @@ class CoreSettingViewController: NSViewController {
 
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 560, height: 460))
+        Logger.log("[Core Settings] loadView frame=\(NSStringFromRect(view.frame))", level: .debug)
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         title = NSLocalizedString("Core", comment: "")
-        Logger.log("[Core Settings] page loaded", level: .debug)
+        Logger.log("[Core Settings] viewDidLoad frame=\(NSStringFromRect(view.frame))", level: .debug)
         setupView()
         applyLoadingState()
         refreshAll()
@@ -69,6 +70,7 @@ class CoreSettingViewController: NSViewController {
 
     override func viewWillAppear() {
         super.viewWillAppear()
+        Logger.log("[Core Settings] viewWillAppear frame=\(NSStringFromRect(view.frame))", level: .debug)
         refreshAll()
     }
 
@@ -89,13 +91,22 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func setupView() {
+        let debugLabel = NSTextField(labelWithString: "CORE VIEW ATTACHED")
+        debugLabel.font = NSFont.boldSystemFont(ofSize: 24)
+        debugLabel.textColor = .systemRed
+        debugLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(debugLabel)
+
         view.addSubview(contentStack)
         contentStack.orientation = .vertical
         contentStack.spacing = 14
         contentStack.alignment = .leading
         contentStack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            contentStack.topAnchor.constraint(equalTo: view.topAnchor, constant: pageVerticalPadding),
+            debugLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
+            debugLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+
+            contentStack.topAnchor.constraint(equalTo: debugLabel.bottomAnchor, constant: pageVerticalPadding),
             contentStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: pageHorizontalPadding),
             contentStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -pageHorizontalPadding),
             contentStack.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -pageVerticalPadding)

@@ -92,7 +92,7 @@ class CoreSettingViewController: NSViewController {
         view.addSubview(contentStack)
         contentStack.orientation = .vertical
         contentStack.spacing = 14
-        contentStack.alignment = .leading
+        contentStack.alignment = .width
         contentStack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             contentStack.topAnchor.constraint(equalTo: view.topAnchor, constant: pageVerticalPadding),
@@ -103,7 +103,6 @@ class CoreSettingViewController: NSViewController {
 
         summaryLabel.stringValue = NSLocalizedString("Core settings are a status and control surface. Unsupported controller endpoints should degrade gracefully instead of leaving this page blank.", comment: "")
         contentStack.addArrangedSubview(summaryLabel)
-        summaryLabel.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
 
         contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Core Info", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("Mode", comment: ""), view: modeLabel),
@@ -184,19 +183,16 @@ class CoreSettingViewController: NSViewController {
     private func makeSection(title: String, rows: [NSView]) -> NSView {
         let stack = NSStackView()
         stack.orientation = .vertical
-        stack.alignment = .leading
+        stack.alignment = .width
         stack.spacing = 8
 
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stack.addArrangedSubview(titleLabel)
-        titleLabel.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         rows.forEach {
             stack.addArrangedSubview($0)
-            $0.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
 
-        stack.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
         return stack
     }
 
@@ -214,7 +210,6 @@ class CoreSettingViewController: NSViewController {
         row.spacing = 8
         row.distribution = .fill
         row.detachesHiddenViews = true
-        row.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
         view.setContentHuggingPriority(.defaultLow, for: .horizontal)
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return row

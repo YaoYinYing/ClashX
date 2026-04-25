@@ -11,11 +11,8 @@ import Cocoa
 class CoreSettingViewController: NSViewController {
     private let pageHorizontalPadding: CGFloat = 24
     private let pageVerticalPadding: CGFloat = 16
-    private let maxReadableContentWidth: CGFloat = 720
     private let rowTitleWidth: CGFloat = 120
 
-    private let scrollView = NSScrollView()
-    private let documentView = NSView()
     private let contentStack = NSStackView()
 
     private let summaryLabel = CoreSettingViewController.makeWrapLabel()
@@ -75,23 +72,10 @@ class CoreSettingViewController: NSViewController {
         refreshAll()
     }
 
-    override func viewDidLayout() {
-        super.viewDidLayout()
-        let documentWidth = max(scrollView.contentSize.width, 320)
-        let contentWidth = max(min(documentWidth - (pageHorizontalPadding * 2), maxReadableContentWidth), 280)
-
-        documentView.frame = NSRect(x: 0, y: 0, width: documentWidth, height: scrollView.contentSize.height)
-        contentStack.frame = NSRect(x: pageHorizontalPadding, y: pageVerticalPadding, width: contentWidth, height: 1)
-        contentStack.layoutSubtreeIfNeeded()
-        let contentHeight = contentStack.fittingSize.height
-        contentStack.frame = NSRect(x: pageHorizontalPadding, y: pageVerticalPadding, width: contentWidth, height: contentHeight)
-        documentView.frame = NSRect(x: 0, y: 0, width: documentWidth, height: max(contentHeight + (pageVerticalPadding * 2), scrollView.contentSize.height))
-    }
-
     private static func makeWrapLabel() -> NSTextField {
         let label = NSTextField(labelWithString: "")
         label.lineBreakMode = .byWordWrapping
-        label.maximumNumberOfLines = 0
+        label.maximumNumberOfLines = 2
         label.textColor = .secondaryLabelColor
         label.setContentHuggingPriority(.defaultLow, for: .horizontal)
         label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -105,18 +89,17 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func setupView() {
-        scrollView.drawsBackground = false
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
-        scrollView.autohidesScrollers = true
-        view.addSubview(scrollView)
-        scrollView.makeConstraintsToBindToSuperview()
-
-        scrollView.documentView = documentView
-        documentView.addSubview(contentStack)
+        view.addSubview(contentStack)
         contentStack.orientation = .vertical
-        contentStack.spacing = 16
+        contentStack.spacing = 14
         contentStack.alignment = .leading
+        contentStack.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            contentStack.topAnchor.constraint(equalTo: view.topAnchor, constant: pageVerticalPadding),
+            contentStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: pageHorizontalPadding),
+            contentStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -pageHorizontalPadding),
+            contentStack.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -pageVerticalPadding)
+        ])
 
         summaryLabel.stringValue = NSLocalizedString("Core settings are a status and control surface. Unsupported controller endpoints should degrade gracefully instead of leaving this page blank.", comment: "")
         contentStack.addArrangedSubview(summaryLabel)
@@ -172,9 +155,6 @@ class CoreSettingViewController: NSViewController {
         modelControls.orientation = .horizontal
         modelControls.spacing = 8
 
-        let modelURLControls = NSStackView(views: [modelUrlField, resetModelUrlButton])
-        modelURLControls.orientation = .horizontal
-        modelURLControls.spacing = 8
         modelUrlField.setContentHuggingPriority(.defaultLow, for: .horizontal)
 
         let modelButtons = NSStackView(views: [updateModelButton, openConfigFolderButton])
@@ -184,36 +164,28 @@ class CoreSettingViewController: NSViewController {
         contentStack.addArrangedSubview(makeSection(title: NSLocalizedString("Smart / LightGBM Status", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("Model.bin", comment: ""), view: modelStatusLabel),
             labeledRow(title: NSLocalizedString("Modified", comment: ""), view: modelModifiedLabel),
-            labeledRow(title: NSLocalizedString("Path", comment: ""), view: modelPathLabel),
             labeledRow(title: NSLocalizedString("Manual Update", comment: ""), view: modelEndpointLabel),
             labeledRow(title: NSLocalizedString("App Override", comment: ""), view: modelOverrideStatusLabel),
             modelControls,
-            labeledRow(title: NSLocalizedString("Model URL", comment: ""), view: modelURLControls),
             modelButtons
         ]))
+
+        controllerURLLabel.lineBreakMode = .byTruncatingMiddle
+        controllerURLLabel.maximumNumberOfLines = 1
+        buildLabel.lineBreakMode = .byTruncatingMiddle
+        buildLabel.maximumNumberOfLines = 1
+        configDetailLabel.lineBreakMode = .byTruncatingTail
+        tunDetailLabel.lineBreakMode = .byTruncatingTail
+        modelPathLabel.lineBreakMode = .byTruncatingMiddle
+        modelPathLabel.maximumNumberOfLines = 1
+        modelUrlField.placeholderString = NSLocalizedString("Custom model URL", comment: "")
     }
 
     private func makeSection(title: String, rows: [NSView]) -> NSView {
-        let container = NSView()
-        container.wantsLayer = true
-        container.layer?.cornerRadius = 8
-        container.layer?.borderWidth = 1
-        container.layer?.borderColor = NSColor.separatorColor.cgColor
-        container.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.35).cgColor
-
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 12
-        container.addSubview(stack)
-        stack.makeConstraints {
-            [
-                $0.topAnchor.constraint(equalTo: container.topAnchor, constant: 14),
-                $0.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
-                $0.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-                $0.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -14)
-            ]
-        }
+        stack.spacing = 8
 
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
@@ -224,8 +196,8 @@ class CoreSettingViewController: NSViewController {
             $0.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
 
-        container.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
-        return container
+        stack.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
+        return stack
     }
 
     private func labeledRow(title: String, view: NSView) -> NSView {
@@ -242,6 +214,7 @@ class CoreSettingViewController: NSViewController {
         row.spacing = 8
         row.distribution = .fill
         row.detachesHiddenViews = true
+        row.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
         view.setContentHuggingPriority(.defaultLow, for: .horizontal)
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return row

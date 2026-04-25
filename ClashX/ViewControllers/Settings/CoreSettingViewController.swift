@@ -10,8 +10,8 @@ import Cocoa
 
 class CoreSettingViewController: NSViewController {
     private let scrollView = NSScrollView()
-    private let documentContentView = NSView()
     private let contentStack = NSStackView()
+    private var didLogInitialLayoutStats = false
 
     private let summaryLabel = CoreSettingViewController.makeWrapLabel()
 
@@ -73,10 +73,17 @@ class CoreSettingViewController: NSViewController {
     override func viewDidLayout() {
         super.viewDidLayout()
         let contentWidth = max(scrollView.contentSize.width, 320)
-        documentContentView.frame = NSRect(x: 0, y: 0, width: contentWidth, height: documentContentView.frame.height)
-        documentContentView.layoutSubtreeIfNeeded()
-        let contentHeight = max(contentStack.fittingSize.height + 32, scrollView.contentSize.height)
-        documentContentView.frame = NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight)
+        contentStack.frame = NSRect(x: 0, y: 0, width: contentWidth, height: 1)
+        contentStack.layoutSubtreeIfNeeded()
+        let contentHeight = max(contentStack.fittingSize.height, scrollView.contentSize.height)
+        contentStack.frame = NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight)
+        if !didLogInitialLayoutStats {
+            didLogInitialLayoutStats = true
+            Logger.log("[Core Settings] layout stats: view=\(view.frame) content=\(contentStack.frame) arranged=\(contentStack.arrangedSubviews.count)", level: .debug)
+            for (index, subview) in contentStack.arrangedSubviews.enumerated() {
+                Logger.log("[Core Settings] arranged[\(index)] fittingHeight=\(subview.fittingSize.height)", level: .debug)
+            }
+        }
     }
 
     private static func makeWrapLabel() -> NSTextField {
@@ -99,20 +106,11 @@ class CoreSettingViewController: NSViewController {
         view.addSubview(scrollView)
         scrollView.makeConstraintsToBindToSuperview()
 
-        scrollView.documentView = documentContentView
-
-        documentContentView.addSubview(contentStack)
+        scrollView.documentView = contentStack
         contentStack.orientation = .vertical
         contentStack.spacing = 12
         contentStack.alignment = .leading
-        contentStack.makeConstraints {
-            [
-                $0.topAnchor.constraint(equalTo: documentContentView.topAnchor, constant: 16),
-                $0.leadingAnchor.constraint(equalTo: documentContentView.leadingAnchor, constant: 20),
-                $0.trailingAnchor.constraint(equalTo: documentContentView.trailingAnchor, constant: -20),
-                $0.bottomAnchor.constraint(equalTo: documentContentView.bottomAnchor, constant: -16)
-            ]
-        }
+        contentStack.edgeInsets = NSEdgeInsets(top: 16, left: 20, bottom: 16, right: 20)
 
         summaryLabel.stringValue = NSLocalizedString("Core settings are a status and control surface. Unsupported controller endpoints should degrade gracefully instead of leaving this page blank.", comment: "")
         contentStack.addArrangedSubview(summaryLabel)
@@ -205,7 +203,6 @@ class CoreSettingViewController: NSViewController {
         stack.addArrangedSubview(titleLabel)
         rows.forEach { stack.addArrangedSubview($0) }
 
-        stack.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
         return stack
     }
 

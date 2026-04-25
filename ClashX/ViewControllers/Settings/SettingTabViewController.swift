@@ -9,17 +9,30 @@
 import Cocoa
 
 class SettingTabViewController: NSTabViewController, NibLoadable {
+    private let coreViewController: CoreSettingViewController = {
+        let viewController = CoreSettingViewController()
+        _ = viewController.view
+        return viewController
+    }()
+
+    private lazy var coreTabViewItem: NSTabViewItem = {
+        let item = NSTabViewItem(viewController: coreViewController)
+        item.label = NSLocalizedString("Core", comment: "")
+        item.identifier = "Core"
+        if #available(macOS 11.0, *) {
+            item.image = NSImage(systemSymbolName: "cpu", accessibilityDescription: item.label)
+        }
+        return item
+    }()
+
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        ensureCoreTabInstalled()
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        if !tabViewItems.contains(where: { $0.identifier as? String == "Core" }) {
-            let item = NSTabViewItem(viewController: CoreSettingViewController())
-            item.label = NSLocalizedString("Core", comment: "")
-            item.identifier = "Core"
-            if #available(macOS 11.0, *) {
-                item.image = NSImage(systemSymbolName: "cpu", accessibilityDescription: item.label)
-            }
-            addTabViewItem(item)
-        }
+        ensureCoreTabInstalled()
         tabStyle = .toolbar
         if #unavailable(macOS 10.11) {
             tabStyle = .segmentedControlOnTop
@@ -28,5 +41,10 @@ class SettingTabViewController: NSTabViewController, NibLoadable {
             }
         }
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func ensureCoreTabInstalled() {
+        guard !tabViewItems.contains(where: { $0.identifier as? String == "Core" }) else { return }
+        addTabViewItem(coreTabViewItem)
     }
 }

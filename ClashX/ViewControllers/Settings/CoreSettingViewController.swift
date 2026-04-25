@@ -336,7 +336,8 @@ class CoreSettingViewController: NSViewController {
             case let .success(config):
                 self.applyConfig(config, source: "/configs", detail: NSLocalizedString("Loaded from the active controller.", comment: ""))
                 Logger.log("[Core Settings] config refresh succeeded from /configs", level: .debug)
-            case let .failure(message):
+            case let .failure(error):
+                let message = error.localizedDescription
                 Logger.log("[Core Settings] config refresh unavailable: \(message)", level: .warning)
                 if let fallbackConfig {
                     self.applyConfig(fallbackConfig,
@@ -352,7 +353,7 @@ class CoreSettingViewController: NSViewController {
         }
     }
 
-    private func requestRemoteConfig(completeHandler: @escaping (Result<ClashConfig, String>) -> Void) {
+    private func requestRemoteConfig(completeHandler: @escaping (Result<ClashConfig, Error>) -> Void) {
         AF.request(ConfigManager.apiUrl + "/configs", headers: ApiRequest.authHeader())
             .validate(statusCode: 200 ..< 300)
             .responseDecodable(of: ClashConfig.self) { response in
@@ -360,7 +361,7 @@ class CoreSettingViewController: NSViewController {
                 case let .success(config):
                     completeHandler(.success(config))
                 case let .failure(error):
-                    completeHandler(.failure(error.localizedDescription))
+                    completeHandler(.failure(error))
                 }
             }
     }

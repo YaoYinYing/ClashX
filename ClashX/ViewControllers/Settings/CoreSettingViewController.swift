@@ -11,7 +11,7 @@ import Cocoa
 class CoreSettingViewController: NSViewController {
     private enum TunCapability {
         case unsupported(String)
-        case supported(String)
+        case guardedUpdateAvailable(String)
     }
 
     private let pageHorizontalPadding: CGFloat = 24
@@ -419,7 +419,7 @@ class CoreSettingViewController: NSViewController {
         }
 
         tunNoteLabel.stringValue = tunCapabilityNoteText()
-        if case .supported = tunCapability, ConfigManager.shared.isRunning, tun != nil {
+        if case .guardedUpdateAvailable = tunCapability, ConfigManager.shared.isRunning, tun != nil {
             tunEnabledButton.isEnabled = true
         } else {
             tunEnabledButton.isEnabled = false
@@ -440,7 +440,7 @@ class CoreSettingViewController: NSViewController {
         }
 
         if source == "/configs" {
-            return .supported(NSLocalizedString("External controller TUN can be toggled only when the controller reports config state through /configs and accepts TUN updates reliably.", comment: ""))
+            return .guardedUpdateAvailable(NSLocalizedString("External controller exposes a tun section through /configs. SmartX can attempt a guarded TUN update, and will restore the previous UI state if the controller rejects it.", comment: ""))
         }
 
         return .unsupported(NSLocalizedString("External controller TUN support is not verified yet. SmartX keeps it disabled until the controller reports config state reliably.", comment: ""))
@@ -449,7 +449,7 @@ class CoreSettingViewController: NSViewController {
     private func tunCapabilityNoteText() -> String {
         let capabilityReason: String
         switch tunCapability {
-        case let .unsupported(reason), let .supported(reason):
+        case let .unsupported(reason), let .guardedUpdateAvailable(reason):
             capabilityReason = reason
         }
         return "\(capabilityReason)\n\(helperCapabilityNote)"
@@ -507,7 +507,7 @@ class CoreSettingViewController: NSViewController {
     }
 
     @objc private func actionToggleTun() {
-        guard case .supported = tunCapability, tunEnabledButton.isEnabled else {
+        guard case .guardedUpdateAvailable = tunCapability, tunEnabledButton.isEnabled else {
             tunEnabledButton.state = currentTunEnabled ? .on : .off
             let info = tunCapabilityNoteText()
             Logger.log("[Core Settings] TUN toggle blocked: \(info)", level: .warning)

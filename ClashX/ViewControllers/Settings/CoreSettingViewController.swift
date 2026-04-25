@@ -9,6 +9,11 @@ import Alamofire
 import Cocoa
 
 class CoreSettingViewController: NSViewController {
+    private enum TunCapability {
+        case unsupported(String)
+        case guardedUpdateAvailable(String)
+    }
+
     private let pageHorizontalPadding: CGFloat = 24
     private let pageVerticalPadding: CGFloat = 16
     private let rowTitleWidth: CGFloat = 120
@@ -49,9 +54,11 @@ class CoreSettingViewController: NSViewController {
 
     private var currentTunEnabled = false
     private var lightGBMEndpointSupported: Bool?
+    private var tunCapability: TunCapability = .unsupported("")
+    private var currentConfigSource: String?
 
-    private var tunSupportNote: String {
-        NSLocalizedString("TUN is shown from the current mihomo config. Full macOS TUN support may require additional privileges and is not completed in this branch.", comment: "")
+    private var helperCapabilityNote: String {
+        NSLocalizedString("ProxyConfigHelper manages macOS system proxy settings only. Installing the helper does not enable TUN support. TUN requires additional privileges beyond system proxy modification.", comment: "")
     }
 
     override func loadView() {
@@ -85,6 +92,7 @@ class CoreSettingViewController: NSViewController {
     private static func makeSecondaryWrapLabel() -> NSTextField {
         let label = makeWrapLabel()
         label.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        label.maximumNumberOfLines = 0
         return label
     }
 
@@ -238,6 +246,8 @@ class CoreSettingViewController: NSViewController {
         if Settings.isUsingEmbeddedCore {
             lightGBMEndpointSupported = nil
         }
+        currentConfigSource = nil
+        tunCapability = makeTunCapability(config: nil, source: nil)
         modeLabel.stringValue = NSLocalizedString("unknown", comment: "")
         versionLabel.stringValue = NSLocalizedString("unknown", comment: "")
         buildLabel.stringValue = NSLocalizedString("unknown", comment: "")
@@ -252,7 +262,7 @@ class CoreSettingViewController: NSViewController {
 
         tunStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
         tunDetailLabel.stringValue = NSLocalizedString("Current mihomo config has not been loaded yet.", comment: "")
-        tunNoteLabel.stringValue = tunSupportNote
+        tunNoteLabel.stringValue = tunCapabilityNoteText()
         tunEnabledButton.state = .off
         tunEnabledButton.isEnabled = false
 
@@ -378,6 +388,7 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func applyConfig(_ config: ClashConfig, source: String, detail: String) {
+        currentConfigSource = source
         configStatusLabel.stringValue = NSLocalizedString("loaded", comment: "")
         configSourceLabel.stringValue = source
         configDetailLabel.stringValue = "\(detail)  mode=\(config.mode.name)  http=\(config.usedHttpPort)  socks=\(config.usedSocksPort)"
@@ -386,6 +397,7 @@ class CoreSettingViewController: NSViewController {
 
     private func refreshTunInfo(using config: ClashConfig?, detail: String?) {
         let tun = config?.tun
+        tunCapability = makeTunCapability(config: config, source: currentConfigSource)
         currentTunEnabled = tun?.enable ?? false
         tunEnabledButton.state = currentTunEnabled ? .on : .off
 
@@ -406,8 +418,41 @@ class CoreSettingViewController: NSViewController {
             tunDetailLabel.stringValue = detail ?? NSLocalizedString("No tun section was found in the current mihomo config.", comment: "")
         }
 
-        tunNoteLabel.stringValue = tunSupportNote
-        tunEnabledButton.isEnabled = ConfigManager.shared.isRunning && tun != nil
+        tunNoteLabel.stringValue = tunCapabilityNoteText()
+        if case .guardedUpdateAvailable = tunCapability, ConfigManager.shared.isRunning, tun != nil {
+            tunEnabledButton.isEnabled = true
+        } else {
+            tunEnabledButton.isEnabled = false
+        }
+    }
+
+    private func makeTunCapability(config: ClashConfig?, source: String?) -> TunCapability {
+        if Settings.isUsingEmbeddedCore {
+            return .unsupported(NSLocalizedString("Embedded core TUN cannot be enabled from SmartX yet. It requires a privileged core startup path or another TUN-capable architecture.", comment: ""))
+        }
+
+        guard ConfigManager.shared.isRunning else {
+            return .unsupported(NSLocalizedString("The external controller is not connected, so SmartX cannot verify whether TUN updates are supported yet.", comment: ""))
+        }
+
+        guard config?.tun != nil else {
+            return .unsupported(NSLocalizedString("The current controller config does not expose a tun section, so SmartX keeps TUN disabled.", comment: ""))
+        }
+
+        if source == "/configs" {
+            return .guardedUpdateAvailable(NSLocalizedString("External controller exposes a tun section through /configs. SmartX can attempt a guarded TUN update, and will restore the previous UI state if the controller rejects it.", comment: ""))
+        }
+
+        return .unsupported(NSLocalizedString("External controller TUN support is not verified yet. SmartX keeps it disabled until the controller reports config state reliably.", comment: ""))
+    }
+
+    private func tunCapabilityNoteText() -> String {
+        let capabilityReason: String
+        switch tunCapability {
+        case let .unsupported(reason), let .guardedUpdateAvailable(reason):
+            capabilityReason = reason
+        }
+        return "\(capabilityReason)\n\(helperCapabilityNote)"
     }
 
     private func refreshLightGBMInfo() {
@@ -462,6 +507,14 @@ class CoreSettingViewController: NSViewController {
     }
 
     @objc private func actionToggleTun() {
+        guard case .guardedUpdateAvailable = tunCapability, tunEnabledButton.isEnabled else {
+            tunEnabledButton.state = currentTunEnabled ? .on : .off
+            let info = tunCapabilityNoteText()
+            Logger.log("[Core Settings] TUN toggle blocked: \(info)", level: .warning)
+            NSUserNotificationCenter.default.post(title: "TUN", info: info)
+            return
+        }
+
         let targetState = tunEnabledButton.state == .on
         ApiRequest.updateTun(enable: targetState) { [weak self] success, message in
             guard let self else { return }

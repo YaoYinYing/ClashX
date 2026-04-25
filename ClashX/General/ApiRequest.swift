@@ -245,6 +245,7 @@ class ApiRequest {
     }
 
     static func updateTun(enable: Bool, completeHandler: @escaping (Bool, ErrorString?) -> Void) {
+        let controllerMode = Settings.isUsingEmbeddedCore ? "embedded core" : "external controller"
         req("/configs",
             method: .patch,
             parameters: ["tun": ["enable": enable]],
@@ -255,9 +256,22 @@ class ApiRequest {
             }
 
             let data = try? response.result.get()
-            let message = data.map { JSON($0)["message"].string } ?? nil
+            let controllerMessage = data.flatMap { JSON($0)["message"].string?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            let statusCode = response.response?.statusCode
             let fallback = response.error?.localizedDescription ?? NSLocalizedString("Failed to update TUN settings.", comment: "")
-            completeHandler(false, message ?? fallback)
+
+            var messageParts = [String(format: NSLocalizedString("TUN update failed while using %@.", comment: ""), controllerMode)]
+            if let statusCode {
+                messageParts.append("HTTP \(statusCode).")
+            }
+            if let controllerMessage, !controllerMessage.isEmpty {
+                messageParts.append(controllerMessage)
+            } else {
+                messageParts.append(fallback)
+            }
+
+            Logger.log("[ApiRequest] updateTun failed enable=\(enable) mode=\(controllerMode) status=\(statusCode.map(String.init) ?? "none") controllerMessage=\(controllerMessage ?? "none")", level: .warning)
+            completeHandler(false, messageParts.joined(separator: " "))
         }
     }
 

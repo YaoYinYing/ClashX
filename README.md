@@ -150,7 +150,9 @@ Minimal verification for the helper requirement expansion:
 
 - Settings -> Core is currently a status and control surface. It should remain informative even when the core is stopped, `/configs` is unavailable, the helper is missing, or Smart / LightGBM endpoints are unsupported.
 - TUN status in this page reflects the current mihomo config only. It does **not** mean full macOS TUN routing support is finished in this branch.
-- Helper installation, helper signing migration, and full TUN routing are separate follow-up work.
+- `SMJobBless` failure in unsigned or ad-hoc local builds is expected, and the legacy helper install path may still succeed, but `ProxyConfigHelper` only manages system proxy operations.
+- Helper installation, helper signing migration, and full TUN routing are separate follow-up work. Installing the helper does **not** enable TUN support.
+- Full TUN support needs a separate architecture decision, such as a privileged mihomo daemon, a Network Extension, or an external controller/core managed outside SmartX.
 - Unsupported mihomo endpoints should degrade gracefully with visible status text instead of leaving the page blank.
 
 Manual test checklist for Settings -> Core:

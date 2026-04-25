@@ -128,6 +128,9 @@ class PrivilegedHelperManager {
         if SMJobBless(kSMDomainSystemLaunchd, PrivilegedHelperManager.machServiceName as CFString, authRef, &error) == false {
             let nsError = (error?.takeRetainedValue() as Error?) as NSError?
             Logger.log("SMJobBless failed for \(PrivilegedHelperManager.machServiceName): domain=\(nsError?.domain ?? "unknown") code=\(nsError?.code ?? -1) userInfo=\(nsError?.userInfo ?? [:])", level: .error)
+            #if DEBUG
+                Logger.log("Debug helper trust override only affects XPC after installation. Unsigned or ad-hoc local Debug builds may still fail SMJobBless because SMAuthorizedClients and SMPrivilegedExecutables still use legacy identity metadata; falling back to the legacy install path is expected until SmartX signing migration is done.", level: .warning)
+            #endif
             return .blessError(nsError?.code ?? -1)
         }
 

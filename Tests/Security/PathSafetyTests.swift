@@ -1,5 +1,5 @@
-import XCTest
 @testable import ClashX
+import XCTest
 
 final class PathSafetyTests: XCTestCase {
     func testValidConfigNames() throws {

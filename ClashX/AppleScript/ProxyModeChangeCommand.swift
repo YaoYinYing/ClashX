@@ -15,7 +15,7 @@ import Foundation
               let mode = ClashProxyMode(rawValue: directParameter)
         else {
             scriptErrorNumber = -1
-            scriptErrorString = "please enter a valid parameter. rule, global or direct"
+            scriptErrorString = "please enter a valid parameter. rule, global, direct or script"
             return nil
         }
         guard let delegate = NSApplication.shared.delegate as? AppDelegate else {
@@ -23,20 +23,7 @@ import Foundation
             scriptErrorString = "can't get application, try again later"
             return nil
         }
-        let menuItem: NSMenuItem
-        switch mode {
-        case .rule:
-            menuItem = delegate.proxyModeRuleMenuItem
-        case .global:
-            menuItem = delegate.proxyModeGlobalMenuItem
-        case .direct:
-            menuItem = delegate.proxyModeDirectMenuItem
-        #if PRO_VERSION
-            case .script:
-                menuItem = delegate.proxyModeScriptMenuItem
-        #endif
-        }
-        delegate.actionSwitchProxyMode(menuItem)
+        delegate.switchProxyMode(mode: mode)
         return nil
     }
 }

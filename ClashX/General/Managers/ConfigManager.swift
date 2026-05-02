@@ -11,6 +11,68 @@ import Foundation
 import RxCocoa
 import RxSwift
 
+enum ConfigProfileKind: String {
+    case local = "Local"
+    case remote = "Remote"
+}
+
+struct ConfigProfileDescriptor {
+    let name: String
+    let kind: ConfigProfileKind
+    let isActive: Bool
+    let localURL: URL?
+    let remoteURL: String?
+    let lastUpdate: Date?
+    let fileExists: Bool
+    let validationSummary: String?
+    let lastFetchSummary: String?
+
+    var menuTitle: String {
+        "\(name) [\(kind.rawValue)]"
+    }
+
+    var sourceSummary: String {
+        if let remoteURL, kind == .remote {
+            return remoteURL
+        }
+        return localURL?.path ?? NSLocalizedString("Unavailable", comment: "")
+    }
+
+    var updateSummary: String {
+        guard kind == .remote else {
+            return NSLocalizedString("Manual local profile", comment: "")
+        }
+        guard let lastUpdate else {
+            return NSLocalizedString("Never updated", comment: "")
+        }
+        return DateFormatter.localizedString(from: lastUpdate, dateStyle: .short, timeStyle: .short)
+    }
+
+    var statusSummary: String {
+        let activity = isActive ? NSLocalizedString("Active", comment: "") : NSLocalizedString("Inactive", comment: "")
+        let fileStatus = fileExists ? NSLocalizedString("cache present", comment: "") : NSLocalizedString("cache missing", comment: "")
+        if kind == .remote {
+            let validation = validationSummary ?? NSLocalizedString("Validation unknown", comment: "")
+            return "\(activity), \(fileStatus), \(validation)"
+        }
+        return "\(activity), \(fileStatus)"
+    }
+
+    var toolTip: String {
+        var lines = [
+            "\(NSLocalizedString("Profile Type", comment: "")): \(kind.rawValue)",
+            "\(NSLocalizedString("Profile Name", comment: "")): \(name)",
+            "\(NSLocalizedString("Source", comment: "")): \(sourceSummary)",
+            "\(NSLocalizedString("Status", comment: "")): \(statusSummary)",
+            "\(NSLocalizedString("Last Update", comment: "")): \(updateSummary)"
+        ]
+        if let lastFetchSummary, kind == .remote {
+            lines.append("\(NSLocalizedString("Last Fetch", comment: "")): \(lastFetchSummary)")
+        }
+        return lines.joined(separator: "\n")
+    }
+}
+
 class ConfigManager {
     static let shared = ConfigManager()
     private let disposeBag = DisposeBag()
@@ -207,5 +269,63 @@ extension ConfigManager {
         } catch {
             return ["config"]
         }
+    }
+
+    static func getProfileDescriptors(complete: @escaping ([ConfigProfileDescriptor]) -> Void) {
+        if ICloudManager.shared.useiCloud.value {
+            ICloudManager.shared.getUrl { url in
+                guard let url else {
+                    complete(buildProfileDescriptors(configNames: [], baseDirectoryURL: nil))
+                    return
+                }
+                ICloudManager.shared.getConfigFilesList { list in
+                    complete(buildProfileDescriptors(configNames: list, baseDirectoryURL: url))
+                }
+            }
+            return
+        }
+
+        complete(buildProfileDescriptors(configNames: getConfigFilesList(), baseDirectoryURL: Paths.configDirectoryURL))
+    }
+
+    static func currentProfileDescriptor() -> ConfigProfileDescriptor {
+        let baseDirectoryURL = ICloudManager.shared.useiCloud.value ? nil : Paths.configDirectoryURL
+        return buildProfileDescriptor(name: selectConfigName, baseDirectoryURL: baseDirectoryURL)
+    }
+
+    static func profileDescriptor(name: String) -> ConfigProfileDescriptor {
+        let baseDirectoryURL = ICloudManager.shared.useiCloud.value ? nil : Paths.configDirectoryURL
+        return buildProfileDescriptor(name: name, baseDirectoryURL: baseDirectoryURL)
+    }
+
+    private static func buildProfileDescriptors(configNames: [String], baseDirectoryURL: URL?) -> [ConfigProfileDescriptor] {
+        configNames
+            .map { buildProfileDescriptor(name: $0, baseDirectoryURL: baseDirectoryURL) }
+            .sorted {
+                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+    }
+
+    private static func buildProfileDescriptor(name: String, baseDirectoryURL: URL?) -> ConfigProfileDescriptor {
+        let remoteConfig = RemoteConfigManager.shared.configs.first { $0.name == name }
+        let localURL = resolvedConfigURL(name: name, baseDirectoryURL: baseDirectoryURL)
+        let fileExists = localURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
+        return ConfigProfileDescriptor(name: name,
+                                       kind: remoteConfig == nil ? .local : .remote,
+                                       isActive: selectConfigName == name,
+                                       localURL: localURL,
+                                       remoteURL: remoteConfig?.url,
+                                       lastUpdate: remoteConfig?.updateTime,
+                                       fileExists: fileExists,
+                                       validationSummary: remoteConfig?.validationSummary(),
+                                       lastFetchSummary: remoteConfig?.updateResultSummary())
+    }
+
+    private static func resolvedConfigURL(name: String, baseDirectoryURL: URL?) -> URL? {
+        guard let baseDirectoryURL,
+              let safeName = try? SafeConfigName(name) else {
+            return nil
+        }
+        return try? Paths.configFileURL(for: safeName, in: baseDirectoryURL)
     }
 }

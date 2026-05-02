@@ -75,6 +75,33 @@ enum Paths {
         return configDirectoryURL.appendingPathComponent("smart_weight_data.csv").path
     }
 
+    static var smartXArtifactsDirectoryURL: URL {
+        configDirectoryURL
+            .appendingPathComponent(".smartx", isDirectory: true)
+            .appendingPathComponent("profiles", isDirectory: true)
+            .standardizedFileURL
+    }
+
+    static var generatedEffectiveConfigURL: URL {
+        smartXArtifactsDirectoryURL.appendingPathComponent("generated-effective.yaml", isDirectory: false)
+            .standardizedFileURL
+    }
+
+    static var lastKnownGoodConfigURL: URL {
+        smartXArtifactsDirectoryURL.appendingPathComponent("last-known-good.yaml", isDirectory: false)
+            .standardizedFileURL
+    }
+
+    static var generatedEffectiveMetadataURL: URL {
+        smartXArtifactsDirectoryURL.appendingPathComponent("generated-effective.json", isDirectory: false)
+            .standardizedFileURL
+    }
+
+    static var lastKnownGoodMetadataURL: URL {
+        smartXArtifactsDirectoryURL.appendingPathComponent("last-known-good.json", isDirectory: false)
+            .standardizedFileURL
+    }
+
     static func configFileName(for name: SafeConfigName) -> String {
         return "\(name.value).yaml"
     }

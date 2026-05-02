@@ -16,7 +16,7 @@ class ConnectionsReq: WebSocketDelegate {
     let decoder = JSONDecoder()
     var onSnapshotUpdate: ((ClashConnectionSnapShot) -> Void)?
     init() {
-        if let url = URL(string: ConfigManager.apiUrl.appending("/connections")) {
+        if let url = URL(string: ConfigManager.webSocketUrl.appending("/connections")) {
             socket = WebSocket(url: url)
         }
         for header in ApiRequest.authHeader() {

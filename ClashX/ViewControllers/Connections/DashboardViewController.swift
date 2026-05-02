@@ -12,6 +12,7 @@ enum DashboardContentType: Int, CaseIterable {
     case allConnection
     case activeConnection
     case smart
+    case diagnostics
 
     var title: String {
         switch self {
@@ -21,6 +22,8 @@ enum DashboardContentType: Int, CaseIterable {
             return NSLocalizedString("Active Connections", comment: "")
         case .smart:
             return NSLocalizedString("Smart", comment: "")
+        case .diagnostics:
+            return NSLocalizedString("Diagnostics", comment: "")
         }
     }
 }
@@ -33,6 +36,7 @@ class DashboardViewController: NSViewController {
 
     private let connectionVC = ConnectionsViewController()
     private let smartVC = SmartDashboardViewController()
+    private let diagnosticsVC = DiagnosticsDashboardViewController()
 
     private var currentContentVC: DashboardSubViewControllerProtocol?
 
@@ -81,8 +85,10 @@ class DashboardViewController: NSViewController {
             connectionVC.setActiveMode(enable: true)
         case .smart:
             setCurrentVC(smartVC)
+        case .diagnostics:
+            setCurrentVC(diagnosticsVC)
         }
-        if contentType != .smart {
+        if contentType != .smart, contentType != .diagnostics {
             setCurrentVC(connectionVC)
         }
     }

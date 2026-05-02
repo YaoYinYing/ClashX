@@ -161,6 +161,7 @@ The current branch already exposes some Smart-related diagnostics, but only part
 - model path
 - limited endpoint-supported vs unsupported status for LightGBM update
 - connection metadata fields `smartTarget` and `smartBlock`
+- structured connection-detail text that surfaces Smart target in the route summary and Smart block in the diagnostics summary
 
 ### Future diagnostics to add
 

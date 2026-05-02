@@ -130,6 +130,9 @@ class ConnectionDetailInfoView: NSView {
         viewModel.$applicationPath.weakAssign(to: \.toolTip, on: processNameLabel).store(in: &cancelable)
         viewModel.$applicationPath.weakAssign(to: \.toolTip, on: logoView).store(in: &cancelable)
         viewModel.$remoteHost.weakAssign(to: \.stringValue, on: hostLabel).store(in: &cancelable)
+        viewModel.$remoteHost.sink { [weak self] text in
+            self?.hostLabel.toolTip = text
+        }.store(in: &cancelable)
         viewModel.$processImage.weakAssign(to: \.image, on: logoView).store(in: &cancelable)
         viewModel.$entry.weakAssign(to: \.stringValue, on: generalView.entryLabel).store(in: &cancelable)
         viewModel.$networkType.weakAssign(to: \.stringValue, on: generalView.networkTypeLabel).store(in: &cancelable)
@@ -144,11 +147,26 @@ class ConnectionDetailInfoView: NSView {
         viewModel.$currentDownload.weakAssign(to: \.stringValue, on: generalView.currentDownloadLabel).store(in: &cancelable)
 
         viewModel.$rule.weakAssign(to: \.stringValue, on: generalView.ruleLabel).store(in: &cancelable)
+        viewModel.$rule.sink { [weak self] text in
+            self?.generalView.ruleLabel.toolTip = text
+        }.store(in: &cancelable)
         viewModel.$chain.weakAssign(to: \.stringValue, on: generalView.proxyChainLabel).store(in: &cancelable)
+        viewModel.$chain.sink { [weak self] text in
+            self?.generalView.proxyChainLabel.toolTip = text
+        }.store(in: &cancelable)
         viewModel.$sourceIP.weakAssign(to: \.stringValue, on: generalView.sourceIpLabel).store(in: &cancelable)
+        viewModel.$sourceIP.sink { [weak self] text in
+            self?.generalView.sourceIpLabel.toolTip = text
+        }.store(in: &cancelable)
 
         viewModel.$destination.weakAssign(to: \.stringValue, on: generalView.destLabel).store(in: &cancelable)
+        viewModel.$destination.sink { [weak self] text in
+            self?.generalView.destLabel.toolTip = text
+        }.store(in: &cancelable)
         viewModel.$otherText.weakAssign(to: \.string, on: generalView.otherTextView).store(in: &cancelable)
+        viewModel.$otherText.sink { [weak self] text in
+            self?.generalView.otherTextView.toolTip = text
+        }.store(in: &cancelable)
 
         viewModel.$showCloseButton.map { !$0 }.weakAssign(to: \.isHidden, on: closeButton).store(in: &cancelable)
         viewModel.$showSmartBlockButton.map { !$0 }.weakAssign(to: \.isHidden, on: smartBlockButton).store(in: &cancelable)

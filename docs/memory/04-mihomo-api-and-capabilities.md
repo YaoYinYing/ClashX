@@ -81,8 +81,9 @@ Current stream APIs include:
 
 - `/logs` through WebSocket in `requestLog`
 - `/traffic` through WebSocket in `requestTrafficInfo`
+- `/memory` through polling in `requestMemorySnapshot`
 
-`ApiRequest` implements retry timers and reconnect backoff for both streams. There is no current `/memory` integration even though mihomo documents it alongside `/logs` and `/traffic`.
+`ApiRequest` implements retry timers and reconnect backoff for the log and traffic streams. Memory diagnostics currently use a simpler polling helper and diagnostics panel rather than a persistent stream.
 
 ### TUN updates
 
@@ -143,21 +144,21 @@ That means SmartX already has two version concepts:
 
 Using the current mihomo API docs as a conceptual reference, SmartX still has clear gaps relative to a mature modern client.
 
-### `/memory` websocket or polling
+### `/memory` websocket vs polling
 
-The official API groups `/memory` with `/logs` and `/traffic`, but `ApiRequest.swift` currently implements only the latter two. SmartX therefore has no direct memory telemetry for the embedded core or an external controller.
+SmartX now exposes `/memory` through `requestMemorySnapshot(...)` and the Diagnostics dashboard, but it still does not implement a dedicated memory WebSocket or a historical memory timeline.
 
 ### `/cache/dns/flush`
 
-SmartX implements `/cache/fakeip/flush` in `resetFakeIpCache`, but not `/cache/dns/flush`. That means cache maintenance coverage is asymmetric even though mihomo exposes both.
+SmartX now exposes `/cache/dns/flush` through `resetDNSCache(...)` alongside the existing fake-IP cache flush path.
 
 ### `/configs/geo`
 
-There is no client method for `POST /configs/geo`. GEO database refresh still appears to be handled outside the general controller API layer.
+SmartX now exposes `POST /configs/geo` through `reloadGeoDatabase(...)`. This is currently used as a diagnostics/recovery action rather than as part of a larger GEO asset-management workflow.
 
 ### `/restart`
 
-There is no API helper for `POST /restart`, so SmartX cannot explicitly request a core restart through the controller layer.
+SmartX now exposes `POST /restart` through `restartCore(...)`.
 
 ### `/upgrade`
 
@@ -165,22 +166,22 @@ There is no general `POST /upgrade` helper for kernel updates. SmartX currently 
 
 ### `/upgrade/ui`
 
-There is no `POST /upgrade/ui` helper even though the branch still depends on downloaded dashboard assets.
+SmartX now exposes `POST /upgrade/ui` through `updateDashboardAssets(...)`.
 
 ### `/upgrade/geo`
 
-There is no `POST /upgrade/geo` helper.
+SmartX now exposes `POST /upgrade/geo` through `updateGeoAssets(...)`.
 
 ### `/group` and `/group/:name`
 
-SmartX uses Smart-specific `/group/weights` endpoints, but it does not expose the documented generic policy-group API surface:
+SmartX now exposes the documented generic policy-group API surface in addition to Smart-specific `/group/weights` endpoints:
 
 - `GET /group`
 - `GET /group/:name`
 - `DELETE /group/:name`
 - `GET /group/:name/delay`
 
-This matters because future cores may support richer group metadata even when they do not support Smart weights.
+The current wrappers return raw JSON diagnostics rather than dedicated Swift models, but they are enough to probe capability and inspect controller responses.
 
 ### `/providers/rules` without `PRO_VERSION` gating
 
@@ -188,11 +189,11 @@ Rule-provider discovery still depends on the historical `PRO_VERSION` macro in `
 
 ### `/dns/query`
 
-There is no DNS query helper for `GET /dns/query`. That limits future DNS diagnostics and makes DNS support harder to surface in the UI.
+SmartX now exposes `GET /dns/query` through `requestDNSQuery(...)` and surfaces it in the Diagnostics dashboard.
 
 ### `/debug/gc`
 
-There is no API helper for `PUT /debug/gc`.
+SmartX now exposes `PUT /debug/gc` through `runDebugGC(...)`.
 
 ### `/debug/pprof` browser helpers
 
@@ -200,11 +201,11 @@ There is no helper or developer tooling path for opening or explaining `/debug/p
 
 ## Capability Map Design
 
-The current client mostly assumes features from branch history, compile-time macros, or individual HTTP status codes. That is already becoming brittle. SmartX should move toward an explicit capability map that describes what the active core can do, independent of whether it is embedded or external.
+The current client mostly assumes features from branch history, compile-time macros, or individual HTTP status codes. That is already becoming brittle. SmartX has now started this transition with a lightweight capability cache, but the broader probe architecture is still incomplete.
 
 ### CoreCapability
 
-`CoreCapability` should be a Swift-side enumeration or identifier set that represents user-facing features rather than raw endpoints. Example categories:
+[`ClashX/General/Managers/CoreCapability.swift`](../../ClashX/General/Managers/CoreCapability.swift) now provides a first-pass `CoreCapability` enum that represents user-facing features rather than raw endpoints. Current categories include:
 
 - configRead
 - configPatch
@@ -224,7 +225,6 @@ The current client mostly assumes features from branch history, compile-time mac
 - dnsQuery
 - geoUpdate
 - uiUpgrade
-- coreUpgrade
 - restart
 - debugGC
 - debugPprof
@@ -233,7 +233,7 @@ The important point is that a capability should mean “this client can safely e
 
 ### CoreEndpointAvailability
 
-`CoreEndpointAvailability` should capture how confident SmartX is about each endpoint. Suggested states:
+`CoreEndpointAvailability` is now implemented and currently uses these states:
 
 - available
 - unavailable
@@ -259,22 +259,23 @@ The key rule is that probes should be safe. They should not mutate user state un
 
 ### CapabilityCache
 
-`CapabilityCache` should hold the probe results for the active controller identity. Cache keys should likely include:
+`CapabilityCache` now holds in-memory probe results for the active controller identity. The current identity includes:
 
 - controller URL
 - auth secret identity, or a secret-hash surrogate
 - embedded vs external mode
-- core version string
-- optional branch/commit metadata when available
+- controller running state
 
-The cache should expire when:
+The current cache resets when the active identity changes. It does not yet key on core version or branch metadata, so this is still an intermediate implementation.
+
+The cache should eventually expire when:
 
 - controller mode changes
 - version changes
 - authentication changes
 - a probe returns a contradictory result
 
-This avoids repeatedly probing unsupported endpoints while still allowing capability changes after a core switch or upgrade.
+This already avoids repeatedly probing obviously unsupported or unauthorized endpoints in the UI, while still allowing capability changes after a controller switch.
 
 ## Why Capability Detection Matters
 
@@ -297,7 +298,13 @@ Because of that, UI decisions should be driven by detected capabilities instead 
 - “presence of a `tun` block means TUN is operational”
 - “Smart endpoints exist everywhere”
 
-The current `CoreSettingViewController` already moves in this direction for TUN and LightGBM. The next step is to generalize that pattern across the API layer.
+The current implementation now uses capability state in:
+
+- [`ClashX/ViewControllers/Settings/CoreSettingViewController.swift`](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift) for config, TUN, and LightGBM endpoint state
+- [`ClashX/ViewControllers/Connections/SmartDashboardViewController.swift`](../../ClashX/ViewControllers/Connections/SmartDashboardViewController.swift) for Smart weights, cache flush, and LightGBM controls
+- [`ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift`](../../ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift) for `/memory`, `/dns/query`, restart, GEO, and debug actions
+
+The next step is to turn this from an opportunistic cache into a fuller probe layer across the API surface.
 
 ## PRO_VERSION Cleanup
 
@@ -305,11 +312,11 @@ Legacy `PRO_VERSION` assumptions are now one of the biggest architectural mismat
 
 ### Rule providers
 
-In [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift), `/providers/rules` is still requested only under `#if PRO_VERSION`. That made sense in the older ClashX product split, but it conflicts with modern mihomo behavior where rule providers are normal controller features.
+[`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift) no longer hides `/providers/rules` behind `#if PRO_VERSION`. That specific mismatch has been removed.
 
 ### Script assumptions
 
-[`ClashX/Models/ClashConfig.swift`](../../ClashX/Models/ClashConfig.swift) still puts `.script` mode behind `#if PRO_VERSION`. That is another example where product-tier history may not match current core capability. If the active core reports script mode through `/configs`, the client should decide from capability and response data, not compile-time branding.
+[`ClashX/Models/ClashConfig.swift`](../../ClashX/Models/ClashConfig.swift) now decodes `.script` mode without `#if PRO_VERSION`, and [`ClashX/AppleScript/ProxyModeChangeCommand.swift`](../../ClashX/AppleScript/ProxyModeChangeCommand.swift) switches modes by value instead of relying on a legacy script-only menu item. That removes one more product-tier assumption, even though the broader capability-map work is still pending.
 
 ### Practical cleanup direction
 

@@ -110,7 +110,7 @@ class StructedLogReq: WebSocketDelegate {
 
     let onLogUpdate = PassthroughSubject<StructedLog, Never>()
     init(level: ClashLogLevel = .warning) {
-        if let url = URL(string: ConfigManager.apiUrl.appending("/logs?format=structured&level=\(logLevel.rawValue)")) {
+        if let url = URL(string: ConfigManager.webSocketUrl.appending("/logs?format=structured&level=\(logLevel.rawValue)")) {
             socket = WebSocket(url: url)
         }
         for header in ApiRequest.authHeader() {

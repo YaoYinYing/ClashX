@@ -30,6 +30,16 @@ Config switching is filename-based, not profile-based.
 
 The config list is derived by enumerating `.yaml` files under the config directory, not by reading structured profile metadata.
 
+There is now a small metadata bridge in [`ClashX/General/Managers/ConfigManager.swift`](../../ClashX/General/Managers/ConfigManager.swift) that derives `ConfigProfileDescriptor` values for the current selectable configs. That layer can currently label configs as `Local` or `Remote`, surface source URL vs local cache path, and report last-update state for remote-backed configs.
+
+For remote-backed configs, the branch now also persists and surfaces:
+
+- validation status from the last attempted update
+- last fetch result summary
+- last error message when a fetch or validation step fails
+
+Important limitation: this is only an inventory/provenance layer. The active selection is still `selectConfigName`, and reload still happens by resolving that name back to a concrete YAML file.
+
 ### Remote config update
 
 [`ClashX/General/Managers/RemoteConfigManager.swift`](../../ClashX/General/Managers/RemoteConfigManager.swift) implements remote config updates by:
@@ -48,6 +58,14 @@ Important current behaviors:
 - remote config updates preserve the last valid file on failure
 - auto-update is timer-based through `NSBackgroundActivityScheduler`
 
+The current UI now exposes some of that provenance more explicitly:
+
+- the config switch menu shows `Local` vs `Remote` badges derived from the inventory layer
+- remote-config table rows expose cache-file, validation, and last-fetch metadata through tooltips
+- the diagnostics report includes the active profile type, source, validation, cache/update status, and last-fetch summary
+
+That is useful progress for observability, but it is not yet the profile-window redesign described later in this document.
+
 ### Direct config reload
 
 [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift) and [`ClashX/AppDelegate.swift`](../../ClashX/AppDelegate.swift) still implement reload as “take a file path and reload it into the active core.”
@@ -58,6 +76,14 @@ Current reload paths:
 - external-controller mode uses `PUT /configs` with a file path
 
 That means the application’s config lifecycle is still centered on mutable files and direct reload operations rather than a profile graph or generated effective config.
+
+There is now a limited artifact layer around that reload path:
+
+- after a successful reload, SmartX copies the selected source YAML into `~/.config/clash/.smartx/profiles/generated-effective.yaml`
+- the same successful reload also refreshes `~/.config/clash/.smartx/profiles/last-known-good.yaml`
+- matching JSON metadata files record profile name, profile kind, source path, remote URL, generation time, and controller mode
+
+This is still not a true merge/script/generated pipeline, because the “generated effective config” is currently just a deterministic copy of the exact file that was successfully loaded. It is nevertheless a meaningful step toward inspectability and rollback.
 
 ### URL scheme import and update
 
@@ -162,6 +188,8 @@ This is the rollback anchor when:
 - a merge layer becomes invalid
 - a script transform fails
 - the generated config parses but core reload fails
+
+The branch now has a first-pass version of this idea for the legacy filename-based flow. On successful reload, the loaded config file is copied to a last-known-good artifact path with metadata. The Diagnostics dashboard can now explicitly restore that artifact into the running core. This is still not automatic rollback, and it is still not driven by a layered effective-profile pipeline, but it does provide a concrete rollback anchor plus a manual restore path.
 
 ## Merge Profile Design
 
@@ -339,6 +367,13 @@ The key UI goal is to make it obvious what is:
 - local override
 - generated output
 - active profile pipeline
+
+The branch now partially satisfies the first part of that goal for existing UI surfaces by surfacing `Local` vs `Remote` provenance in menu items, diagnostics output, and remote-config table tooltips. It still does not provide:
+
+- first-class Merge or Script profile rows
+- active pipeline visualization
+- generated effective config inspection beyond diagnostics-path visibility and diagnostics-driven restore
+- reorder or enable/disable controls for layered profiles
 
 That is a better fit for modern mihomo clients than the current mix of menu-based file switching and a separate remote-config editor.
 

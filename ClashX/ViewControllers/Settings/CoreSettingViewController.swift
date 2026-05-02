@@ -44,6 +44,9 @@ class CoreSettingViewController: NSViewController {
     private let tunDetailLabel = CoreSettingViewController.makeWrapLabel()
     private let tunNoteLabel = CoreSettingViewController.makeSecondaryWrapLabel()
     private let tunEnabledButton = NSButton(checkboxWithTitle: NSLocalizedString("Enable TUN", comment: ""), target: nil, action: nil)
+    private let dnsStatusLabel = CoreSettingViewController.makeWrapLabel()
+    private let dnsDetailLabel = CoreSettingViewController.makeWrapLabel()
+    private let dnsNoteLabel = CoreSettingViewController.makeSecondaryWrapLabel()
 
     private let modelStatusLabel = CoreSettingViewController.makeWrapLabel()
     private let modelModifiedLabel = CoreSettingViewController.makeWrapLabel()
@@ -59,7 +62,6 @@ class CoreSettingViewController: NSViewController {
     private let openConfigFolderButton = NSButton(title: NSLocalizedString("Open Config Folder", comment: ""), target: nil, action: nil)
 
     private var currentTunEnabled = false
-    private var lightGBMEndpointSupported: Bool?
     private var tunCapability: TunCapability = .unsupported("")
     private var currentConfigSource: String?
 
@@ -169,6 +171,12 @@ class CoreSettingViewController: NSViewController {
             tunEnabledButton
         ]))
 
+        addFullWidthArrangedSubview(makeSection(title: NSLocalizedString("DNS Status", comment: ""), rows: [
+            labeledRow(title: NSLocalizedString("State", comment: ""), view: dnsStatusLabel),
+            labeledRow(title: NSLocalizedString("Details", comment: ""), view: dnsDetailLabel),
+            dnsNoteLabel
+        ]))
+
         modelOverrideButton.target = self
         modelOverrideButton.action = #selector(actionModelSettingsChanged)
         modelAutoUpdateButton.target = self
@@ -221,6 +229,7 @@ class CoreSettingViewController: NSViewController {
         buildLabel.maximumNumberOfLines = 1
         configDetailLabel.lineBreakMode = .byTruncatingTail
         tunDetailLabel.lineBreakMode = .byTruncatingTail
+        dnsDetailLabel.lineBreakMode = .byTruncatingTail
         modelPathLabel.lineBreakMode = .byTruncatingMiddle
         modelPathLabel.maximumNumberOfLines = 1
         modelUrlField.placeholderString = NSLocalizedString("Custom model URL", comment: "")
@@ -281,9 +290,6 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func applyLoadingState() {
-        if Settings.isUsingEmbeddedCore {
-            lightGBMEndpointSupported = nil
-        }
         currentConfigSource = nil
         tunCapability = makeTunCapability(config: nil, source: nil)
         modeLabel.stringValue = NSLocalizedString("unknown", comment: "")
@@ -303,6 +309,9 @@ class CoreSettingViewController: NSViewController {
         tunNoteLabel.stringValue = tunCapabilityNoteText()
         tunEnabledButton.state = .off
         tunEnabledButton.isEnabled = false
+        dnsStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
+        dnsDetailLabel.stringValue = NSLocalizedString("Current mihomo DNS config has not been loaded yet.", comment: "")
+        dnsNoteLabel.stringValue = dnsCapabilityNoteText(config: nil)
 
         modelStatusLabel.stringValue = NSLocalizedString("missing or not checked", comment: "")
         modelModifiedLabel.stringValue = NSLocalizedString("not checked", comment: "")
@@ -393,10 +402,14 @@ class CoreSettingViewController: NSViewController {
             guard let self else { return }
             switch result {
             case let .success(config):
+                CapabilityCache.shared.set(.configRead, availability: .available, message: NSLocalizedString("Loaded config state from /configs.", comment: ""))
+                CapabilityCache.shared.set(.tunConfigRead, availability: config.tun == nil ? .unsupported : .available)
                 self.applyConfig(config, source: "/configs", detail: NSLocalizedString("Loaded from the active controller.", comment: ""))
                 Logger.log("[Core Settings] config refresh succeeded from /configs", level: .debug)
             case let .failure(error):
                 let message = error.localizedDescription
+                CapabilityCache.shared.markUnavailable(.configRead, message: message)
+                CapabilityCache.shared.markUnavailable(.tunConfigRead, message: message)
                 Logger.log("[Core Settings] config refresh unavailable: \(message)", level: .warning)
                 if let fallbackConfig {
                     self.applyConfig(fallbackConfig,
@@ -431,6 +444,7 @@ class CoreSettingViewController: NSViewController {
         configSourceLabel.stringValue = source
         configDetailLabel.stringValue = "\(detail)  mode=\(config.mode.name)  http=\(config.usedHttpPort)  socks=\(config.usedSocksPort)"
         refreshTunInfo(using: config, detail: nil)
+        refreshDNSInfo(using: config)
     }
 
     private func refreshTunInfo(using config: ClashConfig?, detail: String?) {
@@ -446,6 +460,14 @@ class CoreSettingViewController: NSViewController {
                 tun.device.map { "device=\($0)" },
                 tun.stack.map { "stack=\($0)" },
                 tun.autoRoute.map { "auto-route=\($0 ? "true" : "false")" },
+                tun.autoDetectInterface.map { "auto-detect-interface=\($0 ? "true" : "false")" },
+                tun.strictRoute.map { "strict-route=\($0 ? "true" : "false")" },
+                tun.mtu.map { "mtu=\($0)" },
+                tun.udpTimeout.map { "udp-timeout=\($0)" },
+                joinedListLabel(title: "include-interface", values: tun.includeInterface),
+                joinedListLabel(title: "exclude-interface", values: tun.excludeInterface),
+                joinedListLabel(title: "route-address", values: tun.routeAddress),
+                joinedListLabel(title: "route-exclude-address", values: tun.routeExcludeAddress),
                 dnsHijack.isEmpty ? nil : "dns-hijack=\(dnsHijack)"
             ].compactMap { $0 }
             tunDetailLabel.stringValue = detailParts.isEmpty
@@ -462,6 +484,40 @@ class CoreSettingViewController: NSViewController {
         } else {
             tunEnabledButton.isEnabled = false
         }
+    }
+
+    private func refreshDNSInfo(using config: ClashConfig?) {
+        guard let dns = config?.dns else {
+            dnsStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
+            dnsDetailLabel.stringValue = NSLocalizedString("No DNS section was found in the current mihomo config.", comment: "")
+            dnsNoteLabel.stringValue = dnsCapabilityNoteText(config: config)
+            return
+        }
+
+        let enabledState = dns.enable ?? true
+        let stateParts = [
+            enabledState ? NSLocalizedString("enabled in config", comment: "") : NSLocalizedString("disabled in config", comment: ""),
+            dns.enhancedMode.map { "mode=\($0)" }
+        ].compactMap { $0 }
+        dnsStatusLabel.stringValue = stateParts.joined(separator: ", ")
+
+        let detailParts = [
+            dns.listen.map { "listen=\($0)" },
+            dns.fakeIPRange.map { "fake-ip-range=\($0)" },
+            dns.fakeIPFilterMode.map { "fake-ip-filter-mode=\($0)" },
+            joinedListLabel(title: "nameserver", values: dns.nameserver),
+            joinedListLabel(title: "fallback", values: dns.fallback),
+            joinedListLabel(title: "direct-nameserver", values: dns.directNameserver),
+            dns.respectRules.map { "respect-rules=\($0 ? "true" : "false")" },
+            dns.useHosts.map { "use-hosts=\($0 ? "true" : "false")" },
+            dns.useSystemHosts.map { "use-system-hosts=\($0 ? "true" : "false")" },
+            dns.preferH3.map { "prefer-h3=\($0 ? "true" : "false")" },
+            joinedListLabel(title: "fake-ip-filter", values: dns.fakeIPFilter)
+        ].compactMap { $0 }
+        dnsDetailLabel.stringValue = detailParts.isEmpty
+            ? NSLocalizedString("DNS section is present but no extra fields were reported.", comment: "")
+            : detailParts.joined(separator: "  ")
+        dnsNoteLabel.stringValue = dnsCapabilityNoteText(config: config)
     }
 
     private func makeTunCapability(config: ClashConfig?, source: String?) -> TunCapability {
@@ -490,7 +546,69 @@ class CoreSettingViewController: NSViewController {
         case let .unsupported(reason), let .guardedUpdateAvailable(reason):
             capabilityReason = reason
         }
-        return "\(capabilityReason)\n\(helperCapabilityNote)"
+        let warnings = validateTunWarnings(from: ConfigManager.shared.currentConfig)
+        let warningText = warnings.isEmpty ? NSLocalizedString("No additional TUN validation warnings were detected.", comment: "") : warnings.joined(separator: "\n")
+        return "\(capabilityReason)\n\(helperCapabilityNote)\n\(warningText)"
+    }
+
+    private func dnsCapabilityNoteText(config: ClashConfig?) -> String {
+        let base = NSLocalizedString("SmartX currently exposes DNS as structured read-only status plus diagnostics helpers. This page does not yet provide a full DNS editor or embedded-core DNS override path.", comment: "")
+        let warnings = validateDNSWarnings(from: config)
+        let warningText = warnings.isEmpty ? NSLocalizedString("No additional DNS validation warnings were detected.", comment: "") : warnings.joined(separator: "\n")
+        return "\(base)\n\(warningText)"
+    }
+
+    private func validateTunWarnings(from config: ClashConfig?) -> [String] {
+        guard let tun = config?.tun else { return [] }
+        var warnings = [String]()
+        if let include = tun.includeInterface, !include.isEmpty,
+           let exclude = tun.excludeInterface, !exclude.isEmpty {
+            warnings.append(NSLocalizedString("Warning: include-interface and exclude-interface are both set. SmartX should treat that as expert-only until a structured editor exists.", comment: ""))
+        }
+        if tun.strictRoute == true {
+            warnings.append(NSLocalizedString("Warning: strict-route can break local macOS workflows and needs careful testing.", comment: ""))
+        }
+        if let mtu = tun.mtu, !(576 ... 9000).contains(mtu) {
+            warnings.append(String(format: NSLocalizedString("Warning: mtu=%d is outside the usual safe range SmartX expects.", comment: ""), mtu))
+        }
+        if let udpTimeout = tun.udpTimeout, udpTimeout <= 0 {
+            warnings.append(NSLocalizedString("Warning: udp-timeout should be a positive integer.", comment: ""))
+        }
+        if !invalidCIDRs(in: tun.routeAddress).isEmpty || !invalidCIDRs(in: tun.routeExcludeAddress).isEmpty {
+            warnings.append(NSLocalizedString("Warning: one or more route-address or route-exclude-address entries do not look like valid CIDR values.", comment: ""))
+        }
+        return warnings
+    }
+
+    private func validateDNSWarnings(from config: ClashConfig?) -> [String] {
+        guard let dns = config?.dns else { return [] }
+        var warnings = [String]()
+        if dns.respectRules == true, (dns.directNameserver ?? []).isEmpty, (dns.nameserver ?? []).isEmpty {
+            warnings.append(NSLocalizedString("Warning: respect-rules is enabled without an obvious configured resolver path.", comment: ""))
+        }
+        if dns.enhancedMode?.caseInsensitiveCompare("fake-ip") == .orderedSame {
+            warnings.append(NSLocalizedString("Warning: fake-ip mode can break software that expects direct real-IP DNS answers.", comment: ""))
+        }
+        if dns.preferH3 == true, dns.respectRules == true {
+            warnings.append(NSLocalizedString("Warning: prefer-h3 with respect-rules may need extra resolver testing.", comment: ""))
+        }
+        return warnings
+    }
+
+    private func invalidCIDRs(in values: [String]?) -> [String] {
+        (values ?? []).filter { !looksLikeCIDR($0) }
+    }
+
+    private func looksLikeCIDR(_ value: String) -> Bool {
+        let parts = value.split(separator: "/")
+        guard parts.count == 2 else { return false }
+        guard let prefix = Int(parts[1]), (0 ... 128).contains(prefix) else { return false }
+        return !parts[0].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func joinedListLabel(title: String, values: [String]?) -> String? {
+        guard let values, !values.isEmpty else { return nil }
+        return "\(title)=\(values.joined(separator: ", "))"
     }
 
     private func refreshLightGBMInfo() {
@@ -511,14 +629,17 @@ class CoreSettingViewController: NSViewController {
         }
         modelPathLabel.stringValue = path
 
-        let manualUpdateSupported = Settings.isUsingEmbeddedCore || lightGBMEndpointSupported != false
+        let lightGBMAvailability = CapabilityCache.shared.availability(for: .lightGBMUpgrade)
+        let manualUpdateSupported = Settings.isUsingEmbeddedCore || (lightGBMAvailability != .unsupported && lightGBMAvailability != .unauthorized)
         if !ConfigManager.shared.isRunning {
             modelEndpointLabel.stringValue = NSLocalizedString("unavailable while the core is stopped", comment: "")
         } else if Settings.isUsingEmbeddedCore {
             modelEndpointLabel.stringValue = NSLocalizedString("appears available for the embedded core", comment: "")
-        } else if lightGBMEndpointSupported == false {
+        } else if lightGBMAvailability == .unsupported {
             modelEndpointLabel.stringValue = NSLocalizedString("unsupported by the current controller", comment: "")
-        } else if lightGBMEndpointSupported == true {
+        } else if lightGBMAvailability == .unauthorized {
+            modelEndpointLabel.stringValue = NSLocalizedString("controller authentication rejected this endpoint", comment: "")
+        } else if lightGBMAvailability == .available || lightGBMAvailability == .degraded {
             modelEndpointLabel.stringValue = NSLocalizedString("appears available", comment: "")
         } else {
             modelEndpointLabel.stringValue = NSLocalizedString("not checked yet", comment: "")
@@ -582,15 +703,16 @@ class CoreSettingViewController: NSViewController {
             guard let self else { return }
             switch result {
             case .success:
-                self.lightGBMEndpointSupported = true
+                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .available)
                 Logger.log("[Core Settings] LightGBM model update requested", level: .debug)
             case .unsupported:
-                self.lightGBMEndpointSupported = false
+                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unsupported)
                 Logger.log("[Core Settings] LightGBM endpoint unsupported", level: .warning)
+            case let .unauthorized(message):
+                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unauthorized, message: message)
+                Logger.log("[Core Settings] LightGBM endpoint unauthorized", level: .warning)
             case .failed:
-                if self.lightGBMEndpointSupported == nil {
-                    self.lightGBMEndpointSupported = true
-                }
+                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .degraded, message: NSLocalizedString("LightGBM model update failed.", comment: ""))
                 Logger.log("[Core Settings] LightGBM model update failed", level: .warning)
             }
             self.refreshLightGBMInfo()

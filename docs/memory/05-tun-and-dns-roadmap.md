@@ -12,12 +12,25 @@ The current Swift-side TUN model lives in [`ClashX/Models/ClashConfig.swift`](..
 - `dns-hijack`
 - `auto-route`
 
+The branch now also decodes several additional TUN fields into the Swift model for read-only inspection:
+
+- `auto-detect-interface`
+- `strict-route`
+- `mtu`
+- `udp-timeout`
+- `route-address`
+- `route-exclude-address`
+- `include-interface`
+- `exclude-interface`
+
 The current Core settings UI in [`ClashX/ViewControllers/Settings/CoreSettingViewController.swift`](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift) can:
 
 - show whether a `tun` section exists
 - show limited details for `device`, `stack`, `auto-route`, and `dns-hijack`
 - show whether `tun.enable` is currently true or false in config
 - attempt a guarded `tun.enable` patch only for an external controller that exposed `tun` through `/configs`
+- show additional read-only routing/interface/TUN values when present
+- emit validation warnings for contradictory include/exclude interface use, suspicious MTU or UDP timeout values, invalid-looking CIDRs, and `strict-route`
 
 The current update path in [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift) is intentionally narrow:
 
@@ -137,9 +150,26 @@ What exists today is mostly indirect:
 
 - the core reads `~/.config/clash/config.yaml` in [`ClashX/goClash/main.go`](../../ClashX/goClash/main.go)
 - SmartX can inspect the general config and patch a limited TUN value through `/configs`
-- `ApiRequest.swift` does not currently expose DNS-specific API helpers such as `/dns/query` or `/cache/dns/flush`
+- [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift) now exposes DNS diagnostics helpers such as `/dns/query` and `/cache/dns/flush`
+- [`ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift`](../../ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift) surfaces those helpers for manual diagnostics
 
-So DNS in the current branch is still primarily config-file-driven, not client-setting-driven.
+The branch now also has a first-pass structured read-only DNS model in [`ClashX/Models/ClashConfig.swift`](../../ClashX/Models/ClashConfig.swift), and the Core settings page surfaces it as status text plus validation notes. The currently decoded fields include:
+
+- `enable`
+- `enhanced-mode`
+- `fake-ip-range`
+- `fake-ip-filter`
+- `fake-ip-filter-mode`
+- `nameserver`
+- `fallback`
+- `direct-nameserver`
+- `respect-rules`
+- `use-hosts`
+- `use-system-hosts`
+- `prefer-h3`
+- `listen`
+
+So DNS in the current branch is still primarily config-file-driven, not client-setting-driven, but it is no longer completely opaque in the UI.
 
 ## Future DNS Model
 

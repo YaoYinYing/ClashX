@@ -162,6 +162,10 @@ class SmartDashboardViewController: NSViewController {
 
     private func reloadData() {
         updateModelStatus()
+        let smartWeightAvailability = CapabilityCache.shared.availability(for: .smartWeights)
+        if smartWeightAvailability == .unsupported || smartWeightAvailability == .unauthorized {
+            smartEndpointsAvailable = false
+        }
         guard smartEndpointsAvailable else {
             updateRows(groups: [], weights: [:])
             return
@@ -176,6 +180,9 @@ class SmartDashboardViewController: NSViewController {
                 guard let self else { return }
                 if response == nil, !groups.isEmpty {
                     self.smartEndpointsAvailable = false
+                    CapabilityCache.shared.set(.smartWeights, availability: .degraded, message: NSLocalizedString("Smart weights could not be loaded from the active controller.", comment: ""))
+                } else if response != nil {
+                    CapabilityCache.shared.set(.smartWeights, availability: .available)
                 }
                 self.updateRows(groups: groups, weights: response?.weights ?? [:])
             }
@@ -201,8 +208,17 @@ class SmartDashboardViewController: NSViewController {
         tableView.reloadData()
         emptyLabel.isHidden = !rows.isEmpty
         scrollView.isHidden = rows.isEmpty
-        flushAllButton.isEnabled = smartEndpointsAvailable && !groups.isEmpty
-        flushConfigButton.isEnabled = smartEndpointsAvailable && !groups.isEmpty
+        let smartCacheBlocked = {
+            let availability = CapabilityCache.shared.availability(for: .smartCacheFlush)
+            return availability == .unsupported || availability == .unauthorized
+        }()
+        flushAllButton.isEnabled = smartEndpointsAvailable && !groups.isEmpty && !smartCacheBlocked
+        flushConfigButton.isEnabled = smartEndpointsAvailable && !groups.isEmpty && !smartCacheBlocked
+
+        let lightGBMAvailability = CapabilityCache.shared.availability(for: .lightGBMUpgrade)
+        if lightGBMAvailability == .unsupported || lightGBMAvailability == .unauthorized {
+            lightGBMEndpointAvailable = false
+        }
         updateModelButton.isEnabled = lightGBMEndpointAvailable && ConfigManager.shared.isRunning
     }
 
@@ -216,18 +232,21 @@ class SmartDashboardViewController: NSViewController {
     }
 
     @objc private func actionRefresh() {
-        smartEndpointsAvailable = true
+        let smartWeightAvailability = CapabilityCache.shared.availability(for: .smartWeights)
+        smartEndpointsAvailable = smartWeightAvailability != .unsupported && smartWeightAvailability != .unauthorized
         reloadData()
     }
 
     @objc private func actionFlushAll() {
-        ApiRequest.flushSmartCache { [weak self] _ in
+        ApiRequest.flushSmartCache { [weak self] success in
+            CapabilityCache.shared.set(.smartCacheFlush, availability: success ? .available : .degraded)
             self?.reloadData()
         }
     }
 
     @objc private func actionFlushConfig() {
-        ApiRequest.flushSmartCache(configName: ConfigManager.selectConfigName) { [weak self] _ in
+        ApiRequest.flushSmartCache(configName: ConfigManager.selectConfigName) { [weak self] success in
+            CapabilityCache.shared.set(.smartCacheFlush, availability: success ? .available : .degraded)
             self?.reloadData()
         }
     }
@@ -239,11 +258,18 @@ class SmartDashboardViewController: NSViewController {
             guard let self else { return }
             switch result {
             case .success:
+                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .available)
                 Logger.log("[Smart] LightGBM model update requested")
             case .unsupported:
                 self.lightGBMEndpointAvailable = false
+                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unsupported)
                 Logger.log("[Smart] LightGBM model update is not supported by this core", level: .warning)
+            case let .unauthorized(message):
+                self.lightGBMEndpointAvailable = false
+                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unauthorized, message: message)
+                Logger.log("[Smart] LightGBM model update was rejected by controller authentication", level: .warning)
             case .failed:
+                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .degraded, message: NSLocalizedString("LightGBM model update failed.", comment: ""))
                 Logger.log("[Smart] LightGBM model update failed", level: .warning)
             }
             self.reloadData()

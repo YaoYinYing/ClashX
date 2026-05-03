@@ -8,12 +8,27 @@
 
 import Cocoa
 
+enum RemoteConfigValidationState: String, Codable {
+    case unknown
+    case valid
+    case invalid
+}
+
+enum RemoteConfigUpdateState: String, Codable {
+    case never
+    case succeeded
+    case failed
+}
+
 class RemoteConfigModel: Codable {
     var url: String
     var name: String
     var updateTime: Date?
     var updating = false
     var isPlaceHolderName = false
+    var validationState: RemoteConfigValidationState = .unknown
+    var lastUpdateState: RemoteConfigUpdateState = .never
+    var lastUpdateMessage: String?
 
     init(url: String, name: String, updateTime: Date? = nil) {
         self.url = url
@@ -22,7 +37,19 @@ class RemoteConfigModel: Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case url, name, updateTime
+        case url, name, updateTime, validationState, lastUpdateState, lastUpdateMessage
+    }
+
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        url = try container.decode(String.self, forKey: .url)
+        name = try container.decode(String.self, forKey: .name)
+        updateTime = try container.decodeIfPresent(Date.self, forKey: .updateTime)
+        validationState = try container.decodeIfPresent(RemoteConfigValidationState.self, forKey: .validationState) ?? .unknown
+        lastUpdateState = try container.decodeIfPresent(RemoteConfigUpdateState.self, forKey: .lastUpdateState) ?? .never
+        lastUpdateMessage = try container.decodeIfPresent(String.self, forKey: .lastUpdateMessage)
+        updating = false
+        isPlaceHolderName = false
     }
 
     func displayingTimeString() -> String {
@@ -33,6 +60,38 @@ class RemoteConfigModel: Codable {
             return dateFormater.string(from: date)
         }
         return NSLocalizedString("Never", comment: "")
+    }
+
+    func validationSummary() -> String {
+        switch validationState {
+        case .unknown:
+            return NSLocalizedString("Validation unknown", comment: "")
+        case .valid:
+            return NSLocalizedString("Validation passed", comment: "")
+        case .invalid:
+            return NSLocalizedString("Validation failed", comment: "")
+        }
+    }
+
+    func updateResultSummary() -> String {
+        if updating {
+            return NSLocalizedString("Update in progress", comment: "")
+        }
+
+        switch lastUpdateState {
+        case .never:
+            return NSLocalizedString("No update result recorded yet", comment: "")
+        case .succeeded:
+            if let lastUpdateMessage, !lastUpdateMessage.isEmpty {
+                return lastUpdateMessage
+            }
+            return NSLocalizedString("Last update succeeded", comment: "")
+        case .failed:
+            if let lastUpdateMessage, !lastUpdateMessage.isEmpty {
+                return lastUpdateMessage
+            }
+            return NSLocalizedString("Last update failed", comment: "")
+        }
     }
 }
 

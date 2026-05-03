@@ -1,321 +1,257 @@
 # SmartX Roadmap
 
-## Product Thesis
+## Current Direction
 
-SmartX should become a native macOS mihomo/smart client derived from ClashX. It should preserve ClashX's lightweight menu-bar experience while modernizing core management, profile processing, TUN/DNS configuration, diagnostics, and smart routing visibility.
+SmartX modernization should not keep expanding as a pile of preview panels, singleton patches, and loosely-related controller wrappers. The current branch proved that capability-aware diagnostics, profile artifacts, TUN/DNS visibility, and Smart evidence are valuable, but it also exposed patchwork architecture debt that should be paid down before more UI is added.
 
-The branch should keep what ClashX was good at:
+SmartX now has three immediate priorities:
 
-- fast native menu-bar interaction
-- low-overhead local-client behavior
-- AppKit-native configuration and status surfaces
+1. Stabilize and merge the current diagnostics/capability preview branch.
+2. Pay down patchwork architecture debt before adding more UI.
+3. Build a sequence of focused PRs that turn prototypes into architecture.
 
-And it should replace what is now too dated for a modern mihomo client:
+This roadmap reflects that review outcome. It deliberately reorders work around architectural seams instead of around feature demos.
 
-- implicit feature assumptions
-- file-name-based config switching
-- incomplete TUN/DNS modeling
-- inherited release identity confusion
-- weak Smart observability
+## Roadmap Rules
 
-## Phase 0: Stabilize Current Branch
+- Current source code remains the source of truth.
+- Memory docs must be updated when implementation changes.
+- New work should avoid adding more large view controllers, more global-singleton coupling, more direct string-concatenated endpoints, or more UI that claims architecture that does not exist yet.
+- Testing is not a late phase. Every PR should include tests where practical, or a documented test gap when direct coverage is blocked.
 
-Scope:
-
-- make current smartx build reproducible
-- fix README identity
-- document current architecture
-- remove inherited release confusion
-- verify embedded smart core build
-- add CI build checks
-
-This phase is about branch credibility, not new product features. Before SmartX can move forward cleanly, it needs a stable baseline that developers can build, inspect, and explain.
-
-Key outputs:
-
-- current branch behavior is documented
-- build flow is explicit
-- embedded Smart core wiring is understood
-- README stops implying old ClashX/ClashX Pro release identity
-- CI proves at least unsigned build health
-
-## Phase 1: Build and Signing Foundation
+## Phase 0: Stabilize Current PR and Merge
 
 Scope:
 
-- CI build
-- deterministic resources
-- version metadata
-- signing identity cleanup
-- privileged helper migration
-- unsigned debug artifact
-- signed preview release later
+- close review findings from the current diagnostics/capability preview branch
+- keep terminology honest
+- remove misleading product wording
+- verify build and basic harness coverage
+- keep docs aligned with what the branch actually implements
 
-This phase turns SmartX from “branch that can sometimes build” into “branch with a coherent release foundation.”
-
-Priority items:
-
-- pin or vendor dashboard and resource downloads
-- make version metadata deterministic
-- align app/helper identifiers
-- migrate helper signing requirements away from inherited legacy identity
-- keep unsigned Debug artifacts for testing
-- defer signed public preview until the identity and notarization path is real
-
-## Phase 2: Mihomo API Layer
-
-Scope:
-
-- capability map
-- endpoint probing
-- remove PRO_VERSION assumptions
-- implement missing API wrappers where needed
-- normalize error handling
-
-This phase should make SmartX feature detection runtime-driven instead of compile-time-history-driven.
-
-Important outcomes:
-
-- no more treating `PRO_VERSION` as the real capability boundary
-- unsupported endpoints disable only the affected UI
-- embedded, external stable, external alpha, and Smart cores can coexist under one client model
-- errors distinguish unavailable controller, auth failure, unsupported feature, and transient failure
-
-## Phase 3: TUN and DNS
-
-Scope:
-
-- expand TUN model
-- add DNS model
-- platform-aware UI
-- validation
-- safe defaults
-- rollback on failure
-
-This phase should stop treating TUN and DNS as mostly opaque config text.
-
-Expected direction:
-
-- model the main macOS-relevant TUN fields
-- add a structured DNS model
-- keep unsupported Linux/Android-specific controls out of normal macOS UI
-- validate dangerous combinations before writing config
-- preserve previous state and roll back on failed updates
-
-This phase still does not automatically mean “full macOS TUN solved.” If a privileged TUN architecture is still missing, the UI must stay honest.
-
-## Phase 4: Profile Pipeline
-
-Scope:
-
-- remote profiles
-- local profiles
-- merge overlays
-- script overlays
-- generated effective config
-- dry-run validation
-- rollback
-- last-known-good snapshot
-
-This phase replaces the old ClashX file-switching model with a modern profile system.
-
-Core principle:
-
-- base profiles stay clean
-- overlays carry local modifications
-- generated effective config is reproducible
-- failed transforms do not destroy the last working state
-
-This is one of the highest-leverage product upgrades because it touches both user experience and operational safety.
-
-## Phase 5: Smart Features
-
-Scope:
-
-- LightGBM model lifecycle
-- smart weights UI
-- smart cache controls
-- smart connection diagnostics
-- smart decision explanation
-
-This phase turns current Smart support from “feature hooks exist” into “Smart routing is inspectable and trustworthy.”
-
-Expected direction:
-
-- explicit Smart capability detection
-- reliable model status and update workflow
-- better Smart dashboard surfaces
-- Smart connection detail that explains target, block reason, weights, and decision context
-
-## Phase 6: Diagnostics
-
-Scope:
-
-- memory
-- logs
-- connections
-- DNS query
-- pprof helpers
-- issue report bundle
-- redaction policy
-
-This phase turns SmartX from a menu-bar client with some debug surfaces into an actually supportable product.
+This phase is about merge quality, not feature expansion. The current branch should land only after its claims, labels, safeguards, and review gaps are cleaned up.
 
 Expected outputs:
 
-- memory telemetry
-- better log viewer
-- richer connection detail
-- DNS tools
-- safe developer diagnostics for debug endpoints
-- sanitized issue-report bundles
+- branch compiles cleanly in documented flows
+- diagnostics actions have appropriate confirmation and safety wording
+- artifact/report terminology does not overclaim generated config or sanitization
+- SmartX identity text is consistent in new user-facing surfaces
+- review findings are captured in memory docs
 
-## Phase 7: Public Preview
+Testing gate:
+
+- every fix PR in this phase should run the relevant build and lightweight harness checks
+
+## Phase 1: Endpoint Builder and API Result Unification
 
 Scope:
 
-- security review
-- release notes
-- source archive
-- known limitations
-- update channel decision
-- migration guide from ClashX or ClashX Pro
+- introduce a shared controller endpoint builder
+- stop spreading raw URL string concatenation across request layers
+- unify endpoint result types and error mapping
+- split large endpoint dumping-ground behavior out of `ApiRequest`
 
-This phase is the first point where SmartX should be treated as something externally consumable beyond source-build testers.
+This phase creates the foundation for future controller work. SmartX should not keep accreting one-off wrappers with inconsistent result semantics.
 
-The preview should be explicit about:
+Expected outputs:
 
-- what works
-- what is experimental
-- what is still missing
-- how SmartX differs from older ClashX expectations
+- controller HTTP and WebSocket URL construction is centralized
+- endpoint wrappers return consistent result families
+- unauthorized, unsupported, unavailable, and transient failures are separated cleanly
+- `ApiRequest` stops being the only place every endpoint lands
 
-## Non-Goals
+Testing gate:
 
-SmartX should not:
+- endpoint building and result mapping should have direct utility-level coverage where practical
 
-- claim to be official ClashX Pro
-- provide proxy services
-- silently inherit upstream release/update identities
+## Phase 2: Capability Probing System
 
-It also should not confuse:
+Scope:
 
-- helper installation with full TUN support
-- unsigned CI artifacts with release readiness
-- embedded Smart support with universal capability across all controllers
+- move from cache-only capability state to active capability probing
+- define probe lifecycle and invalidation rules
+- tie capabilities to controller identity and endpoint availability
+- make capability state explainable to UI and diagnostics layers
 
-## Priority Matrix
+The current capability cache is a useful start, but it is not yet a real probing system. This phase turns preview capability handling into architecture.
 
-### Must fix before any release
+Expected outputs:
 
-- signing identity cleanup for app and helper
-- notarization path
-- helper authorization-string cleanup
-- deterministic resource policy
-- version metadata generation
-- removal or replacement of inherited update feeds
-- clear README/release identity
+- capability probing is explicit and reusable
+- capability state can distinguish unknown, supported, unauthorized, degraded, and unsupported states
+- UI does not guess capability from compile-time history or ad hoc failures
 
-### Should fix before public preview
+Testing gate:
 
-- capability map and endpoint probing
-- better TUN/DNS honesty and validation
-- profile pipeline design at least partially implemented or explicitly deferred
-- Smart endpoint diagnostics
-- sanitized issue-report path
-- privacy review for AppCenter/crash reporting and logs
+- probe-state transitions and invalidation rules should be covered with focused tests where feasible
 
-### Can wait for stable release
+## Phase 3: Redaction and Diagnostics Safety
 
-- full profile overlay system
-- full DNS editing model
-- complete Smart decision explanation
-- mature memory and pprof tooling
-- polished migration tooling from older ClashX installs
+Scope:
 
-### Experimental
+- formalize SmartX redaction rules
+- apply redaction consistently across copied reports, exported bundles, logs, paths, and controller metadata
+- keep diagnostics terminology honest about what is and is not sanitized
+- review sensitive-path and secret exposure risks before adding more export surfaces
 
-- optional sidecar/external core mode beyond current controller support
-- advanced script profile transformation
-- deep Smart explanation UI
-- expert-only diagnostics and debug tools
+This phase makes diagnostics safe enough to grow without quietly leaking subscription URLs, tokens, credentials, controller secrets, or unnecessary local path detail.
 
-## Definition of Done
+Expected outputs:
 
-### Phase 0 done
+- shared redaction utilities are the norm, not ad hoc formatting
+- diagnostics exports and copied reports use the same safety rules
+- sanitization claims match actual redaction behavior
 
-Done when:
+Testing gate:
 
-- the branch builds reproducibly in documented local and CI flows
-- the current architecture is documented
-- README no longer implies old release identity
-- unsigned CI build checks exist and pass consistently
+- redaction fixtures or utility tests should be added whenever the rules change
 
-### Phase 1 done
+## Phase 4: Diagnostics Dashboard Decomposition
 
-Done when:
+Scope:
 
-- build resources are deterministic
-- version metadata is reliable
-- app/helper signing identities are coherent
-- helper migration no longer depends on legacy release identity
-- unsigned Debug artifacts are consistently produced
-- signed public preview prerequisites are documented and mostly in place
+- split `DiagnosticsDashboardViewController` into smaller modules
+- separate UI composition from API execution, formatting, recovery, and maintenance actions
+- create testable utility and view-model seams
+- keep diagnostics growth from turning into another monolithic controller
 
-### Phase 2 done
+The current dashboard proved product value, but it is already too large. This phase is about structural cleanup before adding more panels.
 
-Done when:
+Expected outputs:
 
-- runtime capability detection exists
-- unsupported endpoints no longer break unrelated UI
-- `PRO_VERSION` no longer gates normal mihomo features incorrectly
-- API-layer error handling is normalized
+- dashboard responsibilities are decomposed into smaller components
+- formatting and maintenance logic are reusable outside the main controller
+- diagnostics growth no longer depends on one giant view controller
 
-### Phase 3 done
+Testing gate:
 
-Done when:
+- extracted logic should be tested directly rather than only through controller wiring
 
-- TUN and DNS have structured models
-- platform-aware validation exists
-- unsupported settings are hidden or clearly labeled
-- failed writes roll back safely
+## Phase 5: Profile Artifact Semantics and Override Groundwork
 
-### Phase 4 done
+Scope:
 
-Done when:
+- make profile artifact semantics explicit
+- keep “successful reload artifact” and similar labels honest
+- define what artifacts do and do not represent
+- prepare the groundwork for a SmartX-managed override layer without pretending it already exists
 
-- SmartX has explicit profile types
-- effective config generation is deterministic
-- dry-run validation exists
-- rollback to last-known-good effective config works
+The current artifact flow is still source-copy based. This phase should clean up semantics before SmartX tries to layer more behavior on top.
 
-### Phase 5 done
+Expected outputs:
 
-Done when:
+- artifact metadata clearly states whether content is a source copy, generated output, or override-aware material
+- last-known-good semantics are documented and consistent
+- groundwork exists for later persisted overrides without mutating terminology prematurely
 
-- LightGBM model lifecycle is visible and manageable
-- Smart weights and Smart cache tooling are reliable
-- Smart connection detail explains decision state enough to debug real traffic
+Testing gate:
 
-### Phase 6 done
+- artifact metadata and restore semantics should be covered with focused utility-level checks where practical
 
-Done when:
+## Phase 6: SmartX Managed Override Layer
 
-- logs, traffic, memory, and connections have coherent diagnostic surfaces
-- DNS and provider health tools exist where supported
-- issue-report bundles are useful and redacted
+Scope:
 
-### Phase 7 done
+- design a persisted SmartX-managed override layer
+- stop relying on scattered runtime `RawConfig` mutation as the long-term model
+- define how Smart settings, local adjustments, and future profile transforms should be represented
+- keep override ownership explicit and inspectable
 
-Done when:
+“Smart override” should mean a real SmartX-managed layer, not only whatever runtime patch happened to be applied last.
 
-- SmartX passes a real security/signing/release review
-- preview artifacts are signed, notarized, and documented
-- update-channel policy is explicit
-- source and release materials are aligned with the shipped preview
+Expected outputs:
 
-This roadmap does not claim these phases are already complete unless current code or CI proves it. It is a forward plan derived from the current SmartX branch state and the documented gaps.
+- SmartX owns a coherent override model
+- override provenance is inspectable
+- future config generation can build on explicit override inputs
 
-## Source of Truth
+Testing gate:
 
-This document is descriptive, not normative. It is based on the current SmartX memory docs under [`docs/memory/`](../../docs/memory) and the source tree in this repository. Update it when branch priorities or implementation reality changes.
+- override serialization, merge rules, and provenance logic should be tested as standalone logic
+
+## Phase 7: TUN-First Lifecycle
+
+Scope:
+
+- move beyond a guarded `tun.enable` config patch
+- design preflight, enable, verify, rollback, disable, and recovery flow
+- define what SmartX can support on macOS honestly
+- keep helper presence distinct from actual TUN readiness
+
+This phase is where SmartX earns the term “TUN lifecycle.” Until then, the UI should remain explicit that current support is partial.
+
+Expected outputs:
+
+- TUN operations are modeled as lifecycle steps rather than one config toggle
+- failure and recovery paths are explicit
+- unsupported or incomplete environments are surfaced honestly
+
+Testing gate:
+
+- lifecycle-state logic and failure transitions should be tested where direct system integration is not practical
+
+## Phase 8: DNS/TUN Validation Module
+
+Scope:
+
+- extract heuristic validation out of UI controllers
+- build a shared validation module for DNS and TUN settings
+- document supported checks, warning severity, and unsupported cases
+- make validation reusable across settings, diagnostics, and future config generation flows
+
+The current warnings are useful but incomplete. This phase turns them into a real validation module instead of keeping them as controller-local heuristics.
+
+Expected outputs:
+
+- DNS/TUN validation rules are centralized
+- warning generation is testable
+- UI consumes validation results instead of hardcoding rule logic
+
+Testing gate:
+
+- validation rules should have direct fixtures or unit-style coverage
+
+## Phase 9: Config Workspace
+
+Scope:
+
+- build the real config workspace model
+- support explicit source, override, merge, and generated outputs
+- define rollback and recovery semantics around generated effective config
+- replace filename-era assumptions with a reproducible workspace pipeline
+
+This phase is the larger config architecture that earlier artifact work only prepares for. It should not be confused with the current source-copy artifact model.
+
+Expected outputs:
+
+- generated effective config becomes an honest term backed by a real pipeline
+- profile transforms are reproducible and inspectable
+- rollback works against defined workspace artifacts rather than ad hoc copies
+
+Testing gate:
+
+- workspace transforms, rollback behavior, and artifact outputs should be covered directly
+
+## Phase 10: Test Coverage and Legacy Hardening as a Continuous Gate
+
+Scope:
+
+- keep expanding coverage across diagnostics, capabilities, endpoints, artifacts, Smart logic, and TUN/DNS validation
+- reduce dependence on inherited legacy behaviors that are hard to reason about
+- harden migration edges and compatibility paths as ongoing work
+- enforce that new architecture PRs do not regress safety or clarity
+
+This is listed as a phase only because it needs explicit ownership, not because testing should wait until the end. Testing and legacy hardening are required in every phase and every focused PR.
+
+Expected outputs:
+
+- each architecture PR adds or updates appropriate coverage
+- legacy compatibility paths become more explicit and less magical over time
+- future SmartX work is gated by build health, test signal, and honest terminology
+
+## What This Roadmap Does Not Mean
+
+This roadmap does not authorize another large feature blob. It does not say “finish all SmartX UI first, then clean it up later.” It does not treat preview panels as completed architecture. It also does not treat testing as something to postpone until after the product shape is settled.
+
+The intended sequencing is small PRs, each focused on one architectural improvement, one safety improvement, or one tightly-scoped user-facing follow-up built on those seams.

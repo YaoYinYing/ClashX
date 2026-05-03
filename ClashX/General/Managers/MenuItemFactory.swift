@@ -68,11 +68,13 @@ class MenuItemFactory {
     }
 
     static func generateSwitchConfigMenuItems(complete: @escaping (([NSMenuItem]) -> Void)) {
-        let generateMenuItem: ((String) -> NSMenuItem) = {
-            config in
-            let item = NSMenuItem(title: config, action: #selector(MenuItemFactory.actionSelectConfig(sender:)), keyEquivalent: "")
+        let generateMenuItem: ((ConfigProfileDescriptor) -> NSMenuItem) = {
+            profile in
+            let item = NSMenuItem(title: profile.menuTitle, action: #selector(MenuItemFactory.actionSelectConfig(sender:)), keyEquivalent: "")
             item.target = MenuItemFactory.self
-            item.state = ConfigManager.selectConfigName == config ? .on : .off
+            item.representedObject = profile.name
+            item.toolTip = profile.toolTip
+            item.state = profile.isActive ? .on : .off
             return item
         }
 
@@ -81,12 +83,8 @@ class MenuItemFactory {
             return
         }
 
-        if ICloudManager.shared.useiCloud.value {
-            ICloudManager.shared.getConfigFilesList {
-                complete($0.map { generateMenuItem($0) })
-            }
-        } else {
-            complete(ConfigManager.getConfigFilesList().map { generateMenuItem($0) })
+        ConfigManager.getProfileDescriptors {
+            complete($0.map { generateMenuItem($0) })
         }
     }
 
@@ -286,7 +284,7 @@ extension MenuItemFactory {
     }
 
     @objc static func actionSelectConfig(sender: NSMenuItem) {
-        let config = sender.title
+        let config = sender.representedObject as? String ?? sender.title
         AppDelegate.shared.updateConfig(configName: config, showNotification: false) {
             err in
             if err == nil {

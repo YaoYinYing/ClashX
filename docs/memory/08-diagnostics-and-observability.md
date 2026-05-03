@@ -51,11 +51,12 @@ SmartX currently supports:
 
 ### Dashboard behavior
 
-The current dashboard container in [`ClashX/ViewControllers/Connections/DashboardViewController.swift`](../../ClashX/ViewControllers/Connections/DashboardViewController.swift) exposes three modes:
+The current dashboard container in [`ClashX/ViewControllers/Connections/DashboardViewController.swift`](../../ClashX/ViewControllers/Connections/DashboardViewController.swift) exposes four modes:
 
 - Recent Connections
 - Active Connections
 - Smart
+- Diagnostics
 
 The Smart view is [`ClashX/ViewControllers/Connections/SmartDashboardViewController.swift`](../../ClashX/ViewControllers/Connections/SmartDashboardViewController.swift), which already surfaces:
 
@@ -65,6 +66,24 @@ The Smart view is [`ClashX/ViewControllers/Connections/SmartDashboardViewControl
 - cache flush actions
 - LightGBM model update action
 - model file status and path
+
+The Diagnostics view is [`ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift`](../../ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift), which currently surfaces:
+
+- `/memory` polling with raw JSON output
+- `/dns/query` requests with raw JSON output
+- DNS cache flush
+- fake-IP cache flush
+- core restart
+- debug GC
+- `POST /configs/geo`
+- `POST /upgrade/geo`
+- `POST /upgrade/ui`
+- copy-to-pasteboard sanitized diagnostics report generation
+- manual restore of the last-known-good profile artifact
+- provider diagnostics for proxy/rule providers plus bulk proxy-provider healthcheck requests
+- a lightweight in-app log viewer backed by the rolling app log file
+
+These diagnostics actions now also feed a shared capability cache, so unsupported or unauthorized controller endpoints can be disabled after first contact instead of failing repeatedly every time the user opens the panel.
 
 ### Direct embedded callbacks vs external controller streams
 
@@ -156,37 +175,44 @@ Again, these are present in the detail pipeline, but not yet treated as a first-
 
 Relative to current mihomo controller capabilities and modern client expectations, SmartX still lacks several observability features.
 
-### memory usage stream
+### memory usage stream history
 
-Mihomo exposes `/memory` for real-time memory information, but SmartX currently does not implement a memory stream or memory panel.
+SmartX now exposes `/memory` through a polling diagnostics panel, but it still does not implement a real-time memory stream or a historical memory timeline.
 
-### DNS query tool
+### DNS query workflow
 
-Mihomo exposes `/dns/query`, but SmartX does not yet provide a DNS query UI or API wrapper for interactive diagnostics.
+SmartX now exposes `/dns/query` in the Diagnostics dashboard, but the current UI is still a raw-query tool rather than a polished DNS troubleshooting workflow.
 
 ### DNS cache flush
 
-Mihomo exposes `/cache/dns/flush`, but SmartX currently only implements fake-IP cache flush.
+SmartX now exposes `/cache/dns/flush`, but it is still presented as a simple action rather than as part of a broader DNS diagnostic model.
 
 ### fake-ip cache flush
 
 SmartX already implements `/cache/fakeip/flush` in `ApiRequest.resetFakeIpCache()`, but it is not yet presented as part of a broader DNS diagnostics toolset.
 
-### core restart
+### debug pprof helpers
 
-Mihomo exposes `/restart`, but SmartX does not currently expose a restart diagnostic or recovery action through the API layer.
+SmartX now exposes `/debug/gc` as a diagnostic action and also has a lightweight `/debug/pprof` helper path in the Diagnostics dashboard:
 
-### core debug pprof helpers
+- copy the active controller's pprof URLs to the pasteboard
+- include a reminder that Authorization headers must still be added manually when needed
 
-Mihomo documents `/debug/gc` and `/debug/pprof` for debug builds or debug-level kernel runs, but SmartX has no helper UI for garbage collection, pprof browsing, or safe developer workflows around those endpoints.
+This is still only a developer convenience helper, not a real profiling UI or capture workflow.
 
 ### route explanation
 
-The current connection UI shows chain, rule, and payload, but it does not yet explain the route decision in a structured, user-friendly way.
+The connection detail UI is better than the original raw-field dump now. [`ClashX/ViewControllers/Connections/ViewModels/ConnectionDetailViewModel.swift`](../../ClashX/ViewControllers/Connections/ViewModels/ConnectionDetailViewModel.swift) now formats:
+
+- a structured rule summary with matched rule and payload
+- a route summary with selected proxy, hop path, and Smart target when present
+- a richer diagnostics summary with start time, duration, process path, Smart block reason, and geo/ASN details
+
+This is still text-first rather than a dedicated route-inspection UI, but it is now materially more explanatory than the old raw chain + payload display.
 
 ### rule hit explanation
 
-The model already has enough raw data to show which rule matched, but not yet enough polished UI to explain:
+The model already has enough raw data to show which rule matched, and SmartX now formats the matched rule and payload more clearly in the detail panel. It still does not explain:
 
 - why the rule matched
 - whether it came from a provider
@@ -194,11 +220,20 @@ The model already has enough raw data to show which rule matched, but not yet en
 
 ### provider healthcheck status
 
-`ApiRequest.healthCheck` exists for providers and groups, but there is no diagnostics panel that shows provider healthcheck history or status over time.
+`ApiRequest.healthCheck` exists for providers and groups, and the Diagnostics dashboard now exposes a lightweight provider diagnostics section:
+
+- refresh proxy and rule provider lists
+- show provider names, type, vehicle type, and proxy counts
+- request bulk health checks for HTTP proxy providers
+- append timestamped success/failure summaries to the diagnostics output
+- persist a capped recent provider-health history under the SmartX diagnostics directory
+- include recent provider-health history in the Diagnostics panel and copied/exported reports
+
+This is still not full provider-health history over time, but it is better than having no provider observability surface at all. The current branch keeps a small local JSON-backed history for recent manual healthcheck runs; it does not yet build a continuous background timeline or provider trend analysis.
 
 ### smart decision explanation
 
-SmartX can show weights and some Smart metadata, but it still cannot explain the full Smart decision path for one connection in a way users can inspect and trust.
+SmartX can now surface Smart target and Smart block details more clearly inside the connection detail panel, but it still cannot explain the full Smart decision path for one connection in a way users can inspect and trust.
 
 ### process attribution
 
@@ -249,9 +284,26 @@ Most of the needed raw data already exists:
 
 The design gap is not raw data availability. It is presentation, structure, and explanation.
 
+Current state is improved, but still partial:
+
+- selected proxy and chain path are now summarized explicitly
+- Smart target and Smart block are now surfaced in the route/detail text
+- geo/ASN data and process path are now grouped into one diagnostic summary
+- provider provenance and full decision reasoning are still missing
+
 ## Logs
 
 SmartX should eventually have a first-class log viewer instead of treating logs mainly as background files plus raw controller streams.
+
+The branch now has a meaningful first pass in the Diagnostics dashboard:
+
+- reads the current rolling log file managed by `Logger`
+- shows the last matching log lines in-app instead of only opening the file externally
+- supports level filtering (`All`, `Error`, `Warning`, `Info`, `Debug`)
+- supports text search
+- supports pause/resume for automatic refresh
+- supports export of the filtered plain-text view
+- supports export of a sanitized diagnostics bundle for bug reports
 
 Recommended features:
 
@@ -273,6 +325,12 @@ The current branch already has:
 
 A dedicated log viewer would unify these rather than leaving them scattered across diagnostics code, files, and transient connection synthesis.
 
+The current implementation is still intentionally narrow:
+
+- it is file-backed rather than a separate live controller-log pane
+- it reads the latest rolling file instead of building a structured indexed log store
+- plain log export still writes only the filtered text view, while the richer multi-file bundle lives in a separate export path
+
 ### Metadata to include
 
 Future exported or copied log reports should include:
@@ -289,6 +347,29 @@ But they should avoid exposing secrets or full configs.
 
 SmartX should eventually produce a sanitized diagnostic bundle for bug reports and reproducible troubleshooting.
 
+SmartX now has a first real bundle path through [`ClashX/General/Utils/DiagnosticsBundleExporter.swift`](../../ClashX/General/Utils/DiagnosticsBundleExporter.swift), plus the existing [`ClashX/General/Utils/DiagnosticsReportBuilder.swift`](../../ClashX/General/Utils/DiagnosticsReportBuilder.swift) and Diagnostics dashboard actions. The current bundle includes:
+
+- app and OS metadata
+- embedded/external controller mode
+- selected config name
+- capability-cache state
+- resource file presence for `Model.bin`, `smart_weight_data.csv`, and `config.yaml`
+- profile artifact presence for generated-effective and last-known-good config copies
+- profile artifact metadata for selected profile/source/reload context
+- log folder and latest log file path in the report
+- a separate redacted recent-log snapshot built from the latest rolling log file
+- a small machine-readable manifest with generation time, app build, controller mode, active profile, and active log filename
+
+It intentionally redacts controller secrets by reducing the controller URL to scheme + host + port only.
+The bundle exporter also redacts:
+
+- absolute HTTP/HTTPS/WS/WSS URLs down to origin plus `/<redacted>`
+- proxy URIs such as `ss://`, `vmess://`, `vless://`, `trojan://`, `hysteria2://`, or `tuic://`
+- authorization-style values
+- common token/secret/password key-value patterns
+
+There is still no dedicated XCTest target for diagnostics redaction. For the `codex/goal-may26-01` stabilization pass, the branch keeps the production redactor in app code and documents the remaining test-target gap instead of cloning that logic into a second standalone harness.
+
 Recommended contents:
 
 - build metadata
@@ -299,6 +380,12 @@ Recommended contents:
 - recent logs
 - endpoint capability map
 - resource file status
+
+What still remains:
+
+- richer profile-pipeline metadata once that system exists
+- richer and more formally reviewed subscription/source redaction policy beyond the current pattern-based sanitization
+- fuller provider trend/history modeling beyond the current capped local manual-run history
 
 Examples of resource file status:
 

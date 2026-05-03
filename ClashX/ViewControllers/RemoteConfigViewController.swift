@@ -147,6 +147,7 @@ extension RemoteConfigViewController {
             guard let self = self, let config = config else { return }
             config.updating = false
             if let errorString = errorString {
+                RemoteConfigManager.shared.saveConfigs()
                 let alert = NSAlert()
                 alert.messageText = errorString
                 alert.alertStyle = .warning
@@ -189,6 +190,21 @@ extension RemoteConfigViewController: NSTableViewDataSource {
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         guard let config = RemoteConfigManager.shared.configs[safe: row] else { return nil }
+        let safeName = try? SafeConfigName(config.name)
+        let cacheURL = safeName.flatMap { try? Paths.localConfigURL(for: $0) }
+        let cacheStatus = cacheURL.map {
+            FileManager.default.fileExists(atPath: $0.path) ? NSLocalizedString("present", comment: "") : NSLocalizedString("missing", comment: "")
+        } ?? NSLocalizedString("unavailable", comment: "")
+        let tooltip = [
+            "\(NSLocalizedString("Profile Type", comment: "")): Remote",
+            "\(NSLocalizedString("Profile Name", comment: "")): \(config.name)",
+            "\(NSLocalizedString("Source", comment: "")): \(config.url)",
+            "\(NSLocalizedString("Cache File", comment: "")): \(cacheURL?.path ?? NSLocalizedString("Unavailable", comment: ""))",
+            "\(NSLocalizedString("Cache Status", comment: "")): \(cacheStatus)",
+            "\(NSLocalizedString("Last Update", comment: "")): \(config.displayingTimeString())",
+            "\(NSLocalizedString("Validation", comment: "")): \(config.validationSummary())",
+            "\(NSLocalizedString("Last Fetch", comment: "")): \(config.updateResultSummary())"
+        ].joined(separator: "\n")
 
         func setupCell(withIdentifier: String, string: String, textFieldtag: Int = 1) -> NSView? {
             let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: withIdentifier), owner: nil)
@@ -197,6 +213,7 @@ extension RemoteConfigViewController: NSTableViewDataSource {
             } else {
                 assertionFailure()
             }
+            cell?.toolTip = tooltip
 
             return cell
         }

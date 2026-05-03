@@ -161,6 +161,8 @@ The current branch already exposes some Smart-related diagnostics, but only part
 - model path
 - limited endpoint-supported vs unsupported status for LightGBM update
 - connection metadata fields `smartTarget` and `smartBlock`
+- structured connection-detail text that surfaces Smart target in the route summary and Smart block in the diagnostics summary
+- a first-pass `Smart Explanation` block in connection detail that derives likely Smart group, current selected node, target rank/weight when available, top candidates, and local model-file status
 
 ### Future diagnostics to add
 
@@ -182,6 +184,16 @@ Recommended direction:
 - future diagnostics can include “why this node was preferred” if the core exposes a usable decision trace
 
 The key point is that Smart routing should eventually be observable, not just enabled.
+
+The current branch now partially addresses the last point for individual connections, but only by inference. The connection detail panel can combine:
+
+- `smartTarget`
+- `smartBlock`
+- current Smart groups from merged proxy data
+- `/group/weights`
+- local `Model.bin` file status
+
+to produce a compact explanation block. This is still not a true decision trace from the core, because it cannot prove which internal scorer or fallback path produced the target.
 
 ## Failure Modes
 

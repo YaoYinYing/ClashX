@@ -111,6 +111,12 @@ class RemoteConfigManager {
                 group.leave()
                 if error == nil {
                     config.updateTime = Date()
+                    config.validationState = .valid
+                    config.lastUpdateState = .succeeded
+                    config.lastUpdateMessage = NSLocalizedString("Last background update succeeded.", comment: "")
+                } else {
+                    config.lastUpdateState = .failed
+                    config.lastUpdateMessage = error
                 }
 
                 if isCurrentConfig {
@@ -161,15 +167,21 @@ class RemoteConfigManager {
     static func updateConfig(config: RemoteConfigModel, complete: ((String?) -> Void)? = nil) {
         getRemoteConfigData(config: config) { configString, suggestedFilename in
             guard let newConfig = configString else {
+                config.lastUpdateState = .failed
+                config.lastUpdateMessage = NSLocalizedString("Download fail", comment: "")
                 complete?(NSLocalizedString("Download fail", comment: ""))
                 return
             }
 
             let verifyRes = verifyConfig(string: newConfig)
             if let error = verifyRes {
+                config.validationState = .invalid
+                config.lastUpdateState = .failed
+                config.lastUpdateMessage = NSLocalizedString("Remote Config Format Error", comment: "") + ": " + error
                 complete?(NSLocalizedString("Remote Config Format Error", comment: "") + ": " + error)
                 return
             }
+            config.validationState = .valid
 
             if config.isPlaceHolderName {
                 let name = safeNameFromSuggestedFilename(suggestedFilename, sourceURL: config.url)
@@ -190,8 +202,12 @@ class RemoteConfigManager {
                 do {
                     let saveURL = try Paths.safeConfigFileURL(for: config.name, in: baseDir)
                     try writeConfigAtomically(content: newConfig, targetURL: saveURL)
+                    config.lastUpdateState = .succeeded
+                    config.lastUpdateMessage = NSLocalizedString("Last update succeeded.", comment: "")
                     complete?(nil)
                 } catch {
+                    config.lastUpdateState = .failed
+                    config.lastUpdateMessage = error.localizedDescription
                     complete?(error.localizedDescription)
                 }
             }
@@ -199,6 +215,8 @@ class RemoteConfigManager {
             if ICloudManager.shared.useiCloud.value {
                 ICloudManager.shared.getUrl { url in
                     guard let url = url else {
+                        config.lastUpdateState = .failed
+                        config.lastUpdateMessage = NSLocalizedString("iCloud not available", comment: "")
                         complete?(NSLocalizedString("iCloud not available", comment: ""))
                         return
                     }

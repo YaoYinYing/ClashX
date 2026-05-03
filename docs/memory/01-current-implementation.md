@@ -10,7 +10,7 @@ This branch is not just a core-version bump. It changes:
 - client-side settings and paths for Smart data under [ClashX/General/Managers/Settings.swift](../../ClashX/General/Managers/Settings.swift) and [ClashX/Macro/Paths.swift](../../ClashX/Macro/Paths.swift)
 - API wrappers under [ClashX/General/ApiRequest.swift](../../ClashX/General/ApiRequest.swift)
 - model decoding under [ClashX/Models](../../ClashX/Models)
-- UI surfaces under [ClashX/ViewControllers/Settings/CoreSettingViewController.swift](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift) and [ClashX/ViewControllers/Connections/SmartDashboardViewController.swift](../../ClashX/ViewControllers/Connections/SmartDashboardViewController.swift)
+- UI surfaces under [ClashX/ViewControllers/Settings/CoreSettingViewController.swift](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift), [ClashX/ViewControllers/Connections/SmartDashboardViewController.swift](../../ClashX/ViewControllers/Connections/SmartDashboardViewController.swift), and [ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift](../../ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift)
 
 ## Current Code Changes
 
@@ -86,6 +86,18 @@ Current additions include:
 - `updateSmartLightGBMModel(...)`
 - `requestCoreVersion(...)`
 - `updateTun(enable:...)`
+- `requestMemorySnapshot(...)`
+- `requestDNSQuery(...)`
+- `resetDNSCache(...)`
+- `reloadGeoDatabase(...)`
+- `restartCore(...)`
+- `updateDashboardAssets(...)`
+- `updateGeoAssets(...)`
+- `runDebugGC(...)`
+- `requestPolicyGroups(...)`
+- `requestPolicyGroup(name:...)`
+- `deletePolicyGroup(name:...)`
+- `requestPolicyGroupDelay(name:...)`
 
 The file also adds new response and decoding types:
 
@@ -102,6 +114,16 @@ The current API wrapper layer also changes provider handling:
 
 `updateTun(enable:)` is currently only a guarded `PATCH /configs` wrapper. It does not create a privileged TUN runtime path by itself.
 
+The branch also now has a lightweight capability cache in [ClashX/General/Managers/CoreCapability.swift](../../ClashX/General/Managers/CoreCapability.swift). It is currently used to remember unsupported or unauthorized controller features across the Core settings page, Smart dashboard, and Diagnostics dashboard, so the UI can degrade cleanly instead of repeatedly retrying endpoints that the active controller clearly does not support.
+
+The config layer also now has a lightweight profile inventory bridge in [ClashX/General/Managers/ConfigManager.swift](../../ClashX/General/Managers/ConfigManager.swift). It does not replace filename-based config switching, but it can now classify selectable configs as `Local` or `Remote`, attach source/cache metadata, and feed that state into the menu UI and diagnostics report.
+
+Remote profile definitions in [ClashX/Models/RemoteConfigModel.swift](../../ClashX/Models/RemoteConfigModel.swift) now also persist first-pass validation and last-fetch state. That status is updated by [ClashX/General/Managers/RemoteConfigManager.swift](../../ClashX/General/Managers/RemoteConfigManager.swift) and surfaced through the profile inventory, diagnostics report, and remote-config table tooltips.
+
+Successful config reloads now also persist first-pass profile artifacts through [ClashX/General/Managers/ProfileArtifactManager.swift](../../ClashX/General/Managers/ProfileArtifactManager.swift). The branch writes a deterministic copy of the loaded config file to generated-effective and last-known-good artifact paths under `~/.config/clash/.smartx/profiles/`, along with JSON metadata describing the selected profile and reload context. The Diagnostics dashboard can also restore the saved last-known-good artifact. This is still based on the legacy “reload a file path” model, not a true layered effective-config generator.
+
+The Diagnostics dashboard now also exposes a first-pass artifact inspection surface for that layer. It can preview the generated-effective and last-known-good YAML files, show artifact metadata in-app, and open the SmartX profile artifacts directory directly. This improves inspectability, but it still does not model Merge/Script profiles or a real generated pipeline graph.
+
 ### UI Additions
 
 [ClashX/ViewControllers/Settings/CoreSettingViewController.swift](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift) is a new status/control surface for SmartX-specific core behavior. It currently exposes:
@@ -110,6 +132,7 @@ The current API wrapper layer also changes provider handling:
 - controller state and URL
 - config load status
 - TUN config status
+- DNS config status
 - Smart/LightGBM model status and update controls
 
 The page is informative, but it does not fully manage the whole core lifecycle. It reads state from:
@@ -120,11 +143,14 @@ The page is informative, but it does not fully manage the whole core lifecycle. 
 - `/configs`
 - selected model file metadata
 
-It also contains explicit TUN capability gating. For example:
+It also contains explicit TUN capability gating plus first-pass TUN/DNS validation messaging. For example:
 
 - embedded-core TUN is disabled with a message that SmartX lacks a privileged TUN startup path
 - external-controller TUN can only attempt a guarded update when the controller exposes `tun` through `/configs`
 - helper/system-proxy capability is explicitly separated from TUN capability
+- additional TUN routing/interface fields are shown read-only when present
+- structured DNS fields are shown read-only when present
+- risky combinations such as `strict-route`, conflicting include/exclude interface filters, suspicious MTU values, invalid-looking CIDRs, `fake-ip` mode, or `respect-rules` without an obvious resolver path are surfaced as warnings instead of being silently ignored
 
 [ClashX/ViewControllers/Connections/SmartDashboardViewController.swift](../../ClashX/ViewControllers/Connections/SmartDashboardViewController.swift) is another new UI surface. It currently exposes:
 
@@ -135,6 +161,25 @@ It also contains explicit TUN capability gating. For example:
 - basic model-path and model-status display
 
 It is still a management and observability surface layered on top of API wrappers. It does not implement full Smart policy authoring, full background sync orchestration, or a complete error/retry UX for all Smart endpoints.
+
+[ClashX/ViewControllers/Connections/ViewModels/ConnectionDetailViewModel.swift](../../ClashX/ViewControllers/Connections/ViewModels/ConnectionDetailViewModel.swift) now also adds a first-pass derived Smart explanation for individual connections when Smart metadata is present. It combines `smartTarget` / `smartBlock`, current Smart group membership, current selected node, `/group/weights`, and local model-file status to explain likely Smart routing context in the connection detail panel. This is still inference from currently observable state, not a true per-connection Smart decision trace emitted by the core.
+
+[ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift](../../ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift) adds a lightweight diagnostics surface to the dashboard. It currently exposes:
+
+- `/memory` polling and raw JSON display
+- `/dns/query` requests with raw JSON display
+- DNS cache flush
+- fake-IP cache flush
+- `/restart`
+- `/debug/gc`
+- `POST /configs/geo`
+- `POST /upgrade/geo`
+- `POST /upgrade/ui`
+- a lightweight file-backed log viewer with level filter, search, pause/resume, and export
+- a sanitized diagnostics bundle export with report, manifest, and redacted recent logs
+- a small persisted provider-health history for recent manual healthcheck runs
+
+It is intentionally simple and capability-driven. It does not yet implement a dedicated memory history view, a polished DNS troubleshooting workflow, a real in-app `/debug/pprof` flow, or a richer issue bundle with provider history and route provenance attachments.
 
 ### Data Model Additions
 
@@ -199,7 +244,7 @@ This means resource/build flow has changed, but packaging metadata has only been
 
 - The current TUN model only covers a subset of mihomo TUN fields in [ClashX/Models/ClashConfig.swift](../../ClashX/Models/ClashConfig.swift).
 - DNS is not yet modeled as a first-class client setting in the SmartX UI or Swift config models, even though TUN status refers to DNS hijack-related fields.
-- `PRO_VERSION` gates in legacy models such as [ClashX/Models/ClashConfig.swift](../../ClashX/Models/ClashConfig.swift) may still hide features that are ordinary mihomo features rather than truly “Pro-only” features.
+- `PRO_VERSION` gates still exist in parts of the branch and may hide features that are ordinary mihomo features rather than truly “Pro-only” features, even though rule-provider discovery and `.script` mode decoding have already been moved away from that boundary.
 - Release signing and privileged helper identity still require modernization. [ClashX/Info.plist](../../ClashX/Info.plist) and helper-related metadata still contain legacy identifiers and trust requirements.
 - [README.md](../../README.md) still mixes SmartX notes with older ClashX behavior and should not be treated as a fully current implementation reference.
 - Reproducibility is limited if dashboard and resources are pulled without pinned revisions. [install_dependency.sh](../../install_dependency.sh) clones `Yacd-meta` by branch and downloads GeoIP data by latest URL.

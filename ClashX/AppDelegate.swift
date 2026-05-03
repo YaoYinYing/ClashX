@@ -261,6 +261,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 case .direct: self.proxyModeDirectMenuItem.state = .on
                 case .global: self.proxyModeGlobalMenuItem.state = .on
                 case .rule: self.proxyModeRuleMenuItem.state = .on
+                case .script: break
                 }
                 self.allowFromLanMenuItem.state = config.allowLan ? .on : .off
 
@@ -502,7 +503,66 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         ClashProxy.cleanCache()
 
-        ApiRequest.requestConfigUpdate(configName: config) {
+        ConfigManager.getConfigPath(configName: config) { [weak self] result in
+            guard let self = self else { return }
+            let sourceConfigPath: String
+            switch result {
+            case let .success(path):
+                sourceConfigPath = path
+            case let .failure(error):
+                completeHandler?(error.localizedDescription)
+                return
+            }
+
+            self.reloadConfig(fromPath: sourceConfigPath,
+                              effectiveConfigName: config,
+                              originalSourceConfigPath: sourceConfigPath,
+                              showNotification: showNotification,
+                              successTitle: NSLocalizedString("Reload Config Succeed", comment: ""),
+                              successInfo: NSLocalizedString("Success", comment: ""),
+                              failureConfigName: config,
+                              updateSelectedConfigName: configName,
+                              completeHandler: completeHandler)
+        }
+    }
+
+    func restoreLastKnownGoodConfig(showNotification: Bool = true, completeHandler: ((ErrorString?) -> Void)? = nil) {
+        startProxy()
+        guard ConfigManager.shared.isRunning else { return }
+
+        let artifactURL = Paths.lastKnownGoodConfigURL
+        guard FileManager.default.fileExists(atPath: artifactURL.path) else {
+            completeHandler?(NSLocalizedString("No last-known-good profile artifact is available yet.", comment: ""))
+            return
+        }
+
+        ClashProxy.cleanCache()
+
+        let metadata = ProfileArtifactManager.loadMetadata(at: Paths.lastKnownGoodMetadataURL)
+        let selectedConfigName = metadata?.selectedProfileName ?? ConfigManager.selectConfigName
+        let originalSourcePath = metadata?.sourceConfigPath ?? artifactURL.path
+
+        reloadConfig(fromPath: artifactURL.path,
+                     effectiveConfigName: selectedConfigName,
+                     originalSourceConfigPath: originalSourcePath,
+                     showNotification: showNotification,
+                     successTitle: NSLocalizedString("Restore Last Known Good Succeed", comment: ""),
+                     successInfo: NSLocalizedString("Success", comment: ""),
+                     failureConfigName: selectedConfigName,
+                     updateSelectedConfigName: selectedConfigName,
+                     completeHandler: completeHandler)
+    }
+
+    private func reloadConfig(fromPath sourceConfigPath: String,
+                              effectiveConfigName: String,
+                              originalSourceConfigPath: String,
+                              showNotification: Bool,
+                              successTitle: String,
+                              successInfo: String,
+                              failureConfigName: String,
+                              updateSelectedConfigName: String?,
+                              completeHandler: ((ErrorString?) -> Void)? = nil) {
+        ApiRequest.requestConfigUpdate(configPath: sourceConfigPath) {
             [weak self] err in
             guard let self = self else { return }
 
@@ -511,20 +571,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             if let err {
-                UpdateConfigAction.showError(text: err, configName: config)
+                UpdateConfigAction.showError(text: err, configName: failureConfigName)
             } else {
+                ProfileArtifactManager.persistSuccessfulReloadArtifacts(configName: effectiveConfigName,
+                                                                        sourceConfigPath: sourceConfigPath,
+                                                                        originalSourceConfigPath: originalSourceConfigPath)
                 self.syncConfig()
                 self.resetStreamApi()
                 self.runAfterConfigReload?()
                 self.runAfterConfigReload = nil
                 if showNotification {
-                    NSUserNotificationCenter.default
-                        .post(title: NSLocalizedString("Reload Config Succeed", comment: ""),
-                              info: NSLocalizedString("Success", comment: ""))
+                    NSUserNotificationCenter.default.post(title: successTitle, info: successInfo)
                 }
 
-                if let newConfigName = configName {
-                    ConfigManager.selectConfigName = newConfigName
+                if let updateSelectedConfigName {
+                    ConfigManager.selectConfigName = updateSelectedConfigName
                 }
                 self.selectProxyGroupWithMemory()
                 self.selectOutBoundModeWithMenory()

@@ -50,7 +50,22 @@ struct SmartWeightsResponse: Decodable {
 enum SmartEndpointResult {
     case success
     case unsupported
+    case unauthorized(String)
     case failed
+}
+
+enum ControllerEndpointResult {
+    case success
+    case unsupported
+    case unauthorized(String)
+    case failed(String)
+}
+
+enum ControllerJSONResult {
+    case success(JSON)
+    case unsupported
+    case unauthorized(String)
+    case failed(String)
 }
 
 struct CoreVersionInfo: Decodable {
@@ -98,6 +113,50 @@ class ApiRequest {
                      parameters: parameters,
                      encoding: encoding,
                      headers: authHeader())
+    }
+
+    private static func endpointResult(from response: AFDataResponse<Data>, defaultMessage: String, unsupportedStatusCodes: Set<Int> = [400, 404, 405, 501]) -> ControllerEndpointResult {
+        let statusCode = response.response?.statusCode
+        if let statusCode, (200 ..< 300).contains(statusCode) {
+            return .success
+        }
+
+        if let statusCode, [401, 403].contains(statusCode) {
+            let message = response.error?.localizedDescription ?? NSLocalizedString("The active controller rejected authentication for this endpoint.", comment: "")
+            return .unauthorized(message)
+        }
+
+        if let statusCode, unsupportedStatusCodes.contains(statusCode) {
+            return .unsupported
+        }
+
+        let data = try? response.result.get()
+        let controllerMessage = data.flatMap { rawData in
+            JSON(rawData)["message"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let message: String
+        if let controllerMessage, !controllerMessage.isEmpty {
+            message = controllerMessage
+        } else {
+            message = response.error?.localizedDescription ?? defaultMessage
+        }
+        return .failed(message)
+    }
+
+    private static func jsonResult(from response: AFDataResponse<Data>, defaultMessage: String, unsupportedStatusCodes: Set<Int> = [400, 404, 405, 501]) -> ControllerJSONResult {
+        switch endpointResult(from: response, defaultMessage: defaultMessage, unsupportedStatusCodes: unsupportedStatusCodes) {
+        case .success:
+            guard let data = try? response.result.get() else {
+                return .failed(defaultMessage)
+            }
+            return .success(JSON(data))
+        case .unsupported:
+            return .unsupported
+        case let .unauthorized(message):
+            return .unauthorized(message)
+        case let .failed(message):
+            return .failed(message)
+        }
     }
 
     weak var delegate: ApiRequestStreamDelegate?
@@ -357,6 +416,107 @@ class ApiRequest {
             completeHandler?()
         }
     }
+
+    static func healthCheckProvider(proxy: ClashProviderName, completeHandler: ((Bool) -> Void)? = nil) {
+        Logger.log("HeathCheck for \(proxy) started")
+        req("/providers/proxies/\(proxy.encoded)/healthcheck").response { res in
+            let success = res.response?.statusCode == 204
+            if success {
+                Logger.log("HeathCheck for \(proxy) finished")
+            } else {
+                Logger.log("HeathCheck for \(proxy) failed:\(res.response?.statusCode ?? -1)")
+            }
+            completeHandler?(success)
+        }
+    }
+
+    static func requestMemorySnapshot(completeHandler: @escaping (ControllerJSONResult) -> Void) {
+        req("/memory").responseData { response in
+            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load memory diagnostics.", comment: "")))
+        }
+    }
+
+    static func requestProxyProvidersDiagnostics(completeHandler: @escaping (ControllerJSONResult) -> Void) {
+        req("/providers/proxies").responseData { response in
+            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load proxy provider diagnostics.", comment: "")))
+        }
+    }
+
+    static func requestRuleProvidersDiagnostics(completeHandler: @escaping (ControllerJSONResult) -> Void) {
+        req("/providers/rules").responseData { response in
+            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load rule provider diagnostics.", comment: "")))
+        }
+    }
+
+    static func requestDNSQuery(name: String, type: String? = nil, completeHandler: @escaping (ControllerJSONResult) -> Void) {
+        var parameters: Parameters = ["name": name]
+        if let type, !type.isEmpty {
+            parameters["type"] = type
+        }
+        req("/dns/query", parameters: parameters).responseData { response in
+            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to query DNS diagnostics.", comment: "")))
+        }
+    }
+
+    static func resetDNSCache(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
+        req("/cache/dns/flush", method: .post).responseData { response in
+            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to flush DNS cache.", comment: "")))
+        }
+    }
+
+    static func reloadGeoDatabase(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
+        req("/configs/geo", method: .post).responseData { response in
+            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to reload GEO data.", comment: "")))
+        }
+    }
+
+    static func restartCore(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
+        req("/restart", method: .post).responseData { response in
+            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to restart the active core.", comment: "")))
+        }
+    }
+
+    static func updateDashboardAssets(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
+        req("/upgrade/ui", method: .post).responseData { response in
+            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to update dashboard assets.", comment: "")))
+        }
+    }
+
+    static func updateGeoAssets(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
+        req("/upgrade/geo", method: .post).responseData { response in
+            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to update GEO assets.", comment: "")))
+        }
+    }
+
+    static func runDebugGC(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
+        req("/debug/gc", method: .put).responseData { response in
+            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to trigger controller garbage collection.", comment: "")))
+        }
+    }
+
+    static func requestPolicyGroups(completeHandler: @escaping (ControllerJSONResult) -> Void) {
+        req("/group").responseData { response in
+            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load policy group diagnostics.", comment: "")))
+        }
+    }
+
+    static func requestPolicyGroup(name: String, completeHandler: @escaping (ControllerJSONResult) -> Void) {
+        req("/group/\(name.encoded)").responseData { response in
+            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load policy group details.", comment: "")))
+        }
+    }
+
+    static func deletePolicyGroup(name: String, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
+        req("/group/\(name.encoded)", method: .delete).responseData { response in
+            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to delete policy group state.", comment: "")))
+        }
+    }
+
+    static func requestPolicyGroupDelay(name: String, timeout: Int = 5000, url: String = Settings.benchMarkUrl, completeHandler: @escaping (ControllerJSONResult) -> Void) {
+        req("/group/\(name.encoded)/delay", parameters: ["timeout": timeout, "url": url]).responseData { response in
+            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load policy group delay diagnostics.", comment: "")))
+        }
+    }
 }
 
 // MARK: - Connections
@@ -500,6 +660,8 @@ extension ApiRequest {
             switch resp.response?.statusCode {
             case 200:
                 completeHandler(.success)
+            case 401, 403:
+                completeHandler(.unauthorized(resp.error?.localizedDescription ?? NSLocalizedString("The active controller rejected authentication for the LightGBM update endpoint.", comment: "")))
             case 400, 404:
                 completeHandler(.unsupported)
             default:

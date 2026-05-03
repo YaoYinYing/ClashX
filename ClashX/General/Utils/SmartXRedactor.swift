@@ -18,7 +18,7 @@ enum SmartXRedactor {
         let trimmed = rawURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         guard var components = URLComponents(string: trimmed) else {
-            return sanitizeText(trimmed)
+            return "<redacted-url>"
         }
 
         components.user = nil
@@ -27,7 +27,7 @@ enum SmartXRedactor {
         if components.queryItems != nil {
             components.queryItems = redactedQueryItems(components.queryItems)
         }
-        return components.string.map(sanitizeText)
+        return components.string ?? "<redacted-url>"
     }
 
     static func redactPath(_ path: String?) -> String? {
@@ -96,7 +96,7 @@ enum SmartXRedactor {
 
     private static func redactTokenStyleKeyValues(in text: String) -> String {
         redactMatches(in: text,
-                      pattern: #"(?i)\b(?:token|secret|password|passwd|apikey|api-key|access-key|proxy-secret)\s*[:=]\s*[^\s,;]+"#) { match, source in
+                      pattern: #"(?i)(?<![?&])\b(?:token|secret|password|passwd|apikey|api-key|access-key|proxy-secret)\s*[:=]\s*[^\s,;]+"#) { match, source in
             let raw = source.substring(with: match.range)
             guard let separator = raw.firstIndex(where: { $0 == ":" || $0 == "=" }) else {
                 return "<redacted>"

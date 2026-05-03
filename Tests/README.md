@@ -15,6 +15,8 @@ Notes:
 - Manual helper validation case to add during macOS test runs: `http://127.evil.com/proxy.pac` must be rejected by helper PAC validation.
 - `Tests/SecurityHarness/security_harness.swift` is a temporary CI smoke test. It now mirrors the current production SHA256 fallback naming and suggested-filename validation semantics, but it does not replace a real XCTest target.
 - SmartX redaction currently has no dedicated XCTest target either. For the `codex/goal-may26-01` stabilization PR, the production redactor was kept in app code and the gap remains documented here rather than cloning that logic into another standalone harness.
+- A minimal local smoke check for the production redactor is available at `Tests/SecurityHarness/redactor_smoke.swift` and should be run with `swiftc ClashX/General/Utils/SmartXRedactor.swift Tests/SecurityHarness/redactor_smoke.swift -o /tmp/smartx-redactor-smoke && /tmp/smartx-redactor-smoke` when touching diagnostics redaction behavior.
+- A minimal local upgrade-compatibility check for persisted remote profiles is available at `Tests/SecurityHarness/remote_config_decode_smoke.swift` and should be run with `swiftc ClashX/Models/RemoteConfigModel.swift Tests/SecurityHarness/remote_config_decode_smoke.swift -o /tmp/remote-config-decode-smoke && /tmp/remote-config-decode-smoke` when changing `RemoteConfigModel` coding behavior.
 
 ## CI
 - PR CI runs on macOS GitHub Actions via `.github/workflows/pr-ci.yml`.

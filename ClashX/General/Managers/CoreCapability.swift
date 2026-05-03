@@ -58,7 +58,8 @@ final class CapabilityCache {
         let mode = Settings.isUsingEmbeddedCore ? "embedded" : "external"
         let running = ConfigManager.shared.isRunning ? "running" : "stopped"
         let secret = ConfigManager.shared.overrideSecret ?? ConfigManager.shared.apiSecret
-        return [mode, running, ConfigManager.apiUrl, secret].joined(separator: "|")
+        let secretState = secret.isEmpty ? "no-secret" : "secret-set"
+        return [mode, running, ConfigManager.apiUrl, secretState].joined(separator: "|")
     }
 
     private func synchronizeIdentity() {

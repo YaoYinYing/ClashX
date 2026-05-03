@@ -40,6 +40,18 @@ class RemoteConfigModel: Codable {
         case url, name, updateTime, validationState, lastUpdateState, lastUpdateMessage
     }
 
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        url = try container.decode(String.self, forKey: .url)
+        name = try container.decode(String.self, forKey: .name)
+        updateTime = try container.decodeIfPresent(Date.self, forKey: .updateTime)
+        validationState = try container.decodeIfPresent(RemoteConfigValidationState.self, forKey: .validationState) ?? .unknown
+        lastUpdateState = try container.decodeIfPresent(RemoteConfigUpdateState.self, forKey: .lastUpdateState) ?? .never
+        lastUpdateMessage = try container.decodeIfPresent(String.self, forKey: .lastUpdateMessage)
+        updating = false
+        isPlaceHolderName = false
+    }
+
     func displayingTimeString() -> String {
         if updating { return NSLocalizedString("Updating", comment: "") }
         let dateFormater = DateFormatter()

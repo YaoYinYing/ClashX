@@ -24,3 +24,4 @@ build_derived_data
 /.derivedData
 /.derivedData-local
 /.omx
+/.codex-logs

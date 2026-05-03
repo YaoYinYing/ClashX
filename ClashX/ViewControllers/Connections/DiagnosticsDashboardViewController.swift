@@ -96,6 +96,7 @@ class DiagnosticsDashboardViewController: NSViewController {
         setup()
         renderOutput()
         updateCapabilityDrivenState()
+        CoreCapabilityProbe.shared.probeCurrentController { _ in }
         refreshMemory()
         refreshProviders()
         refreshArtifacts(announce: false)
@@ -393,6 +394,14 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     private func refreshMemory() {
+        guard ConfigManager.shared.isRunning else {
+            memoryOutput = NSLocalizedString("Core is stopped or controller is unavailable.", comment: "")
+            CapabilityCache.shared.markUnavailable(.memorySnapshot, message: memoryOutput)
+            setStatus(memoryOutput)
+            updateCapabilityDrivenState()
+            renderOutput()
+            return
+        }
         setStatus(NSLocalizedString("Refreshing /memory from the active controller.", comment: ""))
         ApiRequest.requestMemorySnapshot { [weak self] result in
             guard let self else { return }
@@ -417,6 +426,18 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     private func refreshProviders() {
+        guard ConfigManager.shared.isRunning else {
+            let message = NSLocalizedString("Core is stopped or controller is unavailable.", comment: "")
+            latestProxyProviderResult = .failed(message)
+            latestRuleProviderResult = .failed(message)
+            providerOutput = formatProviderDiagnostics(proxyResult: latestProxyProviderResult, ruleResult: latestRuleProviderResult)
+            CapabilityCache.shared.markUnavailable(.proxyProviders, message: message)
+            CapabilityCache.shared.markUnavailable(.ruleProviders, message: message)
+            setStatus(message)
+            updateCapabilityDrivenState()
+            renderOutput()
+            return
+        }
         setStatus(NSLocalizedString("Refreshing provider diagnostics from the active controller.", comment: ""))
         let group = DispatchGroup()
         var proxyResult: ControllerJSONResult?
@@ -501,8 +522,21 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionFlushFakeIPCache() {
-        ApiRequest.resetFakeIpCache()
-        setStatus(NSLocalizedString("Fake-IP cache flush requested.", comment: ""))
+        ApiRequest.resetFakeIpCache { [weak self] result in
+            guard let self else { return }
+            CapabilityCache.shared.mark(.dnsCacheFlush, endpointResult: result)
+            switch result {
+            case .success:
+                self.setStatus(NSLocalizedString("Fake-IP cache flush requested.", comment: ""))
+            case .unsupported:
+                self.setStatus(NSLocalizedString("Fake-IP cache flush is unsupported by the active controller.", comment: ""))
+            case .unauthorized:
+                self.setStatus(NSLocalizedString("Fake-IP cache flush was rejected by the active controller credentials.", comment: ""))
+            case let .failed(message):
+                self.setStatus(message)
+            }
+            self.updateCapabilityDrivenState()
+        }
     }
 
     @objc private func actionRestartCore() {
@@ -538,17 +572,17 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionCopyPprofURLs() {
-        guard let baseURL = URL(string: ConfigManager.apiUrl) else {
+        guard let baseURL = try? ControllerEndpointBuilder.baseHTTPURL() else {
             setStatus(NSLocalizedString("The active controller URL is invalid, so pprof URLs could not be prepared.", comment: ""))
             return
         }
 
         let urls = [
-            baseURL.appendingPathComponent("debug/pprof"),
-            baseURL.appendingPathComponent("debug/pprof/goroutine"),
-            baseURL.appendingPathComponent("debug/pprof/heap"),
-            baseURL.appendingPathComponent("debug/pprof/profile")
-        ]
+            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof"),
+            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof/goroutine"),
+            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof/heap"),
+            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof/profile")
+        ].compactMap { $0 }
 
         let text = [
             "SmartX pprof helpers",
@@ -725,6 +759,15 @@ class DiagnosticsDashboardViewController: NSViewController {
         let type = dnsTypeField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else {
             setStatus(NSLocalizedString("Enter a DNS name before querying diagnostics.", comment: ""))
+            return
+        }
+        guard ConfigManager.shared.isRunning else {
+            let message = NSLocalizedString("Core is stopped or controller is unavailable.", comment: "")
+            CapabilityCache.shared.markUnavailable(.dnsQuery, message: message)
+            dnsOutput = message
+            setStatus(message)
+            updateCapabilityDrivenState()
+            renderOutput()
             return
         }
 

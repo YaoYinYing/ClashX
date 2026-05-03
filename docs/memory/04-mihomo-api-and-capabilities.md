@@ -231,6 +231,21 @@ The current client mostly assumes features from branch history, compile-time mac
 
 The important point is that a capability should mean “this client can safely expose this feature,” not merely “an endpoint name exists in docs.”
 
+### ControllerEndpointBuilder
+
+SmartX now also has a dedicated controller endpoint builder at [`ClashX/General/Utils/ControllerEndpointBuilder.swift`](../../ClashX/General/Utils/ControllerEndpointBuilder.swift). New and touched high-risk controller paths should use it instead of raw `ConfigManager.apiUrl + ...` or `ConfigManager.webSocketUrl.appending(...)` construction.
+
+The current builder handles:
+
+- embedded and external controller bases
+- HTTP to WebSocket scheme conversion
+- trailing-slash normalization
+- query items
+- path component encoding
+- stripping query, fragment, and userinfo from external controller bases
+
+This resolves the most visible string-concatenated endpoint debt, but it does not yet split `ApiRequest` into dedicated domain clients.
+
 ### CoreEndpointAvailability
 
 `CoreEndpointAvailability` is now implemented and currently uses these states:
@@ -238,6 +253,21 @@ The important point is that a capability should mean “this client can safely e
 - available
 - unavailable
 - unauthorized
+- unsupported
+- unknown
+- degraded
+
+### Probe baseline
+
+SmartX now has a minimal probe layer in [`ClashX/General/Managers/CoreCapabilityProbe.swift`](../../ClashX/General/Managers/CoreCapabilityProbe.swift). It captures a snapshot for the active controller identity and probes a small safe read-only set:
+
+- `/version`
+- `/configs`
+- `/providers/proxies`
+- `/providers/rules`
+- `/memory`
+
+This is only a baseline. It does not yet implement a fully extracted probe architecture, separate domain clients, or exhaustive capability coverage.
 - unsupported
 - unknown
 - degraded

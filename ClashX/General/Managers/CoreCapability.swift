@@ -49,8 +49,10 @@ struct CoreCapabilityStatus {
 final class CapabilityCache {
     static let shared = CapabilityCache()
 
+    private let queue = DispatchQueue(label: "com.smartx.capability.cache")
     private var controllerIdentity = ""
     private var statuses = [CoreCapability: CoreCapabilityStatus]()
+    private var latestSnapshot: CoreCapabilitySnapshot?
 
     private init() {}
 
@@ -59,7 +61,7 @@ final class CapabilityCache {
         let running = ConfigManager.shared.isRunning ? "running" : "stopped"
         let secret = ConfigManager.shared.overrideSecret ?? ConfigManager.shared.apiSecret
         let secretState = secret.isEmpty ? "no-secret" : "secret-set"
-        return [mode, running, ConfigManager.apiUrl, secretState].joined(separator: "|")
+        return [mode, running, ControllerEndpointBuilder.sanitizedControllerIdentityBaseString(), secretState].joined(separator: "|")
     }
 
     private func synchronizeIdentity() {
@@ -67,31 +69,59 @@ final class CapabilityCache {
         guard controllerIdentity != identity else { return }
         controllerIdentity = identity
         statuses.removeAll()
+        latestSnapshot = nil
     }
 
     func reset() {
-        synchronizeIdentity()
-        statuses.removeAll()
+        queue.sync {
+            synchronizeIdentity()
+            statuses.removeAll()
+            latestSnapshot = nil
+        }
     }
 
     func status(for capability: CoreCapability) -> CoreCapabilityStatus? {
-        synchronizeIdentity()
-        return statuses[capability]
+        queue.sync {
+            synchronizeIdentity()
+            return statuses[capability]
+        }
     }
 
     func availability(for capability: CoreCapability) -> CoreEndpointAvailability {
-        synchronizeIdentity()
-        return statuses[capability]?.availability ?? .unknown
+        queue.sync {
+            synchronizeIdentity()
+            return statuses[capability]?.availability ?? .unknown
+        }
     }
 
     func message(for capability: CoreCapability) -> String? {
-        synchronizeIdentity()
-        return statuses[capability]?.message
+        queue.sync {
+            synchronizeIdentity()
+            return statuses[capability]?.message
+        }
+    }
+
+    func snapshot() -> CoreCapabilitySnapshot? {
+        queue.sync {
+            synchronizeIdentity()
+            return latestSnapshot
+        }
     }
 
     func set(_ capability: CoreCapability, availability: CoreEndpointAvailability, message: String? = nil) {
-        synchronizeIdentity()
-        statuses[capability] = CoreCapabilityStatus(availability: availability, message: message, updatedAt: Date())
+        queue.sync {
+            synchronizeIdentity()
+            statuses[capability] = CoreCapabilityStatus(availability: availability, message: message, updatedAt: Date())
+        }
+    }
+
+    func apply(snapshot: CoreCapabilitySnapshot) {
+        queue.sync {
+            synchronizeIdentity()
+            guard snapshot.controllerIdentity == controllerIdentity else { return }
+            latestSnapshot = snapshot
+            statuses = snapshot.statuses
+        }
     }
 
     func mark(_ capability: CoreCapability, endpointResult: ControllerEndpointResult, successMessage: String? = nil) {
@@ -122,5 +152,12 @@ final class CapabilityCache {
 
     func markUnavailable(_ capability: CoreCapability, message: String? = nil) {
         set(capability, availability: .unavailable, message: message)
+    }
+
+    func currentControllerIdentityForTesting() -> String {
+        queue.sync {
+            synchronizeIdentity()
+            return controllerIdentity
+        }
     }
 }

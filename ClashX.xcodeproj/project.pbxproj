@@ -39,6 +39,8 @@
 		4D534D3F2F44494147010B /* ProviderHealthHistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D3E2F44494147010B /* ProviderHealthHistoryManager.swift */; };
 		4D534D3D2F444941470109 /* DiagnosticsBundleExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D3C2F444941470109 /* DiagnosticsBundleExporter.swift */; };
 		4D534D412F44494147010D /* SmartXRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D402F44494147010D /* SmartXRedactor.swift */; };
+		4D534D432F44494147010E /* ControllerEndpointBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D442F44494147010E /* ControllerEndpointBuilder.swift */; };
+		4D534D452F44494147010F /* CoreCapabilityProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D462F44494147010F /* CoreCapabilityProbe.swift */; };
 		4960A6DB2136529200B940C9 /* JSBridgeHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4960A6DA2136529200B940C9 /* JSBridgeHandler.swift */; };
 		4D534D392F444941470106 /* DiagnosticsReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D382F444941470105 /* DiagnosticsReportBuilder.swift */; };
 		496322222AA5D89E00854231 /* UpdateExternalResourceAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 496322212AA5D89E00854231 /* UpdateExternalResourceAction.swift */; };
@@ -289,6 +291,8 @@
 		4D534D382F444941470105 /* DiagnosticsReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsReportBuilder.swift; sourceTree = "<group>"; };
 		4D534D342F444941470101 /* DiagnosticsDashboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsDashboardViewController.swift; sourceTree = "<group>"; };
 		4D534D312F534D4152540101 /* SmartDashboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartDashboardViewController.swift; sourceTree = "<group>"; };
+		4D534D442F44494147010E /* ControllerEndpointBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerEndpointBuilder.swift; sourceTree = "<group>"; };
+		4D534D462F44494147010F /* CoreCapabilityProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreCapabilityProbe.swift; sourceTree = "<group>"; };
 		5217C006C5A22A1CEA24BFC1 /* Pods-ClashX.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ClashX.debug.xcconfig"; path = "Pods/Target Support Files/Pods-ClashX/Pods-ClashX.debug.xcconfig"; sourceTree = "<group>"; };
 		8A2BBEA627A03ACB0081EBEF /* ProxySetting.sdef */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = ProxySetting.sdef; sourceTree = "<group>"; };
 		8ACD21BA27A04C7800BC4632 /* ProxySettingCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxySettingCommand.swift; sourceTree = "<group>"; };
@@ -385,6 +389,7 @@
 				49FEC6682AD9369C00BAD9F5 /* Command.swift */,
 				4D534D3C2F444941470109 /* DiagnosticsBundleExporter.swift */,
 				4D534D382F444941470105 /* DiagnosticsReportBuilder.swift */,
+				4D534D442F44494147010E /* ControllerEndpointBuilder.swift */,
 				4D534D402F44494147010D /* SmartXRedactor.swift */,
 			);
 			path = Utils;
@@ -398,6 +403,7 @@
 				49CF3B6420CEE06C001EBF94 /* ConfigManager.swift */,
 				495BFB8721919B9800C8779D /* RemoteConfigManager.swift */,
 				4D534D362F444941470103 /* CoreCapability.swift */,
+				4D534D462F44494147010F /* CoreCapabilityProbe.swift */,
 				4D534D3A2F444941470107 /* ProfileArtifactManager.swift */,
 				4D534D3E2F44494147010B /* ProviderHealthHistoryManager.swift */,
 				4952C3BE2115C7CA004A4FA8 /* MenuItemFactory.swift */,
@@ -993,10 +999,12 @@
 				492C4869210EE6B9004554A0 /* ApiRequest.swift in Sources */,
 				49CF3B6520CEE06C001EBF94 /* ConfigManager.swift in Sources */,
 				4D534D372F444941470104 /* CoreCapability.swift in Sources */,
+				4D534D452F44494147010F /* CoreCapabilityProbe.swift in Sources */,
 				4D534D3B2F444941470107 /* ProfileArtifactManager.swift in Sources */,
 				4D534D3F2F44494147010B /* ProviderHealthHistoryManager.swift in Sources */,
 				4D534D3D2F444941470109 /* DiagnosticsBundleExporter.swift in Sources */,
 				4D534D392F444941470106 /* DiagnosticsReportBuilder.swift in Sources */,
+				4D534D432F44494147010E /* ControllerEndpointBuilder.swift in Sources */,
 				4D534D412F44494147010D /* SmartXRedactor.swift in Sources */,
 				49870ADB2AA75DC7002B106B /* TerminalCleanUpAction.swift in Sources */,
 				F9E754D0239CC21F00CEE7CC /* WebPortalManager.swift in Sources */,

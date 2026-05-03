@@ -323,6 +323,9 @@ class CoreSettingViewController: NSViewController {
 
     private func refreshAll() {
         applyLoadingState()
+        CoreCapabilityProbe.shared.probeCurrentController { [weak self] _ in
+            self?.refreshLightGBMInfo()
+        }
         refreshCoreInfo()
         refreshConfigStatus()
         refreshLightGBMInfo()
@@ -426,16 +429,16 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func requestRemoteConfig(completeHandler: @escaping (Result<ClashConfig, Error>) -> Void) {
-        AF.request(ConfigManager.apiUrl + "/configs", headers: ApiRequest.authHeader())
-            .validate(statusCode: 200 ..< 300)
-            .responseDecodable(of: ClashConfig.self) { response in
-                switch response.result {
-                case let .success(config):
-                    completeHandler(.success(config))
-                case let .failure(error):
-                    completeHandler(.failure(error))
-                }
+        ApiRequest.requestControllerConfig { result in
+            switch result {
+            case let .success(config):
+                completeHandler(.success(config))
+            case let .unauthorized(message), let .failed(message):
+                completeHandler(.failure(NSError(domain: "ControllerEndpoint", code: -1, userInfo: [NSLocalizedDescriptionKey: message])))
+            case .unsupported:
+                completeHandler(.failure(NSError(domain: "ControllerEndpoint", code: 404, userInfo: [NSLocalizedDescriptionKey: NSLocalizedString("/configs is unsupported by the active controller.", comment: "")])))
             }
+        }
     }
 
     private func applyConfig(_ config: ClashConfig, source: String, detail: String) {
@@ -675,16 +678,22 @@ class CoreSettingViewController: NSViewController {
         }
 
         let targetState = tunEnabledButton.state == .on
-        ApiRequest.updateTun(enable: targetState) { [weak self] success, message in
+        ApiRequest.updateTunResult(enable: targetState) { [weak self] result in
             guard let self else { return }
-            if success {
+            switch result {
+            case .success:
                 Logger.log("[Core Settings] TUN updated enable=\(targetState)", level: .debug)
                 AppDelegate.shared.syncConfig {
                     self.refreshConfigStatus()
                 }
-            } else {
+            case .unsupported:
                 self.tunEnabledButton.state = self.currentTunEnabled ? .on : .off
-                let info = message ?? NSLocalizedString("Failed to update TUN settings.", comment: "")
+                let info = NSLocalizedString("The active controller does not support guarded TUN updates.", comment: "")
+                Logger.log("[Core Settings] TUN update failure: \(info)", level: .error)
+                NSUserNotificationCenter.default.post(title: "TUN", info: info)
+            case let .unauthorized(message), let .failed(message):
+                self.tunEnabledButton.state = self.currentTunEnabled ? .on : .off
+                let info = message
                 Logger.log("[Core Settings] TUN update failure: \(info)", level: .error)
                 NSUserNotificationCenter.default.post(title: "TUN", info: info)
             }
@@ -711,9 +720,9 @@ class CoreSettingViewController: NSViewController {
             case let .unauthorized(message):
                 CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unauthorized, message: message)
                 Logger.log("[Core Settings] LightGBM endpoint unauthorized", level: .warning)
-            case .failed:
-                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .degraded, message: NSLocalizedString("LightGBM model update failed.", comment: ""))
-                Logger.log("[Core Settings] LightGBM model update failed", level: .warning)
+            case let .failed(message):
+                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .degraded, message: message)
+                Logger.log("[Core Settings] LightGBM model update failed: \(message)", level: .warning)
             }
             self.refreshLightGBMInfo()
         }

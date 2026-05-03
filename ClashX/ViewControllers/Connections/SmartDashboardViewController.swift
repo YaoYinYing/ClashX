@@ -162,6 +162,12 @@ class SmartDashboardViewController: NSViewController {
 
     private func reloadData() {
         updateModelStatus()
+        if !ConfigManager.shared.isRunning {
+            smartEndpointsAvailable = false
+            emptyLabel.stringValue = NSLocalizedString("Core is stopped or controller is unavailable.", comment: "")
+            updateRows(groups: [], weights: [:])
+            return
+        }
         let smartWeightAvailability = CapabilityCache.shared.availability(for: .smartWeights)
         if smartWeightAvailability == .unsupported || smartWeightAvailability == .unauthorized {
             smartEndpointsAvailable = false
@@ -178,13 +184,34 @@ class SmartDashboardViewController: NSViewController {
 
             ApiRequest.requestSmartWeights { [weak self] response in
                 guard let self else { return }
-                if response == nil, !groups.isEmpty {
-                    self.smartEndpointsAvailable = false
-                    CapabilityCache.shared.set(.smartWeights, availability: .degraded, message: NSLocalizedString("Smart weights could not be loaded from the active controller.", comment: ""))
-                } else if response != nil {
+                switch response {
+                case let .success(weightsResponse):
                     CapabilityCache.shared.set(.smartWeights, availability: .available)
+                    self.smartEndpointsAvailable = true
+                    self.emptyLabel.stringValue = groups.isEmpty
+                        ? NSLocalizedString("The current config has no Smart groups.", comment: "")
+                        : (weightsResponse.weights.isEmpty
+                            ? NSLocalizedString("Smart weights loaded successfully, but the controller returned no weight entries.", comment: "")
+                            : NSLocalizedString("No Smart groups or weight data available.", comment: ""))
+                    self.updateRows(groups: groups, weights: weightsResponse.weights)
+                case .unsupported:
+                    self.smartEndpointsAvailable = false
+                    CapabilityCache.shared.set(.smartWeights, availability: .unsupported)
+                    self.emptyLabel.stringValue = NSLocalizedString("Smart weight endpoints are unsupported by the active controller.", comment: "")
+                    self.updateRows(groups: groups, weights: [:])
+                case let .unauthorized(message):
+                    self.smartEndpointsAvailable = false
+                    CapabilityCache.shared.set(.smartWeights, availability: .unauthorized, message: message)
+                    self.emptyLabel.stringValue = NSLocalizedString("Smart weight endpoints were rejected by the active controller credentials.", comment: "")
+                    self.updateRows(groups: groups, weights: [:])
+                case let .failed(message):
+                    if !groups.isEmpty {
+                        self.smartEndpointsAvailable = false
+                    }
+                    CapabilityCache.shared.set(.smartWeights, availability: .degraded, message: message)
+                    self.emptyLabel.stringValue = String(format: NSLocalizedString("Smart weight loading failed: %@", comment: ""), message)
+                    self.updateRows(groups: groups, weights: [:])
                 }
-                self.updateRows(groups: groups, weights: response?.weights ?? [:])
             }
         }
     }
@@ -238,15 +265,15 @@ class SmartDashboardViewController: NSViewController {
     }
 
     @objc private func actionFlushAll() {
-        ApiRequest.flushSmartCache { [weak self] success in
-            CapabilityCache.shared.set(.smartCacheFlush, availability: success ? .available : .degraded)
+        ApiRequest.flushSmartCache { [weak self] result in
+            CapabilityCache.shared.mark(.smartCacheFlush, endpointResult: result)
             self?.reloadData()
         }
     }
 
     @objc private func actionFlushConfig() {
-        ApiRequest.flushSmartCache(configName: ConfigManager.selectConfigName) { [weak self] success in
-            CapabilityCache.shared.set(.smartCacheFlush, availability: success ? .available : .degraded)
+        ApiRequest.flushSmartCache(configName: ConfigManager.selectConfigName) { [weak self] result in
+            CapabilityCache.shared.mark(.smartCacheFlush, endpointResult: result)
             self?.reloadData()
         }
     }
@@ -268,9 +295,9 @@ class SmartDashboardViewController: NSViewController {
                 self.lightGBMEndpointAvailable = false
                 CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unauthorized, message: message)
                 Logger.log("[Smart] LightGBM model update was rejected by controller authentication", level: .warning)
-            case .failed:
-                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .degraded, message: NSLocalizedString("LightGBM model update failed.", comment: ""))
-                Logger.log("[Smart] LightGBM model update failed", level: .warning)
+            case let .failed(message):
+                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .degraded, message: message)
+                Logger.log("[Smart] LightGBM model update failed: \(message)", level: .warning)
             }
             self.reloadData()
         }

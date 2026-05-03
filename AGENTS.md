@@ -13,11 +13,14 @@ Do not treat this repository as a place for speculative redesign. When a task ca
 
 ## Repository map
 
-- `App/`: macOS application layer, menu bar UI, preferences, notifications, launch behavior, and user-facing flows.
-- `Core/`: proxy profile loading, configuration parsing, profile switching, mihomo or Clash-compatible core process management, network state, and runtime control.
-- `Resources/`: assets, icons, localization files, plist files, bundled templates, and app metadata.
-- `Scripts/`: build, test, packaging, signing, notarization, release, and Codex helper scripts.
-- `Vendor/`, `Pods/`, `Carthage/`, `DerivedData/`, generated files, and lock files: treat as read-only unless the task explicitly requires dependency or generated-output changes.
+- `ClashX/`: main macOS app source, AppKit UI, managers, models, settings, connection dashboard, core bridge call sites, and app-target resources.
+- `ClashX/goClash/`: Go c-archive bridge and embedded mihomo or smart core integration.
+- `ProxyConfigHelper/`: privileged helper used for macOS system proxy configuration.
+- `Tests/`: security harnesses and future XCTest targets.
+- `scripts/`: Codex, build, test, and release helper scripts.
+- `docs/`: memory documents, roadmap notes, and project goals.
+- `ClashX.xcworkspace` and `ClashX.xcodeproj`: Xcode workspace and project metadata.
+- `Pods/` and lock files: dependency-managed artifacts; avoid editing unless dependency work is explicit.
 
 If the actual repository layout differs from this map, inspect only the smallest necessary set of files and update this map in a separate patch only when the mismatch affects future maintenance.
 
@@ -225,10 +228,10 @@ If work in one area becomes frequent, add a smaller `AGENTS.md` in that subdirec
 Recommended future locations:
 
 ```text
-App/AGENTS.md
-Core/AGENTS.md
-Resources/AGENTS.md
-Scripts/AGENTS.md
+ClashX/AGENTS.md
+ProxyConfigHelper/AGENTS.md
+Tests/AGENTS.md
+scripts/AGENTS.md
 ```
 
 Each subdirectory guide should stay shorter than this root guide and should contain only rules that are specific to that area.

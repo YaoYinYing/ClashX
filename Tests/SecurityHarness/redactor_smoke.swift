@@ -30,6 +30,14 @@ enum RedactorSmokeMain {
         assertContains(textURL, "https://example.com/sub?token=%3Credacted%3E", "sanitizeText should redact HTTP URL query values without recursion")
         assertNotContains(textURL, "abc", "sanitizeText should remove URL token values")
 
+        let reportLikeText = SmartXRedactor.sanitizeText("Active Profile Source: https://example.com/sub?token=abc")
+        assertContains(reportLikeText, "https://example.com/sub?token=%3Credacted%3E", "report-like text should keep the URL shape while redacting query values")
+        assertNotContains(reportLikeText, "abc", "report-like text should not leak query values")
+
+        let homePathText = SmartXRedactor.sanitizeText("Log Folder: \(NSHomeDirectory())/Library/Logs")
+        assertContains(homePathText, "~/Library/Logs", "sanitizeText should replace the home directory with ~")
+        assertNotContains(homePathText, NSHomeDirectory(), "sanitizeText should not keep the full home directory path")
+
         let proxyText = SmartXRedactor.sanitizeText("proxy: trojan://secret@example.com")
         assertContains(proxyText, "<redacted-proxy-uri>", "sanitizeText should redact proxy URIs")
         assertNotContains(proxyText, "trojan://secret@example.com", "sanitizeText should not leak proxy URI secrets")

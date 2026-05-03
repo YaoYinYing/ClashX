@@ -371,7 +371,7 @@ class CoreSettingViewController: NSViewController {
     private func refreshConfigStatus() {
         let fallbackConfig = ConfigManager.shared.currentConfig
         if let fallbackConfig {
-            applyConfig(fallbackConfig, source: NSLocalizedString("app state", comment: ""), detail: NSLocalizedString("Using the last config known by ClashX.", comment: ""))
+            applyConfig(fallbackConfig, source: NSLocalizedString("app state", comment: ""), detail: NSLocalizedString("Using the last config known by SmartX.", comment: ""))
         }
 
         if !ConfigManager.shared.isRunning {

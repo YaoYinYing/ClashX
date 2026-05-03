@@ -9,7 +9,7 @@ import Foundation
 
 enum DiagnosticsReportBuilder {
     static func build() -> String {
-        [
+        let report = [
             headerSection(),
             controllerSection(),
             configSection(),
@@ -20,6 +20,7 @@ enum DiagnosticsReportBuilder {
             resourceSection(),
             logSection()
         ].joined(separator: "\n\n")
+        return SmartXRedactor.sanitizeText(report)
     }
 
     private static func headerSection() -> String {

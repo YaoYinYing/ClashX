@@ -134,6 +134,12 @@ This is not just branding cleanup. These values affect:
 - analytics routing
 - public release identity
 
+Current note:
+
+- User-facing SmartX branding can be cleaned up independently of the helper/signing migration.
+- This repository may temporarily show SmartX in UI, README, and diagnostics while still retaining ClashX-era bundle IDs, helper IDs, Mach service names, and iCloud container identifiers for compatibility.
+- That split is intentional until a later signing-migration PR replaces the remaining internal identifiers coherently.
+
 ## Privacy Review
 
 SmartX inherits several privacy-sensitive surfaces that require explicit review before public release.

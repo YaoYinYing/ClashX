@@ -32,16 +32,16 @@
 "Cancel" = "取消";
 
 /* No comment provided by engineer. */
-"ClashX fail to create ~/.config/clash folder. Please check privileges or manually create folder and restart ClashX." = "ClashX 创建 ~/.config/clash 文件夹失败，请检查权限设置或者手动创建文件夹后重启 ClashX";
+"SmartX failed to create ~/.config/clash. Check permissions or create the folder manually, then restart SmartX." = "SmartX 创建 ~/.config/clash 文件夹失败，请检查权限设置或手动创建该文件夹后重启 SmartX。";
 
 /* No comment provided by engineer. */
-"ClashX needs to install/update a helper tool with administrator privileges, otherwise ClashX won't be able to configure system proxy." = "ClashX 需要使用管理员权限安装/更新一个帮助程序，否则 ClashX 将无法设置系统代理。";
+"SmartX needs to install or update a helper tool with administrator privileges, otherwise SmartX cannot configure the system proxy." = "SmartX 需要使用管理员权限安装或更新一个帮助程序，否则 SmartX 将无法设置系统代理。";
 
 /* No comment provided by engineer. */
-"ClashX Start Error!" = "ClashX 启动出错";
+"SmartX Start Error!" = "SmartX 启动出错";
 
 /* No comment provided by engineer. */
-"ClashX use a daemon helper to setup your system proxy. Please enable ClashX in the Login Items under the Allow in the Background section and relaunch the app" = "ClashX需要通过后台Daemon进程来设置系统代理，请在\"系统偏好设置->登录项->允许在后台 中\"允许ClashX";
+"SmartX uses a daemon helper to configure the system proxy. Enable SmartX in Login Items under Allow in the Background, then relaunch the app." = "SmartX 需要通过后台 Daemon 帮助程序设置系统代理，请在“系统设置 -> 登录项 -> 允许在后台运行”中允许 SmartX，然后重新启动应用。";
 
 /* No comment provided by engineer. */
 "Click OK to quit the app and apply change." = "确认清理并退出软件";
@@ -128,7 +128,7 @@
 "iCloud not available" = "iCloud 不可用";
 
 /* No comment provided by engineer. */
-"If you can not find ClashX in the settings, you can try reset daemon" = "如果在设置里没找到ClashX,可以尝试重置守护程序";
+"If you cannot find SmartX in Settings, try resetting the daemon." = "如果在系统设置里找不到 SmartX，可以尝试重置守护程序。";
 
 /* No comment provided by engineer. */
 "Install" = "安装";
@@ -146,7 +146,7 @@
 "Local Clients" = "本地程序";
 
 /* No comment provided by engineer. */
-"Need to Restart the ClashX to Take effect, Please start clashX manually" = "需要重启ClashX生效，请手动启动ClashX";
+"Restart SmartX to apply the change, then launch SmartX manually." = "需要重启 SmartX 才会生效，请手动启动 SmartX。";
 
 /* No comment provided by engineer. */
 "Never" = "从未";
@@ -173,10 +173,10 @@
 "Open System Login Item Setting" = "打开系统登录项设置";
 
 /* No comment provided by engineer. */
-"Please enable the location service for ClashX to detect your current WiFi network's SSID name and provide the auto-suspend services." = "请允许ClashX使用定位服务来获取当前所连接的WiFi名称从而提供按需暂停服务。";
+"Enable location services for SmartX so it can detect the current Wi-Fi SSID and provide auto-suspend behavior." = "请允许 SmartX 使用定位服务来获取当前连接的 Wi-Fi 名称，从而提供按需暂停功能。";
 
 /* No comment provided by engineer. */
-"Ports Open Fail, Please try to restart ClashX" = "端口打开失败，请尝试重启ClashX";
+"Ports failed to open. Try restarting SmartX." = "端口打开失败，请尝试重启 SmartX。";
 
 /* No comment provided by engineer. */
 "Prelease" = "Prelease";
@@ -185,13 +185,13 @@
 "Proxy Mode" = "出站模式";
 
 /* No comment provided by engineer. */
-"Proxy settings are changed by another process. ClashX is no longer the default system proxy." = "系统代理设置已被另一个进程修改，ClashX不再是系统默认代理";
+"Proxy settings were changed by another process. SmartX is no longer the default system proxy." = "系统代理设置已被另一个进程修改，SmartX 不再是默认系统代理。";
 
 /* No comment provided by engineer. */
 "Quit" = "退出";
 
 /* No comment provided by engineer. */
-"Quit ClashX?" = "退出ClashX?";
+"Quit SmartX?" = "退出 SmartX？";
 
 /* No comment provided by engineer. */
 "Recent Connections" = "最近连接";
@@ -275,7 +275,7 @@
 "The status icon is coverd or hide by other app." = "菜单栏图标被刘海屏遮挡或者被其他app隐藏，请检查菜单栏状态。";
 
 /* No comment provided by engineer. */
-"This version of ClashX contains a break change due to clash core 1.0 released. Check if your config is not working properly." = "由于Clash Core发布1.0版本，使用此版本的 ClashX 可能需要更新配置内容\n前往 https://github.com/Dreamacro/clash/wiki/breaking-changes-in-1.0.0 查看详情";
+"Check whether your config still works correctly with this SmartX build." = "由于 clash core 1.0 带来不兼容变更，请检查当前 SmartX 构建中的配置是否仍能正常工作。";
 
 /* No comment provided by engineer. */
 "total: %d, success: %d" = "共计: %d, 成功: %d";

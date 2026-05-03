@@ -30,7 +30,7 @@ class AboutViewController: NSViewController {
         let isBeta = AppVersionUtil.isBeta ? " Beta" : ""
         let activeMode = Settings.isUsingEmbeddedCore ? "Embedded Vernesong mihomo" : "External Controller"
 
-        versionLabel.stringValue = "ClashX \(version) (\(build))\(isBeta)"
+        versionLabel.stringValue = "SmartX \(version) (\(build))\(isBeta)"
         if Settings.isUsingEmbeddedCore {
             coreVersionLabel.stringValue = "Core: \(activeMode) \(clashCoreVersion)"
             buildTimeLabel.stringValue = "Build: \(commit) @ \(branch) \(buildTime)"

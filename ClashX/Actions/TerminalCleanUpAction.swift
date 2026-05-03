@@ -68,7 +68,7 @@ enum TerminalConfirmAction {
     static func confirmAction() -> Bool {
         if NSApp.activationPolicy() == .regular {
             let alert = NSAlert()
-            alert.messageText = NSLocalizedString("Quit ClashX?", comment: "")
+            alert.messageText = NSLocalizedString("Quit SmartX?", comment: "")
             alert.informativeText = NSLocalizedString("The active connections will be interrupted.", comment: "")
             alert.alertStyle = .informational
             alert.addButton(withTitle: NSLocalizedString("Quit", comment: ""))

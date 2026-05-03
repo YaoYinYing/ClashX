@@ -25,12 +25,23 @@ enum ControllerEndpointError: LocalizedError {
 }
 
 enum ControllerEndpointBuilder {
+    // `path` is for static literal endpoint paths such as "/configs" or
+    // "/providers/proxies". Dynamic controller identifiers must use
+    // `pathComponents` so each raw component is encoded exactly once.
     static func httpURL(path: String, queryItems: [URLQueryItem] = []) throws -> URL {
         try composeURL(baseURL: baseHTTPURL(), path: path, queryItems: queryItems)
     }
 
+    static func httpURL(pathComponents: [String], queryItems: [URLQueryItem] = []) throws -> URL {
+        try composeURL(baseURL: baseHTTPURL(), pathComponents: pathComponents, queryItems: queryItems)
+    }
+
     static func websocketURL(path: String, queryItems: [URLQueryItem] = []) throws -> URL {
         try composeURL(baseURL: baseWebSocketURL(), path: path, queryItems: queryItems)
+    }
+
+    static func websocketURL(pathComponents: [String], queryItems: [URLQueryItem] = []) throws -> URL {
+        try composeURL(baseURL: baseWebSocketURL(), pathComponents: pathComponents, queryItems: queryItems)
     }
 
     static func baseHTTPURL() throws -> URL {
@@ -83,18 +94,36 @@ enum ControllerEndpointBuilder {
         let segments = path
             .split(separator: "/", omittingEmptySubsequences: true)
             .map(String.init)
-        let url = segments.reduce(baseURL) { partial, segment in
-            partial.appendingPathComponent(segment)
+        return try composeURL(baseURL: baseURL, pathComponents: segments, queryItems: queryItems)
+    }
+
+    static func composeURL(baseURL: URL, pathComponents: [String], queryItems: [URLQueryItem] = []) throws -> URL {
+        guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            throw ControllerEndpointError.invalidEndpoint(pathComponents.joined(separator: "/"))
         }
-        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            throw ControllerEndpointError.invalidEndpoint(path)
+        let encodedBasePath = components.percentEncodedPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let encodedComponents = try pathComponents.map { component in
+            guard let encoded = component.addingPercentEncoding(withAllowedCharacters: pathComponentAllowedCharacters) else {
+                throw ControllerEndpointError.invalidEndpoint(component)
+            }
+            return encoded
         }
+        let joinedPath = ([encodedBasePath] + encodedComponents)
+            .filter { !$0.isEmpty }
+            .joined(separator: "/")
+        components.percentEncodedPath = "/" + joinedPath
         components.queryItems = queryItems.isEmpty ? nil : queryItems
         guard let finalURL = components.url else {
-            throw ControllerEndpointError.invalidEndpoint(path)
+            throw ControllerEndpointError.invalidEndpoint(pathComponents.joined(separator: "/"))
         }
         return finalURL
     }
+
+    private static let pathComponentAllowedCharacters: CharacterSet = {
+        var set = CharacterSet.urlPathAllowed
+        set.remove(charactersIn: "/%")
+        return set
+    }()
 
     private static func normalizeExternalBaseURL(_ baseURL: URL) throws -> URL {
         guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false),

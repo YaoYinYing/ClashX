@@ -29,6 +29,7 @@ final class CoreCapabilityProbe {
         guard ConfigManager.shared.isRunning else {
             let message = NSLocalizedString("Core is stopped or controller is unavailable.", comment: "")
             let statuses = baselineStatuses(probedAt: probedAt, defaults: [
+                .versionRead: .unavailable,
                 .configRead: .unavailable,
                 .proxyProviders: .unavailable,
                 .ruleProviders: .unavailable,
@@ -74,13 +75,13 @@ final class CoreCapabilityProbe {
                     stateQueue.sync {
                         coreVersion = info.version
                     }
-                    assign(.configReload, .available, message: NSLocalizedString("/version responded successfully.", comment: ""))
+                    assign(.versionRead, .available, message: NSLocalizedString("/version responded successfully.", comment: ""))
                 case .unsupported:
-                    assign(.configReload, .unsupported)
+                    assign(.versionRead, .unsupported)
                 case let .unauthorized(message):
-                    assign(.configReload, .unauthorized, message: message)
+                    assign(.versionRead, .unauthorized, message: message)
                 case let .failed(message):
-                    assign(.configReload, .degraded, message: message)
+                    assign(.versionRead, .degraded, message: message)
                 }
                 group.leave()
             }

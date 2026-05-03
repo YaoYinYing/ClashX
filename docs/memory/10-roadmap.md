@@ -39,6 +39,10 @@ Expected outputs:
 - SmartX identity text is consistent in new user-facing surfaces
 - review findings are captured in memory docs
 
+Current note:
+
+- A focused user-facing identity cleanup PR is acceptable in this phase as long as it does not attempt full bundle/helper/signing migration in the same patch.
+
 Testing gate:
 
 - every fix PR in this phase should run the relevant build and lightweight harness checks

@@ -119,7 +119,7 @@ class SSIDSuspendTool: NSObject {
     private func openLocationSettings() {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Location")!)
         NSApp.activate(ignoringOtherApps: true)
-        NSAlert.alert(with: NSLocalizedString("Please enable the location service for ClashX to detect your current WiFi network's SSID name and provide the auto-suspend services.", comment: ""))
+        NSAlert.alert(with: NSLocalizedString("Enable location services for SmartX so it can detect the current Wi-Fi SSID and provide auto-suspend behavior.", comment: ""))
     }
 }
 

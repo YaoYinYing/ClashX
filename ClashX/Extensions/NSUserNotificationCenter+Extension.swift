@@ -134,7 +134,7 @@ extension NSUserNotificationCenter {
 
     func postProxyChangeByOtherAppNotice() {
         post(title: NSLocalizedString("System Proxy Changed", comment: ""),
-             info: NSLocalizedString("Proxy settings are changed by another process. ClashX is no longer the default system proxy.", comment: ""), notiOnly: true)
+             info: NSLocalizedString("Proxy settings were changed by another process. SmartX is no longer the default system proxy.", comment: ""), notiOnly: true)
     }
 }
 

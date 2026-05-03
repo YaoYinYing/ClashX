@@ -52,7 +52,7 @@ class ClashResourceManager {
 
     static func showCreateConfigDirFailAlert(err: String) {
         let alert = NSAlert()
-        alert.messageText = NSLocalizedString("ClashX fail to create ~/.config/clash folder. Please check privileges or manually create folder and restart ClashX." + err, comment: "")
+        alert.messageText = NSLocalizedString("SmartX failed to create ~/.config/clash. Check permissions or create the folder manually, then restart SmartX.", comment: "") + "\n" + err
         alert.alertStyle = .warning
         alert.addButton(withTitle: NSLocalizedString("Quit", comment: ""))
         alert.runModal()

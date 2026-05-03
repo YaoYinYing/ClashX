@@ -117,6 +117,27 @@ class ApiRequest {
         }
     }
 
+    private static func req(
+        pathComponents: [String],
+        method: HTTPMethod = .get,
+        parameters: Parameters? = nil,
+        encoding: ParameterEncoding = URLEncoding.default,
+        queryItems: [URLQueryItem] = []
+    ) -> DataRequest? {
+        do {
+            let url = try ControllerEndpointBuilder.httpURL(pathComponents: pathComponents, queryItems: queryItems)
+            return shared.alamoFireManager
+                .request(url,
+                         method: method,
+                         parameters: parameters,
+                         encoding: encoding,
+                         headers: authHeader())
+        } catch {
+            Logger.log("[ApiRequest] request unavailable pathComponents=\(pathComponents) error=\(error.localizedDescription)", level: .warning)
+            return nil
+        }
+    }
+
     private static func controllerUnavailableMessage() -> String {
         NSLocalizedString("Core is stopped or controller is unavailable.", comment: "")
     }
@@ -241,7 +262,7 @@ class ApiRequest {
 
         let data = clashGetConfigs()?.toString().data(using: .utf8) ?? Data()
         guard let config = ClashConfig.fromData(data) else {
-            NSUserNotificationCenter.default.post(title: "Error", info: "Get clash config failed. Try Fix your config file then reload config or restart ClashX.")
+            NSUserNotificationCenter.default.post(title: "Error", info: "Get clash config failed. Try fixing your config file, then reload the config or restart SmartX.")
             (NSApplication.shared.delegate as? AppDelegate)?.startProxy()
             return
         }
@@ -260,7 +281,7 @@ class ApiRequest {
     }
 
     static func requestConfigUpdate(configPath: String, callback: @escaping ((ErrorString?) -> Void)) {
-        let placeHolderErrorDesp = "Error occoured, Please try to fix it by restarting ClashX. "
+        let placeHolderErrorDesp = "An error occurred. Try fixing it by restarting SmartX. "
 
         // DEV MODE: Use API
         if !useDirectApi() {
@@ -428,7 +449,7 @@ class ApiRequest {
     }
 
     static func updateProxyGroup(group: String, selectProxy: String, callback: @escaping ((Bool) -> Void)) {
-        guard let request = req("/proxies/\(group.encoded)",
+        guard let request = req(pathComponents: ["proxies", group],
                                 method: .put,
                                 parameters: ["name": selectProxy],
                                 encoding: JSONEncoding.default) else {
@@ -480,7 +501,7 @@ class ApiRequest {
     }
 
     static func getProxyDelay(proxyName: String, callback: @escaping ((Int) -> Void)) {
-        guard let request = req("/proxies/\(proxyName.encoded)/delay",
+        guard let request = req(pathComponents: ["proxies", proxyName, "delay"],
                                 method: .get,
                                 parameters: ["timeout": 5000, "url": Settings.benchMarkUrl]) else {
             callback(0)
@@ -512,7 +533,7 @@ class ApiRequest {
 
     static func healthCheck(proxy: ClashProviderName, completeHandler: (() -> Void)? = nil) {
         Logger.log("HeathCheck for \(proxy) started")
-        guard let request = req("/providers/proxies/\(proxy.encoded)/healthcheck") else {
+        guard let request = req(pathComponents: ["providers", "proxies", proxy, "healthcheck"]) else {
             completeHandler?()
             return
         }
@@ -528,7 +549,7 @@ class ApiRequest {
 
     static func healthCheckProvider(proxy: ClashProviderName, completeHandler: ((Bool) -> Void)? = nil) {
         Logger.log("HeathCheck for \(proxy) started")
-        guard let request = req("/providers/proxies/\(proxy.encoded)/healthcheck") else {
+        guard let request = req(pathComponents: ["providers", "proxies", proxy, "healthcheck"]) else {
             completeHandler?(false)
             return
         }
@@ -658,7 +679,7 @@ class ApiRequest {
     }
 
     static func requestPolicyGroup(name: String, completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        guard let request = req("/group/\(name.encoded)") else {
+        guard let request = req(pathComponents: ["group", name]) else {
             completeHandler(unavailableJSONResult())
             return
         }
@@ -668,7 +689,7 @@ class ApiRequest {
     }
 
     static func deletePolicyGroup(name: String, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = req("/group/\(name.encoded)", method: .delete) else {
+        guard let request = req(pathComponents: ["group", name], method: .delete) else {
             completeHandler?(unavailableEndpointResult())
             return
         }
@@ -682,7 +703,7 @@ class ApiRequest {
             URLQueryItem(name: "timeout", value: String(timeout)),
             URLQueryItem(name: "url", value: url)
         ]
-        guard let request = req("/group/\(name.encoded)/delay", queryItems: queryItems) else {
+        guard let request = req(pathComponents: ["group", name, "delay"], queryItems: queryItems) else {
             completeHandler(unavailableJSONResult())
             return
         }
@@ -712,7 +733,7 @@ extension ApiRequest {
     }
 
     static func closeConnection(_ id: String) {
-        req("/connections/\(id)", method: .delete)?.response { _ in }
+        req(pathComponents: ["connections", id], method: .delete)?.response { _ in }
     }
 
     static func closeAllConnection() {
@@ -788,14 +809,14 @@ extension ApiRequest {
     }
 
     static func updateProviderResult(name: String, type: ProviderType, completeHandler: @escaping (ControllerEndpointResult) -> Void) {
-        let url: String
+        let pathComponents: [String]
         switch type {
         case .proxy:
-            url = "/providers/proxies/\(name.encoded)"
+            pathComponents = ["providers", "proxies", name]
         case .rule:
-            url = "/providers/rules/\(name.encoded)"
+            pathComponents = ["providers", "rules", name]
         }
-        guard let request = ApiRequest.req(url, method: .put) else {
+        guard let request = ApiRequest.req(pathComponents: pathComponents, method: .put) else {
             completeHandler(unavailableEndpointResult())
             return
         }
@@ -832,7 +853,7 @@ extension ApiRequest {
     }
 
     static func requestSmartWeights(group: String, completeHandler: @escaping (ControllerDecodedResult<[SmartNodeWeight]>) -> Void) {
-        guard let request = req("/group/\(group.encoded)/weights") else {
+        guard let request = req(pathComponents: ["group", group, "weights"]) else {
             completeHandler(unavailableDecodedResult())
             return
         }
@@ -854,8 +875,13 @@ extension ApiRequest {
     }
 
     static func flushSmartCache(configName: String? = nil, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        let path = configName.map { "/cache/smart/flush/\($0.encoded)" } ?? "/cache/smart/flush"
-        guard let request = req(path, method: .post) else {
+        let request: DataRequest?
+        if let configName {
+            request = req(pathComponents: ["cache", "smart", "flush", configName], method: .post)
+        } else {
+            request = req("/cache/smart/flush", method: .post)
+        }
+        guard let request else {
             completeHandler?(unavailableEndpointResult())
             return
         }
@@ -865,7 +891,7 @@ extension ApiRequest {
     }
 
     static func blockSmartConnection(_ id: String, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = req("/connections/smart/\(id)", method: .delete) else {
+        guard let request = req(pathComponents: ["connections", "smart", id], method: .delete) else {
             completeHandler?(unavailableEndpointResult())
             return
         }

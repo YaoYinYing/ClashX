@@ -23,11 +23,11 @@ func expectURL(_ url: URL, equals expected: String, _ message: String) {
 func runControllerEndpointBuilderSmoke() throws {
     ConfigManager.shared.isRunning = true
     ConfigManager.shared.overrideApiURL = nil
-    ConfigManager.shared.apiPort = try "9090"
+    ConfigManager.shared.apiPort = "9090"
 
-    expectURL(ControllerEndpointBuilder.httpURL(path: "/configs"),
-              equals: "http://127.0.0.1:9090/configs",
-              "embedded http path with leading slash")
+    try expectURL(ControllerEndpointBuilder.httpURL(path: "/configs"),
+                  equals: "http://127.0.0.1:9090/configs",
+                  "embedded http path with leading slash")
     try expectURL(ControllerEndpointBuilder.websocketURL(path: "/traffic"),
                   equals: "ws://127.0.0.1:9090/traffic",
                   "embedded websocket path")
@@ -64,6 +64,34 @@ func runControllerEndpointBuilderSmoke() throws {
               equals: "https://example.com:9443/base/configs",
               "userinfo stripped from base")
     expect(!userInfoURL.absoluteString.contains("user"), "userinfo leaked into endpoint")
+
+    let proxySpaceURL = try ControllerEndpointBuilder.httpURL(pathComponents: ["proxies", "Proxy A"])
+    expectURL(proxySpaceURL,
+              equals: "https://example.com:9443/base/proxies/Proxy%20A",
+              "raw space component encoded exactly once")
+    expect(!proxySpaceURL.absoluteString.contains("%2520"), "space component double-encoded")
+
+    let chineseURL = try ControllerEndpointBuilder.httpURL(pathComponents: ["group", "香港 节点"])
+    expectURL(chineseURL,
+              equals: "https://example.com:9443/base/group/%E9%A6%99%E6%B8%AF%20%E8%8A%82%E7%82%B9",
+              "raw Chinese component encoded exactly once")
+    expect(!chineseURL.absoluteString.contains("%25E9"), "Chinese component double-encoded")
+
+    let slashURL = try ControllerEndpointBuilder.httpURL(pathComponents: ["providers", "proxies", "Group/A"])
+    expectURL(slashURL,
+              equals: "https://example.com:9443/base/providers/proxies/Group%2FA",
+              "slash inside raw component stays in one path segment")
+
+    let percentURL = try ControllerEndpointBuilder.httpURL(pathComponents: ["proxies", "50% Node"])
+    expectURL(percentURL,
+              equals: "https://example.com:9443/base/proxies/50%25%20Node",
+              "literal percent encoded as %25")
+
+    // Static string paths are only for literal endpoints, not pre-encoded names.
+    let staticPathURL = try ControllerEndpointBuilder.httpURL(path: "/group/test")
+    expectURL(staticPathURL,
+              equals: "https://example.com:9443/base/group/test",
+              "static path API remains available for literal endpoints")
 }
 
 @main

@@ -207,6 +207,7 @@ The current client mostly assumes features from branch history, compile-time mac
 
 [`ClashX/General/Managers/CoreCapability.swift`](../../ClashX/General/Managers/CoreCapability.swift) now provides a first-pass `CoreCapability` enum that represents user-facing features rather than raw endpoints. Current categories include:
 
+- versionRead
 - configRead
 - configPatch
 - configReload
@@ -243,6 +244,13 @@ The current builder handles:
 - query items
 - path component encoding
 - stripping query, fragment, and userinfo from external controller bases
+
+The builder now separates two semantics explicitly:
+
+- `path`: static literal controller endpoints only
+- `pathComponents`: raw dynamic controller identifiers that must be encoded exactly once
+
+Callers should pass proxy names, provider names, group names, config names, and similar dynamic identifiers as raw `pathComponents`, not as pre-encoded strings. This fixes the PR #9 regression where `appendingPathComponent` turned values like `Proxy%20A` into `Proxy%2520A`.
 
 This resolves the most visible string-concatenated endpoint debt, but it does not yet split `ApiRequest` into dedicated domain clients.
 

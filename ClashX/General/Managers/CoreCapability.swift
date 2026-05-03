@@ -8,6 +8,7 @@
 import Foundation
 
 enum CoreCapability: String, CaseIterable {
+    case versionRead
     case configRead
     case configPatch
     case configReload

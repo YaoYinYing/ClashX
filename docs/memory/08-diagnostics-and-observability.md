@@ -368,6 +368,8 @@ The bundle exporter also redacts:
 - authorization-style values
 - common token/secret/password key-value patterns
 
+There is still no dedicated XCTest target for diagnostics redaction. For the `codex/goal-may26-01` stabilization pass, the branch keeps the production redactor in app code and documents the remaining test-target gap instead of cloning that logic into a second standalone harness.
+
 Recommended contents:
 
 - build metadata

@@ -14,6 +14,7 @@ Notes:
 - `PathSafetyTests` currently focuses on deterministic name validation/path APIs and config replacement invariants.
 - Manual helper validation case to add during macOS test runs: `http://127.evil.com/proxy.pac` must be rejected by helper PAC validation.
 - `Tests/SecurityHarness/security_harness.swift` is a temporary CI smoke test. It now mirrors the current production SHA256 fallback naming and suggested-filename validation semantics, but it does not replace a real XCTest target.
+- SmartX redaction currently has no dedicated XCTest target either. For the `codex/goal-may26-01` stabilization PR, the production redactor was kept in app code and the gap remains documented here rather than cloning that logic into another standalone harness.
 
 ## CI
 - PR CI runs on macOS GitHub Actions via `.github/workflows/pr-ci.yml`.

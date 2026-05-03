@@ -30,7 +30,7 @@ class SmartDashboardViewController: NSViewController {
     private let updateModelButton = NSButton(title: NSLocalizedString("Update LightGBM Model", comment: ""), target: nil, action: nil)
     private let resetModelUrlButton = NSButton(title: NSLocalizedString("Reset URL", comment: ""), target: nil, action: nil)
     private let openConfigFolderButton = NSButton(title: NSLocalizedString("Open Config Folder", comment: ""), target: nil, action: nil)
-    private let modelOverrideButton = NSButton(checkboxWithTitle: NSLocalizedString("Use ClashX LightGBM Settings", comment: ""), target: nil, action: nil)
+    private let modelOverrideButton = NSButton(checkboxWithTitle: NSLocalizedString("Use SmartX LightGBM Override", comment: ""), target: nil, action: nil)
     private let modelAutoUpdateButton = NSButton(checkboxWithTitle: NSLocalizedString("Auto Update", comment: ""), target: nil, action: nil)
     private let modelUrlField = NSTextField(string: "")
     private let modelIntervalField = NSTextField(string: "")

@@ -214,7 +214,7 @@ The current client mostly assumes features from branch history, compile-time mac
 - ruleProviders
 - logsStream
 - trafficStream
-- memoryStream
+- memorySnapshot
 - tunConfigRead
 - tunGuardedUpdate
 - smartWeights

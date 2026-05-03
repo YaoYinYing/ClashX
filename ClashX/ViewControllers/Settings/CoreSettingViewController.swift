@@ -53,7 +53,7 @@ class CoreSettingViewController: NSViewController {
     private let modelPathLabel = CoreSettingViewController.makeWrapLabel()
     private let modelEndpointLabel = CoreSettingViewController.makeWrapLabel()
     private let modelOverrideStatusLabel = CoreSettingViewController.makeWrapLabel()
-    private let modelOverrideButton = NSButton(checkboxWithTitle: NSLocalizedString("Use ClashX LightGBM Settings", comment: ""), target: nil, action: nil)
+    private let modelOverrideButton = NSButton(checkboxWithTitle: NSLocalizedString("Use SmartX LightGBM Override", comment: ""), target: nil, action: nil)
     private let modelAutoUpdateButton = NSButton(checkboxWithTitle: NSLocalizedString("Auto Update", comment: ""), target: nil, action: nil)
     private let modelUrlField = NSTextField(string: "")
     private let modelIntervalField = NSTextField(string: "")

@@ -15,7 +15,7 @@ enum CoreCapability: String, CaseIterable {
     case ruleProviders
     case logsStream
     case trafficStream
-    case memoryStream
+    case memorySnapshot
     case tunConfigRead
     case tunGuardedUpdate
     case smartWeights

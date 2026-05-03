@@ -367,7 +367,7 @@ class DiagnosticsDashboardViewController: NSViewController {
 
     private func refreshArtifacts(announce: Bool = true) {
         artifactOutput = [
-            formatArtifactPreview(title: "Generated Effective Config",
+            formatArtifactPreview(title: "Successful Reload Artifact",
                                   configURL: Paths.generatedEffectiveConfigURL,
                                   metadataURL: Paths.generatedEffectiveMetadataURL),
             formatArtifactPreview(title: "Last Known Good Config",
@@ -396,7 +396,7 @@ class DiagnosticsDashboardViewController: NSViewController {
         setStatus(NSLocalizedString("Refreshing /memory from the active controller.", comment: ""))
         ApiRequest.requestMemorySnapshot { [weak self] result in
             guard let self else { return }
-            CapabilityCache.shared.mark(.memoryStream, jsonResult: result)
+            CapabilityCache.shared.mark(.memorySnapshot, jsonResult: result)
             switch result {
             case let .success(json):
                 self.memoryOutput = self.prettyPrinted(json)
@@ -506,6 +506,10 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionRestartCore() {
+        guard confirmMaintenanceAction(title: NSLocalizedString("Restart core?", comment: ""),
+                                       message: NSLocalizedString("This will ask the active controller to restart immediately. Existing controller activity may be interrupted.", comment: ""),
+                                       confirmTitle: NSLocalizedString("Restart", comment: ""))
+        else { return }
         performAction(
             .restart,
             startText: NSLocalizedString("Requesting controller restart.", comment: ""),
@@ -518,6 +522,10 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionRunGC() {
+        guard confirmMaintenanceAction(title: NSLocalizedString("Run debug GC?", comment: ""),
+                                       message: NSLocalizedString("This sends a debug garbage-collection request to the active controller. Use it only for diagnostics.", comment: ""),
+                                       confirmTitle: NSLocalizedString("Run GC", comment: ""))
+        else { return }
         performAction(
             .debugGC,
             startText: NSLocalizedString("Requesting controller garbage collection.", comment: ""),
@@ -568,6 +576,10 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionUpdateGeoAssets() {
+        guard confirmMaintenanceAction(title: NSLocalizedString("Update GEO assets?", comment: ""),
+                                       message: NSLocalizedString("This asks the active controller to refresh GEO databases and related assets. It is a maintenance action, not a read-only diagnostic.", comment: ""),
+                                       confirmTitle: NSLocalizedString("Update GEO", comment: ""))
+        else { return }
         performAction(
             .geoUpdate,
             startText: NSLocalizedString("Updating GEO assets.", comment: ""),
@@ -580,6 +592,10 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionUpdateDashboardAssets() {
+        guard confirmMaintenanceAction(title: NSLocalizedString("Update dashboard assets?", comment: ""),
+                                       message: NSLocalizedString("This requests a dashboard asset update from the active controller. Use it only when you intend to modify installed assets.", comment: ""),
+                                       confirmTitle: NSLocalizedString("Update Dashboard", comment: ""))
+        else { return }
         performAction(
             .uiUpgrade,
             startText: NSLocalizedString("Updating dashboard assets.", comment: ""),
@@ -645,16 +661,15 @@ class DiagnosticsDashboardViewController: NSViewController {
         }
 
         let metadata = ProfileArtifactManager.loadMetadata(at: Paths.lastKnownGoodMetadataURL)
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = NSLocalizedString("Restore last-known-good profile artifact?", comment: "")
         let profileName = metadata?.selectedProfileName ?? ConfigManager.selectConfigName
         let sourcePath = metadata?.sourceConfigPath ?? Paths.lastKnownGoodConfigURL.path
-        alert.informativeText = String(format: NSLocalizedString("This will reload the saved last-known-good config for profile %@.\nSource: %@", comment: ""), profileName, sourcePath)
-        alert.addButton(withTitle: NSLocalizedString("Restore", comment: ""))
-        alert.addButton(withTitle: NSLocalizedString("Cancel", comment: ""))
-        NSApp.activate(ignoringOtherApps: true)
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let message = String(format: NSLocalizedString("This will reload the saved last-known-good config for profile %@.\nSource: %@", comment: ""),
+                             profileName,
+                             SmartXRedactor.redactPath(sourcePath) ?? sourcePath)
+        guard confirmMaintenanceAction(title: NSLocalizedString("Restore last-known-good profile artifact?", comment: ""),
+                                       message: message,
+                                       confirmTitle: NSLocalizedString("Restore", comment: ""))
+        else { return }
 
         setStatus(NSLocalizedString("Restoring the last-known-good profile artifact.", comment: ""))
         AppDelegate.shared.restoreLastKnownGoodConfig(showNotification: false) { [weak self] error in
@@ -846,6 +861,17 @@ class DiagnosticsDashboardViewController: NSViewController {
         return lines.joined(separator: "\n")
     }
 
+    private func confirmMaintenanceAction(title: String, message: String, confirmTitle: String) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: confirmTitle)
+        alert.addButton(withTitle: NSLocalizedString("Cancel", comment: ""))
+        NSApp.activate(ignoringOtherApps: true)
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
     private func formatArtifactPreview(title: String, configURL: URL, metadataURL: URL) -> String {
         var lines = [title]
         let fileManager = FileManager.default
@@ -855,15 +881,19 @@ class DiagnosticsDashboardViewController: NSViewController {
             return lines.joined(separator: "\n")
         }
 
-        lines.append("Path: \(configURL.path)")
+        lines.append("Path: \(SmartXRedactor.redactPath(configURL.path) ?? configURL.path)")
         if let metadata = ProfileArtifactManager.loadMetadata(at: metadataURL) {
             lines.append("Profile: \(metadata.selectedProfileName) [\(metadata.selectedProfileKind)]")
-            lines.append("Source: \(metadata.sourceConfigPath)")
+            lines.append("Source: \(SmartXRedactor.redactPath(metadata.sourceConfigPath) ?? metadata.sourceConfigPath)")
             if let remoteURL = metadata.sourceRemoteURL, !remoteURL.isEmpty {
-                lines.append("Remote Source: \(remoteURL)")
+                lines.append("Remote Source: \(SmartXRedactor.redactURLString(remoteURL) ?? "<redacted-url>")")
             }
             lines.append("Generated: \(DateFormatter.localizedString(from: metadata.generatedAt, dateStyle: .short, timeStyle: .medium))")
             lines.append("Controller Mode: \(metadata.controllerMode)")
+            lines.append("Generation Mode: \(metadata.generationMode)")
+            lines.append("Includes SmartX Overrides: \(metadata.includesSmartXOverrides ? "yes" : "no")")
+            lines.append("Includes Profile Merge: \(metadata.includesProfileMerge ? "yes" : "no")")
+            lines.append("Includes Runtime Overrides: \(metadata.includesRuntimeOverrides ? "yes" : "no")")
         } else {
             lines.append("Metadata: unavailable")
         }
@@ -897,5 +927,8 @@ private extension DateFormatter {
 
 @available(macOS 10.15, *)
 extension DiagnosticsDashboardViewController: DashboardSubViewControllerProtocol {
-    func actionSearch(string _: String) {}
+    func actionSearch(string: String) {
+        logSearchField.stringValue = string
+        refreshLogs(announce: false)
+    }
 }

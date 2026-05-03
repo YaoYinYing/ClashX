@@ -14,6 +14,10 @@ struct ProfileArtifactMetadata: Codable {
     let sourceRemoteURL: String?
     let generatedAt: Date
     let controllerMode: String
+    let generationMode: String
+    let includesSmartXOverrides: Bool
+    let includesProfileMerge: Bool
+    let includesRuntimeOverrides: Bool
 }
 
 enum ProfileArtifactManager {
@@ -24,7 +28,11 @@ enum ProfileArtifactManager {
                                                sourceConfigPath: originalSourceConfigPath ?? sourceConfigPath,
                                                sourceRemoteURL: profile.remoteURL,
                                                generatedAt: Date(),
-                                               controllerMode: Settings.isUsingEmbeddedCore ? "embedded" : "external")
+                                               controllerMode: Settings.isUsingEmbeddedCore ? "embedded" : "external",
+                                               generationMode: "source-copy",
+                                               includesSmartXOverrides: false,
+                                               includesProfileMerge: false,
+                                               includesRuntimeOverrides: false)
 
         do {
             try ensureArtifactsDirectory()

@@ -88,73 +88,9 @@ enum DiagnosticsBundleExporter {
         ].joined(separator: "\n")
 
         let body = recentLines
-            .map(redactSensitiveContent(in:))
+            .map(SmartXRedactor.sanitizeText(_:))
             .joined(separator: "\n")
 
         return "\(header)\n\n\(body)"
-    }
-
-    private static func redactSensitiveContent(in text: String) -> String {
-        let patterns: [(String, (NSTextCheckingResult, NSString) -> String)] = [
-            (#"(?i)\b(?:ss|ssr|vmess|vless|trojan|hysteria2?|tuic|wireguard|mieru|anytls|masque)://\S+"#, { _, _ in
-                "<redacted-proxy-uri>"
-            }),
-            (#"(?i)\b(?:https?|wss?)://\S+"#, { match, source in
-                redactURL(source.substring(with: match.range))
-            }),
-            (#"(?i)\b(?:authorization|proxy-authorization)\s*[:=]\s*(?:bearer|basic)?\s*[^\s,;]+"#, { match, source in
-                let raw = source.substring(with: match.range)
-                guard let separator = raw.firstIndex(where: { $0 == ":" || $0 == "=" }) else {
-                    return "authorization: <redacted>"
-                }
-                return "\(raw[..<separator])\(raw[separator]) <redacted>"
-            }),
-            (#"(?i)\b(?:token|secret|password|passwd|apikey|api-key|access-key|proxy-secret)\s*[:=]\s*[^\s,;]+"#, { match, source in
-                let raw = source.substring(with: match.range)
-                guard let separator = raw.firstIndex(where: { $0 == ":" || $0 == "=" }) else {
-                    return "<redacted>"
-                }
-                return "\(raw[..<separator])\(raw[separator]) <redacted>"
-            })
-        ]
-
-        return patterns.reduce(text) { partial, entry in
-            redactMatches(in: partial, pattern: entry.0, replacement: entry.1)
-        }
-    }
-
-    private static func redactURL(_ rawURL: String) -> String {
-        let trimmed = rawURL.trimmingCharacters(in: CharacterSet(charactersIn: ".,;)]}"))
-        guard var components = URLComponents(string: trimmed) else {
-            return "<redacted-url>"
-        }
-
-        components.user = nil
-        components.password = nil
-        components.query = nil
-        components.fragment = nil
-        components.path = "/<redacted>"
-        return components.string ?? "<redacted-url>"
-    }
-
-    private static func redactMatches(in text: String,
-                                      pattern: String,
-                                      replacement: (NSTextCheckingResult, NSString) -> String) -> String {
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
-            return text
-        }
-
-        let source = text as NSString
-        let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: source.length))
-        guard !matches.isEmpty else { return text }
-
-        var result = text
-        for match in matches.reversed() {
-            let replacementText = replacement(match, source)
-            if let range = Range(match.range, in: result) {
-                result.replaceSubrange(range, with: replacementText)
-            }
-        }
-        return result
     }
 }

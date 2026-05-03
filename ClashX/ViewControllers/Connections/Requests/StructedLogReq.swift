@@ -103,13 +103,14 @@ class StructedLogReq: WebSocketDelegate {
         }
         {"time":"22:42:09","level":"debug","message":"[TUN] hijack udp dns","fields":[{"key":"addr","value":"198.18.0.2:53"}]}
      */
-    let logLevel = ClashLogLevel.info
+    let logLevel: ClashLogLevel
     private var socket: WebSocket?
 
     let decoder = JSONDecoder()
 
     let onLogUpdate = PassthroughSubject<StructedLog, Never>()
     init(level: ClashLogLevel = .warning) {
+        logLevel = level
         if let url = URL(string: ConfigManager.webSocketUrl.appending("/logs?format=structured&level=\(logLevel.rawValue)")) {
             socket = WebSocket(url: url)
         }

@@ -60,7 +60,7 @@ enum DiagnosticsReportBuilder {
             "Config",
             "------",
             "Selected Config: \(ConfigManager.selectConfigName)",
-            "Config Home: \(Paths.configDirectoryURL.path)",
+            "Config Home: \(SmartXRedactor.redactPath(Paths.configDirectoryURL.path) ?? Paths.configDirectoryURL.path)",
             "iCloud Config Storage: \(ICloudManager.shared.useiCloud.value ? "enabled" : "disabled")"
         ]
 
@@ -77,17 +77,20 @@ enum DiagnosticsReportBuilder {
 
     private static func profileSection() -> String {
         let currentProfile = ConfigManager.currentProfileDescriptor()
+        let sourceSummary = currentProfile.kind == .remote
+            ? (SmartXRedactor.redactURLString(currentProfile.sourceSummary) ?? currentProfile.sourceSummary)
+            : (SmartXRedactor.redactPath(currentProfile.sourceSummary) ?? currentProfile.sourceSummary)
         var lines = [
             "Profiles",
             "--------",
             "Active Profile Type: \(currentProfile.kind.rawValue)",
             "Active Profile Status: \(currentProfile.statusSummary)",
-            "Active Profile Source: \(currentProfile.sourceSummary)",
+            "Active Profile Source: \(sourceSummary)",
             "Active Profile Last Update: \(currentProfile.updateSummary)"
         ]
 
         if let localPath = currentProfile.localURL?.path {
-            lines.append("Active Profile Cache Path: \(localPath)")
+            lines.append("Active Profile Cache Path: \(SmartXRedactor.redactPath(localPath) ?? localPath)")
         } else if ICloudManager.shared.useiCloud.value {
             lines.append("Active Profile Cache Path: managed by iCloud")
         } else {
@@ -95,7 +98,7 @@ enum DiagnosticsReportBuilder {
         }
 
         if let remoteURL = currentProfile.remoteURL {
-            lines.append("Active Remote URL: \(remoteURL)")
+            lines.append("Active Remote URL: \(SmartXRedactor.redactURLString(remoteURL) ?? "<redacted-url>")")
         }
         if let validationSummary = currentProfile.validationSummary {
             lines.append("Active Profile Validation: \(validationSummary)")
@@ -135,9 +138,9 @@ enum DiagnosticsReportBuilder {
         let lines = [
             "Profile Artifacts",
             "-----------------",
-            artifactLine(title: "Generated Effective Config", path: Paths.generatedEffectiveConfigURL.path, metadata: generatedMetadata),
+            artifactLine(title: "Successful Reload Artifact", path: Paths.generatedEffectiveConfigURL.path, metadata: generatedMetadata),
             artifactLine(title: "Last Known Good Config", path: Paths.lastKnownGoodConfigURL.path, metadata: lastKnownGoodMetadata),
-            metadataLine(title: "Generated Metadata", path: Paths.generatedEffectiveMetadataURL.path),
+            metadataLine(title: "Successful Reload Metadata", path: Paths.generatedEffectiveMetadataURL.path),
             metadataLine(title: "Last Known Good Metadata", path: Paths.lastKnownGoodMetadataURL.path)
         ]
         return lines.joined(separator: "\n")
@@ -183,8 +186,8 @@ enum DiagnosticsReportBuilder {
         let lines = [
             "Logs",
             "----",
-            "Log Folder: \(Logger.shared.logFolder())",
-            "Latest Log File: \(latestLogPath.isEmpty ? "unavailable" : latestLogPath)"
+            "Log Folder: \(SmartXRedactor.redactPath(Logger.shared.logFolder()) ?? Logger.shared.logFolder())",
+            "Latest Log File: \(latestLogPath.isEmpty ? "unavailable" : (SmartXRedactor.redactPath(latestLogPath) ?? latestLogPath))"
         ]
         return lines.joined(separator: "\n")
     }
@@ -240,13 +243,28 @@ enum DiagnosticsReportBuilder {
         let modified = (attributes?[.modificationDate] as? Date).map {
             DateFormatter.localizedString(from: $0, dateStyle: .short, timeStyle: .medium)
         } ?? "unknown date"
-        return "\(title): present (\(size), modified \(modified))"
+        let redactedPath = SmartXRedactor.redactPath(path) ?? path
+        return "\(title): present at \(redactedPath) (\(size), modified \(modified))"
     }
 
     private static func artifactLine(title: String, path: String, metadata: ProfileArtifactMetadata?) -> String {
         let status = fileStatusLine(title: title, path: path)
         guard let metadata else { return status }
-        return "\(status) [profile=\(metadata.selectedProfileName), kind=\(metadata.selectedProfileKind), source=\(metadata.sourceConfigPath)]"
+        let sourcePath = SmartXRedactor.redactPath(metadata.sourceConfigPath) ?? metadata.sourceConfigPath
+        let remoteURL = SmartXRedactor.redactURLString(metadata.sourceRemoteURL)
+        var details = [
+            "profile=\(metadata.selectedProfileName)",
+            "kind=\(metadata.selectedProfileKind)",
+            "source=\(sourcePath)",
+            "mode=\(metadata.generationMode)",
+            "smartxOverrides=\(metadata.includesSmartXOverrides ? "yes" : "no")",
+            "profileMerge=\(metadata.includesProfileMerge ? "yes" : "no")",
+            "runtimeOverrides=\(metadata.includesRuntimeOverrides ? "yes" : "no")"
+        ]
+        if let remoteURL, !remoteURL.isEmpty {
+            details.append("remote=\(remoteURL)")
+        }
+        return "\(status) [\(details.joined(separator: ", "))]"
     }
 
     private static func metadataLine(title: String, path: String) -> String {

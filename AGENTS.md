@@ -78,6 +78,8 @@ For a normal Debug build, use:
 scripts/codex-build-debug.sh
 ```
 
+If the debug wrapper reports `BUILD INCONCLUSIVE` due to the workspace false-negative, run the printed direct `xcodebuild` fallback in an interactive terminal and report both results.
+
 For a focused unit-test run, use:
 
 ```bash

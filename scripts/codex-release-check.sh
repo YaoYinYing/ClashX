@@ -101,7 +101,7 @@ xcodebuild \
     -showBuildSettings \
     > "$BUILD_SETTINGS_FILE" 2>> "$LOG_FILE"
 
-if [[ "$?" -ne 0 ]]; then
+if [[ ! -s "$BUILD_SETTINGS_FILE" ]]; then
     record_failure "xcodebuild -showBuildSettings"
 else
     {
@@ -118,8 +118,7 @@ if [[ -n "$APP_PATH" ]]; then
         codesign -dv --verbose=4 "$APP_PATH" >> "$LOG_FILE" 2>&1
 
         log_section "Gatekeeper assessment"
-        spctl --assess --type execute --verbose=4 "$APP_PATH" >> "$LOG_FILE" 2>&1
-        if [[ "$?" -ne 0 ]]; then
+        if ! spctl --assess --type execute --verbose=4 "$APP_PATH" >> "$LOG_FILE" 2>&1; then
             record_failure "spctl assessment"
         fi
     else

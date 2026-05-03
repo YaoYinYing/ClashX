@@ -102,12 +102,12 @@ jobs:
         run: |
           mkdir -p .ci-artifacts
 
-          APP_PATH="$(find ~/Library/Developer/Xcode/DerivedData -path '*/Build/Products/Debug/ClashX.app' -type d | head -n 1 || true)"
+          APP_PATH="$(find ~/Library/Developer/Xcode/DerivedData -path '*/Build/Products/Debug/SmartX.app' -type d | head -n 1 || true)"
 
           if [ -n "$APP_PATH" ]; then
-            ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" ".ci-artifacts/ClashX-PR-Debug.app.zip"
+            ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" ".ci-artifacts/SmartX-PR-Debug.app.zip"
           else
-            echo "ClashX.app was not found in DerivedData." | tee .ci-artifacts/NO_APP_FOUND.txt
+            echo "SmartX.app was not found in DerivedData." | tee .ci-artifacts/NO_APP_FOUND.txt
           fi
 
           cp -R .ci-logs .ci-artifacts/logs
@@ -234,10 +234,10 @@ jobs:
           BUILD_CONFIGURATION="$(cat .ci-logs/build-configuration.txt)"
           mkdir -p .ci-artifacts
 
-          APP_PATH="$(find ~/Library/Developer/Xcode/DerivedData -path "*/Build/Products/${BUILD_CONFIGURATION}/ClashX.app" -type d | head -n 1 || true)"
+          APP_PATH="$(find ~/Library/Developer/Xcode/DerivedData -path "*/Build/Products/${BUILD_CONFIGURATION}/SmartX.app" -type d | head -n 1 || true)"
 
           if [ -z "$APP_PATH" ]; then
-            echo "ClashX.app was not found in DerivedData for ${BUILD_CONFIGURATION}." | tee .ci-artifacts/NO_APP_FOUND.txt
+            echo "SmartX.app was not found in DerivedData for ${BUILD_CONFIGURATION}." | tee .ci-artifacts/NO_APP_FOUND.txt
             exit 1
           fi
 

@@ -83,7 +83,7 @@ jobs:
             | tee .ci-logs/helper-release-build-settings.log
           python3 scripts/check_helper_requirement.py .ci-logs/helper-release-build-settings.log Release | tee .ci-logs/helper-release-check.log
 
-      - name: Build ClashX (Debug, unsigned)
+      - name: Build SmartX (Debug, unsigned)
         run: |
           set -o pipefail
           xcodebuild \

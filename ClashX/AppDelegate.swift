@@ -165,7 +165,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ aNotification: Notification) {
         UserDefaults.standard.set(0, forKey: "launch_fail_times")
-        Logger.log("ClashX will terminate")
+        Logger.log("SmartX will terminate")
         if NetworkChangeNotifier.isCurrentSystemSetToClash(looser: true) ||
             NetworkChangeNotifier.hasInterfaceProxySetToClash() {
             Logger.log("Need Reset Proxy Setting again", level: .error)

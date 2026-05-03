@@ -30,7 +30,7 @@ EOF
   exit 1
 fi
 
-echo "Build Clash core"
+echo "Build SmartX embedded mihomo core"
 
 cd ClashX/goClash
 python3 build_clash_universal.py

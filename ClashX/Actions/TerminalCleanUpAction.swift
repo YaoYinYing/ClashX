@@ -20,7 +20,7 @@ enum TerminalConfirmAction {
 
         if ConfigManager.shared.proxyPortAutoSet && !ConfigManager.shared.isProxySetByOtherVariable.value || NetworkChangeNotifier.isCurrentSystemSetToClash(looser: true) ||
             NetworkChangeNotifier.hasInterfaceProxySetToClash() {
-            Logger.log("ClashX quit need clean proxy setting")
+            Logger.log("SmartX quit needs proxy cleanup")
             shouldWait = true
             group.enter()
 
@@ -30,7 +30,7 @@ enum TerminalConfirmAction {
         }
 
         if !shouldWait {
-            Logger.log("ClashX quit without clean waiting")
+            Logger.log("SmartX quit without cleanup wait")
             return .terminateNow
         }
 
@@ -43,7 +43,7 @@ enum TerminalConfirmAction {
             let res = group.wait(timeout: .now() + 5)
             switch res {
             case .success:
-                Logger.log("ClashX quit after clean up finish")
+                Logger.log("SmartX quit after cleanup finished")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     NSApp.reply(toApplicationShouldTerminate: true)
                 }
@@ -51,7 +51,7 @@ enum TerminalConfirmAction {
                     NSApp.reply(toApplicationShouldTerminate: true)
                 }
             case .timedOut:
-                Logger.log("ClashX quit after clean up timeout")
+                Logger.log("SmartX quit after cleanup timeout")
                 DispatchQueue.main.async {
                     NSApp.reply(toApplicationShouldTerminate: true)
                 }
@@ -61,7 +61,7 @@ enum TerminalConfirmAction {
             }
         }
 
-        Logger.log("ClashX quit wait for clean up")
+        Logger.log("SmartX quit waiting for cleanup")
         return .terminateLater
     }
 

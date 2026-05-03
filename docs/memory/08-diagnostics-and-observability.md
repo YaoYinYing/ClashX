@@ -226,8 +226,10 @@ The model already has enough raw data to show which rule matched, and SmartX now
 - show provider names, type, vehicle type, and proxy counts
 - request bulk health checks for HTTP proxy providers
 - append timestamped success/failure summaries to the diagnostics output
+- persist a capped recent provider-health history under the SmartX diagnostics directory
+- include recent provider-health history in the Diagnostics panel and copied/exported reports
 
-This is still not full provider-health history over time, but it is better than having no provider observability surface at all.
+This is still not full provider-health history over time, but it is better than having no provider observability surface at all. The current branch keeps a small local JSON-backed history for recent manual healthcheck runs; it does not yet build a continuous background timeline or provider trend analysis.
 
 ### smart decision explanation
 
@@ -301,6 +303,7 @@ The branch now has a meaningful first pass in the Diagnostics dashboard:
 - supports text search
 - supports pause/resume for automatic refresh
 - supports export of the filtered plain-text view
+- supports export of a sanitized diagnostics bundle for bug reports
 
 Recommended features:
 
@@ -326,7 +329,7 @@ The current implementation is still intentionally narrow:
 
 - it is file-backed rather than a separate live controller-log pane
 - it reads the latest rolling file instead of building a structured indexed log store
-- export currently writes the filtered plain-text view, not a richer incident bundle
+- plain log export still writes only the filtered text view, while the richer multi-file bundle lives in a separate export path
 
 ### Metadata to include
 
@@ -344,7 +347,7 @@ But they should avoid exposing secrets or full configs.
 
 SmartX should eventually produce a sanitized diagnostic bundle for bug reports and reproducible troubleshooting.
 
-SmartX now has a lightweight first step through [`ClashX/General/Utils/DiagnosticsReportBuilder.swift`](../../ClashX/General/Utils/DiagnosticsReportBuilder.swift) and the Diagnostics dashboard "Copy Report" action. The current report is a pasted text summary rather than a bundled artifact, but it already includes:
+SmartX now has a first real bundle path through [`ClashX/General/Utils/DiagnosticsBundleExporter.swift`](../../ClashX/General/Utils/DiagnosticsBundleExporter.swift), plus the existing [`ClashX/General/Utils/DiagnosticsReportBuilder.swift`](../../ClashX/General/Utils/DiagnosticsReportBuilder.swift) and Diagnostics dashboard actions. The current bundle includes:
 
 - app and OS metadata
 - embedded/external controller mode
@@ -353,9 +356,17 @@ SmartX now has a lightweight first step through [`ClashX/General/Utils/Diagnosti
 - resource file presence for `Model.bin`, `smart_weight_data.csv`, and `config.yaml`
 - profile artifact presence for generated-effective and last-known-good config copies
 - profile artifact metadata for selected profile/source/reload context
-- log folder and latest log file path
+- log folder and latest log file path in the report
+- a separate redacted recent-log snapshot built from the latest rolling log file
+- a small machine-readable manifest with generation time, app build, controller mode, active profile, and active log filename
 
 It intentionally redacts controller secrets by reducing the controller URL to scheme + host + port only.
+The bundle exporter also redacts:
+
+- absolute HTTP/HTTPS/WS/WSS URLs down to origin plus `/<redacted>`
+- proxy URIs such as `ss://`, `vmess://`, `vless://`, `trojan://`, `hysteria2://`, or `tuic://`
+- authorization-style values
+- common token/secret/password key-value patterns
 
 Recommended contents:
 
@@ -370,11 +381,9 @@ Recommended contents:
 
 What still remains:
 
-- bundled export instead of pasteboard text
-- redacted recent log contents instead of only log paths
 - richer profile-pipeline metadata once that system exists
-- explicit remote subscription redaction policy beyond the current URL reduction
-- long-lived provider health history instead of session-local summaries
+- richer and more formally reviewed subscription/source redaction policy beyond the current pattern-based sanitization
+- fuller provider trend/history modeling beyond the current capped local manual-run history
 
 Examples of resource file status:
 

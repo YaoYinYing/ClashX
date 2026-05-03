@@ -122,6 +122,8 @@ Remote profile definitions in [ClashX/Models/RemoteConfigModel.swift](../../Clas
 
 Successful config reloads now also persist first-pass profile artifacts through [ClashX/General/Managers/ProfileArtifactManager.swift](../../ClashX/General/Managers/ProfileArtifactManager.swift). The branch writes a deterministic copy of the loaded config file to generated-effective and last-known-good artifact paths under `~/.config/clash/.smartx/profiles/`, along with JSON metadata describing the selected profile and reload context. The Diagnostics dashboard can also restore the saved last-known-good artifact. This is still based on the legacy “reload a file path” model, not a true layered effective-config generator.
 
+The Diagnostics dashboard now also exposes a first-pass artifact inspection surface for that layer. It can preview the generated-effective and last-known-good YAML files, show artifact metadata in-app, and open the SmartX profile artifacts directory directly. This improves inspectability, but it still does not model Merge/Script profiles or a real generated pipeline graph.
+
 ### UI Additions
 
 [ClashX/ViewControllers/Settings/CoreSettingViewController.swift](../../ClashX/ViewControllers/Settings/CoreSettingViewController.swift) is a new status/control surface for SmartX-specific core behavior. It currently exposes:
@@ -160,6 +162,8 @@ It also contains explicit TUN capability gating plus first-pass TUN/DNS validati
 
 It is still a management and observability surface layered on top of API wrappers. It does not implement full Smart policy authoring, full background sync orchestration, or a complete error/retry UX for all Smart endpoints.
 
+[ClashX/ViewControllers/Connections/ViewModels/ConnectionDetailViewModel.swift](../../ClashX/ViewControllers/Connections/ViewModels/ConnectionDetailViewModel.swift) now also adds a first-pass derived Smart explanation for individual connections when Smart metadata is present. It combines `smartTarget` / `smartBlock`, current Smart group membership, current selected node, `/group/weights`, and local model-file status to explain likely Smart routing context in the connection detail panel. This is still inference from currently observable state, not a true per-connection Smart decision trace emitted by the core.
+
 [ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift](../../ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift) adds a lightweight diagnostics surface to the dashboard. It currently exposes:
 
 - `/memory` polling and raw JSON display
@@ -172,8 +176,10 @@ It is still a management and observability surface layered on top of API wrapper
 - `POST /upgrade/geo`
 - `POST /upgrade/ui`
 - a lightweight file-backed log viewer with level filter, search, pause/resume, and export
+- a sanitized diagnostics bundle export with report, manifest, and redacted recent logs
+- a small persisted provider-health history for recent manual healthcheck runs
 
-It is intentionally simple and capability-driven. It does not yet implement a dedicated memory history view, a polished DNS troubleshooting workflow, or `/debug/pprof` tooling.
+It is intentionally simple and capability-driven. It does not yet implement a dedicated memory history view, a polished DNS troubleshooting workflow, a real in-app `/debug/pprof` flow, or a richer issue bundle with provider history and route provenance attachments.
 
 ### Data Model Additions
 

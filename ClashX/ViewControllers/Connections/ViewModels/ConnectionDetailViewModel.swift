@@ -33,6 +33,7 @@ class ConnectionDetailViewModel {
     @Published var showSmartBlockButton = false
 
     private var uuid = ""
+    private var baseOtherText = ""
     var cancellable = Set<AnyCancellable>()
 
     func accept(connection: ClashConnectionSnapShot.Connection?) {
@@ -72,7 +73,9 @@ class ConnectionDetailViewModel {
         chain = formatRouteSummary(for: connection)
         sourceIP = connection.metadata.sourceIP.appending(":").appending(connection.metadata.sourcePort)
         destination = connection.metadata.destinationIP.appending(":").appending(connection.metadata.destinationPort)
-        otherText = formatOtherSummary(for: connection)
+        baseOtherText = formatOtherSummary(for: connection)
+        otherText = baseOtherText
+        refreshSmartExplanation(for: connection)
     }
 
     func flag(from country: String) -> String {
@@ -180,6 +183,154 @@ class ConnectionDetailViewModel {
         }
 
         return lines.joined(separator: "\n")
+    }
+
+    private func refreshSmartExplanation(for connection: ClashConnectionSnapShot.Connection) {
+        let smartTarget = connection.metadata.smartTarget?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let smartBlock = connection.metadata.smartBlock?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !smartTarget.isEmpty || !smartBlock.isEmpty else { return }
+
+        let connectionID = connection.id
+        let modelStatus = formatModelStatus()
+        let loadingText = [baseOtherText, "Smart Explanation\n-----------------\nLoading Smart group and weight context...\n\(modelStatus)"]
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
+        otherText = loadingText
+
+        ApiRequest.getMergedProxyData { [weak self] proxyInfo in
+            guard let self, self.uuid == connectionID else { return }
+            let smartGroups = proxyInfo?.proxyGroups.filter { $0.type == .smart } ?? []
+            let candidateGroups = self.matchingSmartGroups(for: connection, in: smartGroups)
+
+            ApiRequest.requestSmartWeights { [weak self] response in
+                guard let self, self.uuid == connectionID else { return }
+                let explanation = self.formatSmartExplanation(for: connection,
+                                                              candidateGroups: candidateGroups,
+                                                              weightsResponse: response,
+                                                              modelStatus: modelStatus)
+                self.otherText = [self.baseOtherText, explanation]
+                    .filter { !$0.isEmpty }
+                    .joined(separator: "\n\n")
+            }
+        }
+    }
+
+    private func matchingSmartGroups(for connection: ClashConnectionSnapShot.Connection, in groups: [ClashProxy]) -> [ClashProxy] {
+        let smartTarget = connection.metadata.smartTarget?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let chainEntries = Set(connection.chains.filter { !$0.isEmpty })
+
+        let chainMatches = groups.filter { chainEntries.contains($0.name) }
+        let currentMatches = groups.filter { $0.now == smartTarget }
+        let memberMatches = groups.filter { ($0.all ?? []).contains(smartTarget) }
+
+        var ordered = [ClashProxy]()
+        for group in chainMatches + currentMatches + memberMatches {
+            if !ordered.contains(where: { $0.name == group.name }) {
+                ordered.append(group)
+            }
+        }
+        return ordered
+    }
+
+    private func formatSmartExplanation(for connection: ClashConnectionSnapShot.Connection,
+                                        candidateGroups: [ClashProxy],
+                                        weightsResponse: SmartWeightsResponse?,
+                                        modelStatus: String) -> String {
+        let smartTarget = connection.metadata.smartTarget?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let smartBlock = connection.metadata.smartBlock?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        var lines = [
+            "Smart Explanation",
+            "-----------------"
+        ]
+
+        if !smartTarget.isEmpty {
+            lines.append("Target Node: \(smartTarget)")
+        } else {
+            lines.append("Target Node: not reported")
+        }
+
+        if !smartBlock.isEmpty {
+            lines.append("Block Reason: \(smartBlock)")
+        }
+
+        lines.append(modelStatus)
+
+        guard !candidateGroups.isEmpty else {
+            lines.append("Smart Group: unable to map this connection to a Smart group from current proxy data.")
+            if weightsResponse == nil {
+                lines.append("Weights: unavailable from the active controller.")
+            }
+            lines.append("Decision Note: this is only partial Smart context because no matching Smart group could be inferred.")
+            return lines.joined(separator: "\n")
+        }
+
+        let weightMap = weightsResponse?.weights ?? [:]
+        for group in candidateGroups.prefix(2) {
+            lines.append("Smart Group: \(group.name)")
+            lines.append("Current Selection: \(group.now ?? NSLocalizedString("not reported", comment: ""))")
+
+            let groupWeights = weightMap[group.name] ?? []
+            if let targetWeight = groupWeights.first(where: { $0.name == smartTarget }) {
+                lines.append("Target Rank: \(targetWeight.rank.isEmpty ? NSLocalizedString("not reported", comment: "") : targetWeight.rank)")
+                lines.append("Target Weight: \(String(format: "%.2f", targetWeight.weight))")
+            } else if !smartTarget.isEmpty {
+                lines.append("Target Weight: unavailable for the reported target node")
+            }
+
+            let topNodes = groupWeights
+                .sorted { lhs, rhs in
+                    if lhs.weight == rhs.weight {
+                        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                    }
+                    return lhs.weight > rhs.weight
+                }
+                .prefix(3)
+                .map { weight in
+                    let rank = weight.rank.isEmpty ? "?" : weight.rank
+                    return "\(weight.name) (\(String(format: "%.2f", weight.weight)), #\(rank))"
+                }
+
+            if topNodes.isEmpty {
+                lines.append(weightsResponse == nil
+                    ? "Weights: unavailable from the active controller."
+                    : "Weights: no entries were reported for this Smart group.")
+            } else {
+                lines.append("Top Candidates: \(topNodes.joined(separator: ", "))")
+            }
+
+            if !smartTarget.isEmpty {
+                if group.now == smartTarget {
+                    lines.append("Decision Note: the reported Smart target matches the current node selected by this group.")
+                } else if let currentNode = group.now, !currentNode.isEmpty {
+                    lines.append("Decision Note: the connection reported target \(smartTarget), but the group currently points at \(currentNode).")
+                } else {
+                    lines.append("Decision Note: the controller reported a target node, but the group's current selection was not available.")
+                }
+            }
+        }
+
+        if let message = weightsResponse?.message?.trimmingCharacters(in: .whitespacesAndNewlines), !message.isEmpty {
+            lines.append("Weights Message: \(message)")
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private func formatModelStatus() -> String {
+        let path = Paths.smartLightGBMModelPath
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: path) else {
+            return "Model File: missing"
+        }
+
+        let attributes = try? fileManager.attributesOfItem(atPath: path)
+        let size = (attributes?[.size] as? NSNumber).map {
+            ByteCountFormatter.string(fromByteCount: $0.int64Value, countStyle: .file)
+        } ?? "unknown size"
+        let modified = (attributes?[.modificationDate] as? Date).map {
+            DateFormatter.localizedString(from: $0, dateStyle: .short, timeStyle: .medium)
+        } ?? "unknown date"
+        return "Model File: present (\(size), modified \(modified))"
     }
 }
 

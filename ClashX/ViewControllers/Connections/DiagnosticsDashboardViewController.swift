@@ -60,6 +60,9 @@ class DiagnosticsDashboardViewController: NSViewController {
     private let updateGeoButton = NSButton(title: NSLocalizedString("Update GEO Assets", comment: ""), target: nil, action: nil)
     private let updateDashboardButton = NSButton(title: NSLocalizedString("Update Dashboard", comment: ""), target: nil, action: nil)
     private let copyReportButton = NSButton(title: NSLocalizedString("Copy Report", comment: ""), target: nil, action: nil)
+    private let exportBundleButton = NSButton(title: NSLocalizedString("Export Bundle", comment: ""), target: nil, action: nil)
+    private let refreshArtifactsButton = NSButton(title: NSLocalizedString("Refresh Artifacts", comment: ""), target: nil, action: nil)
+    private let openArtifactsButton = NSButton(title: NSLocalizedString("Open Artifacts", comment: ""), target: nil, action: nil)
     private let restoreLastKnownGoodButton = NSButton(title: NSLocalizedString("Restore Last Good", comment: ""), target: nil, action: nil)
     private let refreshLogsButton = NSButton(title: NSLocalizedString("Refresh Logs", comment: ""), target: nil, action: nil)
     private let exportLogsButton = NSButton(title: NSLocalizedString("Export Logs", comment: ""), target: nil, action: nil)
@@ -76,8 +79,11 @@ class DiagnosticsDashboardViewController: NSViewController {
     private var memoryOutput = NSLocalizedString("Memory diagnostics have not been loaded yet.", comment: "")
     private var dnsOutput = NSLocalizedString("DNS diagnostics have not been queried yet.", comment: "")
     private var providerOutput = NSLocalizedString("Provider diagnostics have not been loaded yet.", comment: "")
+    private var artifactOutput = NSLocalizedString("Profile artifacts have not been inspected yet.", comment: "")
     private var logOutput = NSLocalizedString("Log viewer has not loaded any log lines yet.", comment: "")
     private var httpProxyProviderNames = [String]()
+    private var latestProxyProviderResult: ControllerJSONResult?
+    private var latestRuleProviderResult: ControllerJSONResult?
     private var logRefreshTimer: Timer?
     private var isLogRefreshPaused = false
 
@@ -92,6 +98,7 @@ class DiagnosticsDashboardViewController: NSViewController {
         updateCapabilityDrivenState()
         refreshMemory()
         refreshProviders()
+        refreshArtifacts(announce: false)
         refreshLogs()
         startLogRefreshTimer()
     }
@@ -124,6 +131,9 @@ class DiagnosticsDashboardViewController: NSViewController {
             updateGeoButton,
             updateDashboardButton,
             copyReportButton,
+            exportBundleButton,
+            refreshArtifactsButton,
+            openArtifactsButton,
             restoreLastKnownGoodButton,
             refreshLogsButton,
             exportLogsButton
@@ -165,6 +175,12 @@ class DiagnosticsDashboardViewController: NSViewController {
         updateDashboardButton.action = #selector(actionUpdateDashboardAssets)
         copyReportButton.target = self
         copyReportButton.action = #selector(actionCopyDiagnosticsReport)
+        exportBundleButton.target = self
+        exportBundleButton.action = #selector(actionExportDiagnosticsBundle)
+        refreshArtifactsButton.target = self
+        refreshArtifactsButton.action = #selector(actionRefreshArtifacts)
+        openArtifactsButton.target = self
+        openArtifactsButton.action = #selector(actionOpenArtifactsFolder)
         restoreLastKnownGoodButton.target = self
         restoreLastKnownGoodButton.action = #selector(actionRestoreLastKnownGood)
         refreshLogsButton.target = self
@@ -253,6 +269,7 @@ class DiagnosticsDashboardViewController: NSViewController {
             "Memory\n------\n\(memoryOutput)",
             "DNS Query\n---------\n\(dnsOutput)",
             "Providers\n---------\n\(providerOutput)",
+            "Profile Artifacts\n-----------------\n\(artifactOutput)",
             "Logs\n----\n\(logOutput)"
         ].joined(separator: "\n\n")
     }
@@ -283,7 +300,10 @@ class DiagnosticsDashboardViewController: NSViewController {
         refreshProvidersButton.isEnabled = !disableIfBlocked(.proxyProviders) && ConfigManager.shared.isRunning
         healthCheckProvidersButton.isEnabled = !disableIfBlocked(.proxyProviders) && ConfigManager.shared.isRunning && !httpProxyProviderNames.isEmpty
         restoreLastKnownGoodButton.isEnabled = ConfigManager.shared.isRunning && FileManager.default.fileExists(atPath: Paths.lastKnownGoodConfigURL.path)
+        refreshArtifactsButton.isEnabled = true
+        openArtifactsButton.isEnabled = FileManager.default.fileExists(atPath: Paths.smartXArtifactsDirectoryURL.path)
         refreshLogsButton.isEnabled = true
+        exportBundleButton.isEnabled = true
         exportLogsButton.isEnabled = !logOutput.isEmpty
     }
 
@@ -340,6 +360,22 @@ class DiagnosticsDashboardViewController: NSViewController {
         logOutput = "\(header)\n\n\(body)"
         if announce {
             setStatus(NSLocalizedString("Log viewer refreshed from the current rolling log file.", comment: ""))
+        }
+        renderOutput()
+        updateCapabilityDrivenState()
+    }
+
+    private func refreshArtifacts(announce: Bool = true) {
+        artifactOutput = [
+            formatArtifactPreview(title: "Generated Effective Config",
+                                  configURL: Paths.generatedEffectiveConfigURL,
+                                  metadataURL: Paths.generatedEffectiveMetadataURL),
+            formatArtifactPreview(title: "Last Known Good Config",
+                                  configURL: Paths.lastKnownGoodConfigURL,
+                                  metadataURL: Paths.lastKnownGoodMetadataURL)
+        ].joined(separator: "\n\n")
+        if announce {
+            setStatus(NSLocalizedString("Profile artifact inspection refreshed.", comment: ""))
         }
         renderOutput()
         updateCapabilityDrivenState()
@@ -403,6 +439,8 @@ class DiagnosticsDashboardViewController: NSViewController {
             CapabilityCache.shared.mark(.proxyProviders, jsonResult: proxyResult ?? .failed(NSLocalizedString("Proxy provider diagnostics returned no result.", comment: "")))
             CapabilityCache.shared.mark(.ruleProviders, jsonResult: ruleResult ?? .failed(NSLocalizedString("Rule provider diagnostics returned no result.", comment: "")))
 
+            self.latestProxyProviderResult = proxyResult
+            self.latestRuleProviderResult = ruleResult
             self.providerOutput = self.formatProviderDiagnostics(proxyResult: proxyResult, ruleResult: ruleResult)
 
             switch (proxyResult, ruleResult) {
@@ -560,6 +598,45 @@ class DiagnosticsDashboardViewController: NSViewController {
         setStatus(NSLocalizedString("A sanitized diagnostics report was copied to the pasteboard.", comment: ""))
     }
 
+    @objc private func actionRefreshArtifacts() {
+        refreshArtifacts()
+    }
+
+    @objc private func actionOpenArtifactsFolder() {
+        let directoryURL = Paths.smartXArtifactsDirectoryURL
+        guard FileManager.default.fileExists(atPath: directoryURL.path) else {
+            setStatus(NSLocalizedString("The SmartX profile artifacts directory does not exist yet.", comment: ""))
+            updateCapabilityDrivenState()
+            return
+        }
+
+        NSWorkspace.shared.open(directoryURL)
+        setStatus(NSLocalizedString("Opened the SmartX profile artifacts directory.", comment: ""))
+    }
+
+    @objc private func actionExportDiagnosticsBundle() {
+        let savePanel = NSSavePanel()
+        let timestamp = DateFormatter.exportStamp.string(from: Date())
+        savePanel.nameFieldStringValue = "smartx-diagnostics-\(timestamp).smartxdiag"
+        savePanel.canCreateDirectories = true
+
+        let handleSave: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard let self, response == .OK, let url = savePanel.url else { return }
+            do {
+                try DiagnosticsBundleExporter.export(to: url)
+                self.setStatus(NSLocalizedString("A sanitized diagnostics bundle was exported successfully.", comment: ""))
+            } catch {
+                self.setStatus(String(format: NSLocalizedString("Failed to export diagnostics bundle: %@", comment: ""), error.localizedDescription))
+            }
+        }
+
+        if let window = view.window ?? NSApp.mainWindow {
+            savePanel.beginSheetModal(for: window, completionHandler: handleSave)
+        } else {
+            handleSave(savePanel.runModal())
+        }
+    }
+
     @objc private func actionRestoreLastKnownGood() {
         guard FileManager.default.fileExists(atPath: Paths.lastKnownGoodConfigURL.path) else {
             setStatus(NSLocalizedString("No last-known-good profile artifact is available yet.", comment: ""))
@@ -588,6 +665,7 @@ class DiagnosticsDashboardViewController: NSViewController {
                 self.setStatus(NSLocalizedString("Last-known-good profile artifact restored successfully.", comment: ""))
                 self.refreshMemory()
                 self.refreshProviders()
+                self.refreshArtifacts(announce: false)
             }
             self.updateCapabilityDrivenState()
         }
@@ -619,12 +697,9 @@ class DiagnosticsDashboardViewController: NSViewController {
 
         group.notify(queue: .main) { [weak self] in
             guard let self else { return }
+            ProviderHealthHistoryManager.append(succeeded: succeeded, failed: failed)
             let summary = self.providerHealthCheckSummary(timestamp: timestamp, succeeded: succeeded.sorted(), failed: failed.sorted())
-            if self.providerOutput.isEmpty {
-                self.providerOutput = summary
-            } else {
-                self.providerOutput = "\(self.providerOutput)\n\n\(summary)"
-            }
+            self.providerOutput = "\(self.formatProviderDiagnostics(proxyResult: self.latestProxyProviderResult, ruleResult: self.latestRuleProviderResult))\n\n\(summary)"
             self.setStatus(String(format: NSLocalizedString("Finished provider health checks. Success: %d, Failed: %d.", comment: ""), succeeded.count, failed.count))
             self.renderOutput()
         }
@@ -705,7 +780,8 @@ class DiagnosticsDashboardViewController: NSViewController {
     private func formatProviderDiagnostics(proxyResult: ControllerJSONResult?, ruleResult: ControllerJSONResult?) -> String {
         let proxySection = providerSection(title: "Proxy Providers", result: proxyResult, capability: .proxyProviders)
         let ruleSection = providerSection(title: "Rule Providers", result: ruleResult, capability: .ruleProviders)
-        return [proxySection, ruleSection].joined(separator: "\n\n")
+        let historySection = ProviderHealthHistoryManager.summary(limit: 5)
+        return [proxySection, ruleSection, historySection].joined(separator: "\n\n")
     }
 
     private func providerSection(title: String, result: ControllerJSONResult?, capability: CoreCapability) -> String {
@@ -769,6 +845,54 @@ class DiagnosticsDashboardViewController: NSViewController {
         }
         return lines.joined(separator: "\n")
     }
+
+    private func formatArtifactPreview(title: String, configURL: URL, metadataURL: URL) -> String {
+        var lines = [title]
+        let fileManager = FileManager.default
+
+        guard fileManager.fileExists(atPath: configURL.path) else {
+            lines.append("Status: missing")
+            return lines.joined(separator: "\n")
+        }
+
+        lines.append("Path: \(configURL.path)")
+        if let metadata = ProfileArtifactManager.loadMetadata(at: metadataURL) {
+            lines.append("Profile: \(metadata.selectedProfileName) [\(metadata.selectedProfileKind)]")
+            lines.append("Source: \(metadata.sourceConfigPath)")
+            if let remoteURL = metadata.sourceRemoteURL, !remoteURL.isEmpty {
+                lines.append("Remote Source: \(remoteURL)")
+            }
+            lines.append("Generated: \(DateFormatter.localizedString(from: metadata.generatedAt, dateStyle: .short, timeStyle: .medium))")
+            lines.append("Controller Mode: \(metadata.controllerMode)")
+        } else {
+            lines.append("Metadata: unavailable")
+        }
+
+        let preview = (try? String(contentsOf: configURL, encoding: .utf8))
+            .map { previewText(from: $0, maxLines: 20) }
+            ?? NSLocalizedString("Config preview could not be read.", comment: "")
+        lines.append("Preview:")
+        lines.append(preview)
+        return lines.joined(separator: "\n")
+    }
+
+    private func previewText(from raw: String, maxLines: Int) -> String {
+        let lines = raw.components(separatedBy: .newlines)
+        let head = Array(lines.prefix(maxLines))
+        var preview = head.joined(separator: "\n")
+        if lines.count > maxLines {
+            preview.append("\n...")
+        }
+        return preview.isEmpty ? NSLocalizedString("(empty file)", comment: "") : preview
+    }
+}
+
+private extension DateFormatter {
+    static let exportStamp: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return formatter
+    }()
 }
 
 @available(macOS 10.15, *)

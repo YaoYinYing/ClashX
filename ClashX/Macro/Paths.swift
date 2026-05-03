@@ -82,6 +82,13 @@ enum Paths {
             .standardizedFileURL
     }
 
+    static var smartXDiagnosticsDirectoryURL: URL {
+        configDirectoryURL
+            .appendingPathComponent(".smartx", isDirectory: true)
+            .appendingPathComponent("diagnostics", isDirectory: true)
+            .standardizedFileURL
+    }
+
     static var generatedEffectiveConfigURL: URL {
         smartXArtifactsDirectoryURL.appendingPathComponent("generated-effective.yaml", isDirectory: false)
             .standardizedFileURL
@@ -99,6 +106,11 @@ enum Paths {
 
     static var lastKnownGoodMetadataURL: URL {
         smartXArtifactsDirectoryURL.appendingPathComponent("last-known-good.json", isDirectory: false)
+            .standardizedFileURL
+    }
+
+    static var providerHealthHistoryURL: URL {
+        smartXDiagnosticsDirectoryURL.appendingPathComponent("provider-health-history.json", isDirectory: false)
             .standardizedFileURL
     }
 

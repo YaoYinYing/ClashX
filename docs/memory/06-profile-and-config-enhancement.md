@@ -372,8 +372,17 @@ The branch now partially satisfies the first part of that goal for existing UI s
 
 - first-class Merge or Script profile rows
 - active pipeline visualization
-- generated effective config inspection beyond diagnostics-path visibility and diagnostics-driven restore
 - reorder or enable/disable controls for layered profiles
+- generated effective config editing or a true pipeline graph
+
+The branch now does provide a first-pass generated artifact inspection surface in the Diagnostics dashboard:
+
+- preview of the current generated-effective YAML
+- preview of the current last-known-good YAML
+- artifact metadata such as selected profile, source path, generated time, and controller mode
+- open-folder access to the SmartX profile artifacts directory
+
+That is still not a full profile window or pipeline visualizer, but it is materially better than path-only diagnostics.
 
 That is a better fit for modern mihomo clients than the current mix of menu-based file switching and a separate remote-config editor.
 

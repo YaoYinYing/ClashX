@@ -16,6 +16,7 @@ enum DiagnosticsReportBuilder {
             profileSection(),
             profileArtifactsSection(),
             capabilitySection(),
+            providerHealthSection(),
             resourceSection(),
             logSection()
         ].joined(separator: "\n\n")
@@ -171,6 +172,10 @@ enum DiagnosticsReportBuilder {
             fileStatusLine(title: "config.yaml", path: Paths.defaultConfigURL.path)
         ]
         return lines.joined(separator: "\n")
+    }
+
+    private static func providerHealthSection() -> String {
+        ProviderHealthHistoryManager.summary(limit: 5)
     }
 
     private static func logSection() -> String {

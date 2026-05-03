@@ -36,6 +36,8 @@
 		495BFB8821919B9800C8779D /* RemoteConfigManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 495BFB8721919B9800C8779D /* RemoteConfigManager.swift */; };
 		4D534D372F444941470104 /* CoreCapability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D362F444941470103 /* CoreCapability.swift */; };
 		4D534D3B2F444941470107 /* ProfileArtifactManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D3A2F444941470107 /* ProfileArtifactManager.swift */; };
+		4D534D3F2F44494147010B /* ProviderHealthHistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D3E2F44494147010B /* ProviderHealthHistoryManager.swift */; };
+		4D534D3D2F444941470109 /* DiagnosticsBundleExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D3C2F444941470109 /* DiagnosticsBundleExporter.swift */; };
 		4960A6DB2136529200B940C9 /* JSBridgeHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4960A6DA2136529200B940C9 /* JSBridgeHandler.swift */; };
 		4D534D392F444941470106 /* DiagnosticsReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D382F444941470105 /* DiagnosticsReportBuilder.swift */; };
 		496322222AA5D89E00854231 /* UpdateExternalResourceAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 496322212AA5D89E00854231 /* UpdateExternalResourceAction.swift */; };
@@ -198,6 +200,8 @@
 		495A44D220D267D000888A0A /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		495BFB8721919B9800C8779D /* RemoteConfigManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConfigManager.swift; sourceTree = "<group>"; };
 		4D534D3A2F444941470107 /* ProfileArtifactManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileArtifactManager.swift; sourceTree = "<group>"; };
+		4D534D3E2F44494147010B /* ProviderHealthHistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderHealthHistoryManager.swift; sourceTree = "<group>"; };
+		4D534D3C2F444941470109 /* DiagnosticsBundleExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsBundleExporter.swift; sourceTree = "<group>"; };
 		4960A6DA2136529200B940C9 /* JSBridgeHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSBridgeHandler.swift; sourceTree = "<group>"; };
 		496322212AA5D89E00854231 /* UpdateExternalResourceAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateExternalResourceAction.swift; sourceTree = "<group>"; };
 		4966E9E22118153A00A391FB /* NSUserNotificationCenter+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSUserNotificationCenter+Extension.swift"; sourceTree = "<group>"; };
@@ -377,6 +381,7 @@
 				49B445152457CDF000B27E3E /* ClashStatusTool.swift */,
 				49D223382A1DA5F10002FFCB /* SSIDSuspendTool.swift */,
 				49FEC6682AD9369C00BAD9F5 /* Command.swift */,
+				4D534D3C2F444941470109 /* DiagnosticsBundleExporter.swift */,
 				4D534D382F444941470105 /* DiagnosticsReportBuilder.swift */,
 			);
 			path = Utils;
@@ -391,6 +396,7 @@
 				495BFB8721919B9800C8779D /* RemoteConfigManager.swift */,
 				4D534D362F444941470103 /* CoreCapability.swift */,
 				4D534D3A2F444941470107 /* ProfileArtifactManager.swift */,
+				4D534D3E2F44494147010B /* ProviderHealthHistoryManager.swift */,
 				4952C3BE2115C7CA004A4FA8 /* MenuItemFactory.swift */,
 				F935B2FB23085515009E4D33 /* SystemProxyManager.swift */,
 				F977FAAB2366790500C17F1F /* AutoUpgardeManager.swift */,
@@ -985,6 +991,8 @@
 				49CF3B6520CEE06C001EBF94 /* ConfigManager.swift in Sources */,
 				4D534D372F444941470104 /* CoreCapability.swift in Sources */,
 				4D534D3B2F444941470107 /* ProfileArtifactManager.swift in Sources */,
+				4D534D3F2F44494147010B /* ProviderHealthHistoryManager.swift in Sources */,
+				4D534D3D2F444941470109 /* DiagnosticsBundleExporter.swift in Sources */,
 				4D534D392F444941470106 /* DiagnosticsReportBuilder.swift in Sources */,
 				49870ADB2AA75DC7002B106B /* TerminalCleanUpAction.swift in Sources */,
 				F9E754D0239CC21F00CEE7CC /* WebPortalManager.swift in Sources */,

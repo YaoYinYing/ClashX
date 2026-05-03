@@ -9,6 +9,23 @@ SmartX still does not have a dedicated Xcode unit-test bundle wired into the pro
 
 The current repository is still in the second state.
 
+## Current CI Lanes
+
+PR CI now uses two unsigned Debug build lanes plus a shared validation gate:
+
+- Legacy lane: `macos-15` + Xcode `16.4` + `MACOSX_DEPLOYMENT_TARGET=10.14`
+- Modern lane: `macos-26` + Xcode `26.x`
+- Validation gate: helper fail-closed build-settings check plus pure-logic smoke harnesses
+
+Every PR uploads unsigned SmartX app zip artifacts and `.ci-logs` for the Legacy and Modern lanes.
+
+Artifact upload does **not** imply:
+
+- signing is valid
+- notarization is valid
+- helper installation works
+- runtime compatibility is proven on the target OS
+
 ## What This PR Added
 
 For the controller API foundation work, SmartX now has two additional pure-logic harnesses under [`Tests/SecurityHarness`](../../Tests/SecurityHarness):
@@ -39,6 +56,12 @@ The current approach is useful because it verifies the production files directly
 
 - harness stubs only cover the pure-logic seams, not the full runtime environment
 - failure reporting is shell-level, not Xcode test reporting
-- CI does not yet run these harnesses automatically
+- CI now runs these harnesses automatically, but they are still smoke coverage rather than a real XCTest bundle
+
+## Legacy Compatibility Boundary
+
+- The Legacy CI lane validates that SmartX still compiles with Xcode `16.4` and `MACOSX_DEPLOYMENT_TARGET=10.14`.
+- That compile success does **not** prove the app actually runs correctly on a real macOS `10.14` machine.
+- GitHub-hosted runners do not provide genuine macOS `10.14` runtime validation, so true legacy runtime checks still require external hardware or a VM.
 
 The long-term target remains a real test bundle with focused unit coverage for endpoint building, capability transitions, and controller result mapping.

@@ -26,7 +26,12 @@ Notes:
 - PR CI runs on macOS GitHub Actions via `.github/workflows/pr-ci.yml`.
 - CI uses the same `bash install_dependency.sh` path as local setup so dashboard resources, `Country.mmdb.gz`, Pods, and the Go archive are installed the same way in both environments.
 - CI builds with code signing disabled (`CODE_SIGNING_ALLOWED=NO`) so it can validate compile/build paths without local certificates.
-- CI compiles app/helper code paths, verifies that the Release helper client requirement remains fail-closed, and runs `Tests/SecurityHarness/security_harness.swift`.
+- PR CI verifies the Release helper client requirement remains fail-closed in a dedicated validation gate before artifact jobs run.
+- Every PR now uploads unsigned Debug app artifacts for two lanes:
+  - Legacy: macOS deployment-target compile check with Xcode 16.4 and `MACOSX_DEPLOYMENT_TARGET=10.14`
+  - Modern: current unsigned build line with Xcode 26.x
+- CI also runs `Tests/SecurityHarness/security_harness.swift`, the endpoint-builder smoke harness, and the capability-identity smoke harness in PR validation.
 - CI does **not** validate notarization, privileged helper installation by SMJobBless, or production signing requirements.
 - Local release testing still requires real Apple Developer identities and a follow-up helper identity migration.
-- CI still does **not** run the endpoint-builder or capability-identity smoke harnesses automatically. Those remain documented local checks until the repository gets a real unit-test target or an expanded pure-logic smoke step.
+- The Legacy artifact is only a deployment-target compile check for macOS 10.14. It does **not** prove runtime behavior on a real macOS 10.14 system.
+- True macOS 10.14 runtime validation still requires a real 10.14 machine or VM outside GitHub-hosted runners.

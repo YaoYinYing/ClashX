@@ -26,8 +26,9 @@ enum ControllerEndpointError: LocalizedError {
 
 enum ControllerEndpointBuilder {
     // `path` is for static literal endpoint paths such as "/configs" or
-    // "/providers/proxies". Dynamic controller identifiers must use
-    // `pathComponents` so each raw component is encoded exactly once.
+    // "/providers/proxies". `pathComponents` accepts raw, unescaped
+    // components only; callers must not pass `.encoded` values there because
+    // each component is percent-encoded exactly once by the builder.
     static func httpURL(path: String, queryItems: [URLQueryItem] = []) throws -> URL {
         try composeURL(baseURL: baseHTTPURL(), path: path, queryItems: queryItems)
     }

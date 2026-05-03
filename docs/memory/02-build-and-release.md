@@ -219,6 +219,16 @@ The repository already contains GitHub Actions workflows:
 
 They already perform unsigned SmartX builds, including Go archive creation and `xcodebuild` Debug builds. A future stable SmartX CI plan should keep that direction and standardize on the following pipeline:
 
+Current CI scope note:
+
+- PR CI now has two unsigned Debug artifact lanes:
+  - Legacy: `macos-15` + Xcode `16.4` + `MACOSX_DEPLOYMENT_TARGET=10.14`
+  - Modern: `macos-26` + Xcode `26.3`
+- Every PR uploads unsigned SmartX app artifacts and build logs for both lanes.
+- PR CI also runs the helper fail-closed validation, the security harness, the endpoint-builder smoke harness, and the capability-identity smoke harness.
+- Artifact upload does **not** imply Developer ID signing, notarization, helper installation success, or runtime compatibility on the target OS.
+- The Legacy lane only proves that the deployment-target compile path still works. It does **not** prove real macOS `10.14` runtime behavior.
+
 1. checkout
 2. setup Xcode version
 3. setup Go version
@@ -228,7 +238,7 @@ They already perform unsigned SmartX builds, including Go archive creation and `
 7. build Go archive
 8. `pod install`
 9. `xcodebuild` Debug
-10. upload unsigned debug artifact
+10. upload unsigned debug artifacts for both Legacy and Modern lanes
 
 Recommended details:
 

@@ -40,6 +40,15 @@ Build from source on this branch for preview validation. Legacy public AppCenter
 
 ## Build
 - Make sure have python3 and golang installed in your computer.
+- Use the project Ruby in [`.ruby-version`](./.ruby-version). macOS system Ruby 2.6 is not supported for this repository's Bundler dependencies.
+- Recommended Ruby setup:
+  ```
+  brew install rbenv ruby-build
+  rbenv install 3.2.4
+  rbenv local 3.2.4
+  gem install bundler
+  bundle install
+  ```
 
 - Install Golang
   ```

@@ -37,7 +37,7 @@ The branch selection matters because the Smart core integration, Core settings U
 The inspected files imply these toolchains are expected:
 
 - Go `1.21` family from [`ClashX/goClash/go.mod`](../../ClashX/goClash/go.mod)
-- Ruby `3.2` in current GitHub Actions workflows
+- Ruby `3.2.4` from [`.ruby-version`](../../.ruby-version), matching the current GitHub Actions Ruby `3.2` family
 - Bundler for the [`Gemfile`](../../Gemfile)
 - CocoaPods for the [`Podfile`](../../Podfile)
 - Xcode with SwiftPM support and macOS SDK compatible with the project
@@ -48,11 +48,14 @@ The `Gemfile` currently pins:
 - `cocoapods`
 - `activesupport = 7.0.8`
 
+The repository should be installed with a project Ruby, not macOS system Ruby 2.6. `activesupport = 7.0.8` requires Ruby `>= 2.7`, and the documented local recommendation is Ruby `3.2.4`. Run `bundle install` using that project Ruby before invoking the rest of the dependency flow.
+
 ### 4. Run `install_dependency.sh`
 
 [`install_dependency.sh`](../../install_dependency.sh) currently performs four main jobs:
 
 - builds the Go core by running `python3 build_clash_universal.py` inside `ClashX/goClash`
+- checks that the active Ruby is at least `2.7.0` and recommends Ruby `3.2.4`
 - runs `bundle install`
 - runs `bundle exec pod install`
 - deletes and redownloads runtime resources

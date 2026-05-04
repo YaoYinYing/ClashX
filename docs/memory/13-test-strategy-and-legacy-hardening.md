@@ -31,10 +31,10 @@ For the controller API foundation and SmartX hardening work, SmartX now has seve
 
 - `controller_endpoint_builder_smoke.swift` exercises `ControllerEndpointBuilder` against embedded and external controller bases, WebSocket conversion, query items, trailing-slash handling, query/fragment stripping, and userinfo stripping.
 - `capability_cache_identity_smoke.swift` checks that `CapabilityCache` controller identity keeps the sanitized controller base and `secret-set` marker without leaking raw controller secrets, URL userinfo, or query strings.
-- `smartx_managed_override_smoke.swift` exercises managed-override persistence, legacy UserDefaults migration, normalization of invalid model URLs, and interval clamping for the initial LightGBM override groundwork.
-- `config_validator_smoke.swift` exercises the reusable TUN and DNS validators without duplicating the production validation rules.
+- `smartx_managed_override_smoke.swift` exercises explicit bootstrap, no-hidden-write behavior for the effective model URL getter, managed-override persistence, legacy UserDefaults migration, future-schema skip behavior, normalization of invalid model URLs, and interval clamping for the initial LightGBM override groundwork.
+- `config_validator_smoke.swift` exercises the reusable TUN and DNS validators without duplicating the production validation rules, including nil-input handling and invalid IPv6 CIDR prefixes.
 - `diagnostics_log_reader_smoke.swift` exercises the diagnostics log tail reader so large rolling log files do not require full synchronous reads every refresh cycle.
-- `profile_artifact_metadata_smoke.swift` exercises `ProfileArtifactMetadata` encoding so source-copy artifact semantics stay stable while the real generated effective config pipeline is still pending.
+- `profile_artifact_metadata_smoke.swift` exercises `ProfileArtifactMetadata` encoding so source-copy artifact semantics stay stable while the real generated effective config pipeline is still pending, including the false override/merge/runtime flags that keep the current artifacts honest.
 
 These harnesses compile the production files directly with lightweight stubs for app-global state. That keeps the tested logic real while avoiding a second copied implementation.
 High coverage has not been achieved in this branch, and XCTest migration remains follow-up work.
@@ -68,6 +68,6 @@ The current approach is useful because it verifies the production files directly
 
 ## Legacy Compatibility Boundary
 
-- This branch no longer keeps a dedicated macOS `10.14` compile lane in CI.
+- This branch no longer keeps a dedicated macOS `10.14` compile lane in CI, and SmartX no longer claims active macOS `10.14` support after the CI failure on `CryptoKit.SHA256`.
 
 The long-term target remains a real test bundle with focused unit coverage for endpoint building, capability transitions, and controller result mapping.

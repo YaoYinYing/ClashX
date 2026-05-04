@@ -71,8 +71,15 @@ enum ProfileArtifactMetadataSmokeMain {
             let decoded = try decoder.decode(ProfileArtifactMetadata.self, from: data)
 
             expect(decoded.selectedProfileName == metadata.selectedProfileName, "profile name should round-trip")
+            expect(decoded.selectedProfileKind == metadata.selectedProfileKind, "profile kind should round-trip")
+            expect(decoded.sourceConfigPath == metadata.sourceConfigPath, "source config path should round-trip")
+            expect(decoded.sourceRemoteURL == metadata.sourceRemoteURL, "remote URL should round-trip")
+            expect(decoded.generatedAt == metadata.generatedAt, "generated timestamp should round-trip")
+            expect(decoded.controllerMode == metadata.controllerMode, "controller mode should round-trip")
             expect(decoded.generationMode == "source-copy", "generation mode should remain honest for source-copy artifacts")
             expect(decoded.includesSmartXOverrides == false, "override flag should remain false for source-copy artifacts")
+            expect(decoded.includesProfileMerge == false, "profile merge flag should remain false for source-copy artifacts")
+            expect(decoded.includesRuntimeOverrides == false, "runtime override flag should remain false for source-copy artifacts")
 
             print("profile_artifact_metadata_smoke passed")
         } catch {

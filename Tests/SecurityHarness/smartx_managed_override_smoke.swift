@@ -20,6 +20,13 @@ enum Settings {
     static var smartLightGBMModelUrl = defaultSmartLightGBMModelUrl
     static var smartLightGBMAutoUpdate = false
     static var smartLightGBMUpdateIntervalHours = 72
+
+    static var effectiveSmartLightGBMModelUrl: String {
+        if smartLightGBMModelUrl.isEmpty {
+            return defaultSmartLightGBMModelUrl
+        }
+        return smartLightGBMModelUrl
+    }
 }
 
 enum Paths {
@@ -65,6 +72,10 @@ enum SmartXManagedOverrideSmokeMain {
             Settings.smartLightGBMAutoUpdate = true
             Settings.smartLightGBMUpdateIntervalHours = 0
 
+            expect(!FileManager.default.fileExists(atPath: Paths.smartXManagedOverrideURL.path), "managed override file should not exist before explicit bootstrap")
+            _ = Settings.effectiveSmartLightGBMModelUrl
+            expect(!FileManager.default.fileExists(atPath: Paths.smartXManagedOverrideURL.path), "reading the effective model URL should not create the managed override file")
+
             SmartXManagedOverrideManager.bootstrapIfNeeded()
 
             expect(FileManager.default.fileExists(atPath: Paths.smartXManagedOverrideURL.path), "bootstrap should persist the managed override file")
@@ -78,7 +89,11 @@ enum SmartXManagedOverrideSmokeMain {
 
             Settings.smartLightGBMModelUrl = "https://example.com/custom-model.bin"
             Settings.smartLightGBMUpdateIntervalHours = 12
-            SmartXManagedOverrideManager.persistCurrentSettings()
+            let savedResult = SmartXManagedOverrideManager.persistCurrentSettings()
+            if case .saved = savedResult {
+            } else {
+                expect(false, "persist should report a saved result for the current schema")
+            }
 
             let persisted = SmartXManagedOverrideManager.load()
             expect(persisted?.lightGBM?.modelURL == "https://example.com/custom-model.bin", "persist should update the managed override file")
@@ -115,12 +130,20 @@ enum SmartXManagedOverrideSmokeMain {
             Settings.smartLightGBMModelUrl = "https://example.com/should-not-overwrite.bin"
             Settings.smartLightGBMUpdateIntervalHours = 24
             Logger.loggedWarnings.removeAll()
-            SmartXManagedOverrideManager.persistCurrentSettings()
+            let skippedResult = SmartXManagedOverrideManager.persistCurrentSettings()
+            switch skippedResult {
+            case let .skippedFutureSchema(version):
+                expect(version == SmartXManagedOverrideManager.currentSchemaVersion + 1, "future schema skip should report the preserved schema version")
+            default:
+                expect(false, "future schema save should report a skipped result")
+            }
 
             let persistedFutureJSON = try String(contentsOf: Paths.smartXManagedOverrideURL, encoding: .utf8)
             expect(persistedFutureJSON.contains("\"futureOnly\""), "persist should not overwrite a future-schema file")
             expect(persistedFutureJSON.contains("future-model.bin"), "persist should leave future-schema contents untouched")
             expect(Logger.loggedWarnings.contains { $0.contains("Skipping SmartX managed override write because schema version") }, "persist should warn when it skips overwriting a future schema file")
+            expect(Settings.smartLightGBMModelUrl == "https://example.com/should-not-overwrite.bin", "runtime settings should still reflect the in-memory save even when persistence is skipped")
+            expect(Settings.smartLightGBMUpdateIntervalHours == 24, "runtime interval should still update in memory when persistence is skipped")
 
             print("smartx_managed_override_smoke passed")
         } catch {

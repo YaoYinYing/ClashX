@@ -85,11 +85,13 @@ The Diagnostics view is [`ClashX/ViewControllers/Connections/DiagnosticsDashboar
 
 The in-app log viewer now uses a tail reader rather than re-reading the full rolling log file every refresh. That keeps the dashboard transitional but materially safer for large logs.
 
+Artifact preview and managed-override status formatting now also route through a small `DiagnosticsArtifactFormatter` helper. The dashboard is still transitional, but one more coherent formatting seam is no longer embedded directly in the controller.
+
 These diagnostics actions now also feed a shared capability cache, so unsupported or unauthorized controller endpoints can be disabled after first contact instead of failing repeatedly every time the user opens the panel.
 
 Important limitation:
 
-- `DiagnosticsDashboardViewController` is still a transitional controller. The log-tail reader is extracted and dangerous actions remain confirmed, but the dashboard is not fully decomposed yet.
+- `DiagnosticsDashboardViewController` is still a transitional controller. `DiagnosticsLogReader` and `DiagnosticsArtifactFormatter` are extracted, and dangerous actions remain confirmed, but the dashboard is not fully decomposed yet.
 
 The controller URL paths used by the Diagnostics dashboard are also now routed through [`ControllerEndpointBuilder`](../../ClashX/General/Utils/ControllerEndpointBuilder.swift) for high-risk touched surfaces such as pprof helper URL generation and WebSocket diagnostics.
 

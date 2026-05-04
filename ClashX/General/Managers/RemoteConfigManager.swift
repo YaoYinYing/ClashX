@@ -8,6 +8,7 @@
 
 import Alamofire
 import Cocoa
+import CryptoKit
 
 class RemoteConfigManager {
     var configs: [RemoteConfigModel] = []
@@ -253,11 +254,7 @@ class RemoteConfigManager {
     }
 
     static func deterministicFallbackName(sourceURL: String) -> String {
-        let data = Data(sourceURL.utf8)
-        var digest = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-        data.withUnsafeBytes { rawBuffer in
-            _ = CC_SHA256(rawBuffer.baseAddress, CC_LONG(data.count), &digest)
-        }
+        let digest = SHA256.hash(data: Data(sourceURL.utf8))
         let suffix = digest.prefix(4).map { String(format: "%02x", $0) }.joined()
         return "remote-config-\(suffix)"
     }

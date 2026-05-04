@@ -18,6 +18,10 @@ struct LightGBMSettingsState {
     let modelModifiedText: String
     let overrideSummaryText: String
     let manualUpdateText: String
+    let noteText: String
+    let persistenceStatusText: String?
+    let persistenceWarningText: String?
+    let persistenceResult: SmartXManagedOverridePersistenceResult?
 }
 
 struct LightGBMSettingsInput {
@@ -38,6 +42,7 @@ struct LightGBMSettingsControlBindings {
     let modelModifiedLabel: NSTextField?
     let manualUpdateLabel: NSTextField?
     let overrideSummaryLabel: NSTextField?
+    let noteLabel: NSTextField?
 }
 
 enum LightGBMSettingsUpdateResult {
@@ -77,42 +82,16 @@ enum LightGBMSettingsViewModel {
         controls.modelModifiedLabel?.stringValue = state.modelModifiedText
         controls.manualUpdateLabel?.stringValue = state.manualUpdateText
         controls.overrideSummaryLabel?.stringValue = state.overrideSummaryText
+        controls.noteLabel?.stringValue = state.noteText
     }
 
     static func currentState(isCoreRunning: Bool, capabilityAvailability: CoreEndpointAvailability) -> LightGBMSettingsState {
+        // This UI path is an explicit migration/setup entry point. bootstrapIfNeeded()
+        // is idempotent and should not keep writing after the first successful bootstrap.
         SmartXManagedOverrideManager.bootstrapIfNeeded()
-
-        let path = Paths.smartLightGBMModelPath
-        let attributes = try? FileManager.default.attributesOfItem(atPath: path)
-
-        let modelStatusText: String
-        let modelModifiedText: String
-        if let size = attributes?[.size] as? NSNumber {
-            modelStatusText = String(format: NSLocalizedString("present (%@)", comment: ""),
-                                     ByteCountFormatter.string(fromByteCount: size.int64Value, countStyle: .file))
-            if let modified = attributes?[.modificationDate] as? Date {
-                modelModifiedText = DateFormatter.localizedString(from: modified, dateStyle: .short, timeStyle: .medium)
-            } else {
-                modelModifiedText = NSLocalizedString("unknown", comment: "")
-            }
-        } else {
-            modelStatusText = NSLocalizedString("missing", comment: "")
-            modelModifiedText = NSLocalizedString("not available", comment: "")
-        }
-
-        let overrideStatus = Settings.smartLightGBMOverrideConfig ? NSLocalizedString("enabled", comment: "") : NSLocalizedString("disabled", comment: "")
-        let autoUpdateStatus = Settings.smartLightGBMAutoUpdate ? NSLocalizedString("auto update on", comment: "") : NSLocalizedString("auto update off", comment: "")
-        let manualUpdateText = manualUpdateSummary(isCoreRunning: isCoreRunning, capabilityAvailability: capabilityAvailability)
-
-        return LightGBMSettingsState(overrideEnabled: Settings.smartLightGBMOverrideConfig,
-                                     autoUpdateEnabled: Settings.smartLightGBMAutoUpdate,
-                                     modelURL: Settings.effectiveSmartLightGBMModelUrl,
-                                     updateIntervalHours: Settings.smartLightGBMUpdateIntervalHours,
-                                     modelPath: path,
-                                     modelStatusText: modelStatusText,
-                                     modelModifiedText: modelModifiedText,
-                                     overrideSummaryText: "\(overrideStatus), \(autoUpdateStatus), \(Settings.smartLightGBMUpdateIntervalHours)h",
-                                     manualUpdateText: manualUpdateText)
+        return makeState(isCoreRunning: isCoreRunning,
+                         capabilityAvailability: capabilityAvailability,
+                         persistenceResult: nil)
     }
 
     static func save(overrideEnabled: Bool,
@@ -127,10 +106,12 @@ enum LightGBMSettingsViewModel {
         Settings.smartLightGBMAutoUpdate = autoUpdate
         Settings.smartLightGBMModelUrl = modelURL
         Settings.smartLightGBMUpdateIntervalHours = max(1, updateIntervalHours)
-        SmartXManagedOverrideManager.persistCurrentSettings()
+        let persistenceResult = SmartXManagedOverrideManager.persistCurrentSettings()
         Settings.syncSmartLightGBMOptionsToCore()
 
-        return currentState(isCoreRunning: isCoreRunning, capabilityAvailability: capabilityAvailability)
+        return makeState(isCoreRunning: isCoreRunning,
+                         capabilityAvailability: capabilityAvailability,
+                         persistenceResult: persistenceResult)
     }
 
     static func save(input: LightGBMSettingsInput,
@@ -177,23 +158,27 @@ enum LightGBMSettingsViewModel {
             case .success:
                 CapabilityCache.shared.set(.lightGBMUpgrade, availability: .available)
                 completion(.success,
-                           currentState(isCoreRunning: isCoreRunning,
-                                        capabilityAvailability: .available))
+                           makeState(isCoreRunning: isCoreRunning,
+                                     capabilityAvailability: .available,
+                                     persistenceResult: initialState.persistenceResult))
             case .unsupported:
                 CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unsupported)
                 completion(.unsupported,
-                           currentState(isCoreRunning: isCoreRunning,
-                                        capabilityAvailability: .unsupported))
+                           makeState(isCoreRunning: isCoreRunning,
+                                     capabilityAvailability: .unsupported,
+                                     persistenceResult: initialState.persistenceResult))
             case let .unauthorized(message):
                 CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unauthorized, message: message)
                 completion(.unauthorized(message),
-                           currentState(isCoreRunning: isCoreRunning,
-                                        capabilityAvailability: .unauthorized))
+                           makeState(isCoreRunning: isCoreRunning,
+                                     capabilityAvailability: .unauthorized,
+                                     persistenceResult: initialState.persistenceResult))
             case let .failed(message):
                 CapabilityCache.shared.set(.lightGBMUpgrade, availability: .degraded, message: message)
                 completion(.failed(message),
-                           currentState(isCoreRunning: isCoreRunning,
-                                        capabilityAvailability: .degraded))
+                           makeState(isCoreRunning: isCoreRunning,
+                                     capabilityAvailability: .degraded,
+                                     persistenceResult: initialState.persistenceResult))
             }
         }
     }
@@ -211,6 +196,60 @@ enum LightGBMSettingsViewModel {
 
     static func controlsEnabled(for state: LightGBMSettingsState) -> Bool {
         state.overrideEnabled
+    }
+
+    static func persistenceNotificationInfo(for state: LightGBMSettingsState) -> String? {
+        state.persistenceWarningText
+    }
+
+    private static func makeState(isCoreRunning: Bool,
+                                  capabilityAvailability: CoreEndpointAvailability,
+                                  persistenceResult: SmartXManagedOverridePersistenceResult?) -> LightGBMSettingsState {
+        let path = Paths.smartLightGBMModelPath
+        let attributes = try? FileManager.default.attributesOfItem(atPath: path)
+
+        let modelStatusText: String
+        let modelModifiedText: String
+        if let size = attributes?[.size] as? NSNumber {
+            modelStatusText = String(format: NSLocalizedString("present (%@)", comment: ""),
+                                     ByteCountFormatter.string(fromByteCount: size.int64Value, countStyle: .file))
+            if let modified = attributes?[.modificationDate] as? Date {
+                modelModifiedText = DateFormatter.localizedString(from: modified, dateStyle: .short, timeStyle: .medium)
+            } else {
+                modelModifiedText = NSLocalizedString("unknown", comment: "")
+            }
+        } else {
+            modelStatusText = NSLocalizedString("missing", comment: "")
+            modelModifiedText = NSLocalizedString("not available", comment: "")
+        }
+
+        let overrideStatus = Settings.smartLightGBMOverrideConfig ? NSLocalizedString("enabled", comment: "") : NSLocalizedString("disabled", comment: "")
+        let autoUpdateStatus = Settings.smartLightGBMAutoUpdate ? NSLocalizedString("auto update on", comment: "") : NSLocalizedString("auto update off", comment: "")
+        let manualUpdateText = manualUpdateSummary(isCoreRunning: isCoreRunning, capabilityAvailability: capabilityAvailability)
+        let persistenceStatusText = persistenceResult?.statusText
+        let noteText: String
+        if let warning = persistenceResult?.warningText {
+            noteText = "\(overrideExplanation)\n\(warning)"
+        } else {
+            noteText = overrideExplanation
+        }
+
+        let overrideSummaryText = ["\(overrideStatus), \(autoUpdateStatus), \(Settings.smartLightGBMUpdateIntervalHours)h",
+                                   persistenceStatusText].compactMap { $0 }.joined(separator: " | ")
+
+        return LightGBMSettingsState(overrideEnabled: Settings.smartLightGBMOverrideConfig,
+                                     autoUpdateEnabled: Settings.smartLightGBMAutoUpdate,
+                                     modelURL: Settings.effectiveSmartLightGBMModelUrl,
+                                     updateIntervalHours: Settings.smartLightGBMUpdateIntervalHours,
+                                     modelPath: path,
+                                     modelStatusText: modelStatusText,
+                                     modelModifiedText: modelModifiedText,
+                                     overrideSummaryText: overrideSummaryText,
+                                     manualUpdateText: manualUpdateText,
+                                     noteText: noteText,
+                                     persistenceStatusText: persistenceStatusText,
+                                     persistenceWarningText: persistenceResult?.warningText,
+                                     persistenceResult: persistenceResult)
     }
 
     private static func manualUpdateSummary(isCoreRunning: Bool, capabilityAvailability: CoreEndpointAvailability) -> String {

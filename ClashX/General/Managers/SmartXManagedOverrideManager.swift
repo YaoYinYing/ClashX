@@ -28,6 +28,32 @@ struct LightGBMOverride: Codable {
     var updateIntervalHours: Int
 }
 
+enum SmartXManagedOverridePersistenceResult {
+    case saved
+    case skippedFutureSchema(version: Int)
+    case failed(String)
+
+    var statusText: String {
+        switch self {
+        case .saved:
+            return NSLocalizedString("Saved to the SmartX managed override file.", comment: "")
+        case let .skippedFutureSchema(version):
+            return String(format: NSLocalizedString("Applied runtime settings, but preserved a newer SmartX override schema (v%d) instead of overwriting it.", comment: ""), version)
+        case let .failed(message):
+            return String(format: NSLocalizedString("Applied runtime settings, but failed to persist the SmartX managed override file: %@", comment: ""), message)
+        }
+    }
+
+    var warningText: String? {
+        switch self {
+        case .saved:
+            return nil
+        case .skippedFutureSchema, .failed:
+            return statusText
+        }
+    }
+}
+
 enum SmartXManagedOverrideManager {
     static let currentSchemaVersion = 1
 
@@ -84,6 +110,8 @@ enum SmartXManagedOverrideManager {
     }
 
     static func captureFromSettings() -> SmartXManagedOverride {
+        // Read raw compatibility-cache values only. This capture path must not depend
+        // on effective getters that could later grow hidden migration side effects.
         SmartXManagedOverride(schemaVersion: currentSchemaVersion,
                               lightGBM: normalizedLightGBMOverride(enabled: Settings.smartLightGBMOverrideConfig,
                                                                    modelURL: Settings.smartLightGBMModelUrl,
@@ -91,18 +119,20 @@ enum SmartXManagedOverrideManager {
                                                                    updateIntervalHours: Settings.smartLightGBMUpdateIntervalHours))
     }
 
-    static func persistCurrentSettings() {
+    static func persistCurrentSettings() -> SmartXManagedOverridePersistenceResult {
         if let futureSchemaVersion = unsafeFutureSchemaVersionOnDisk() {
             Logger.log("Skipping SmartX managed override write because schema version \(futureSchemaVersion) is newer than SmartX schema version \(currentSchemaVersion). The current app may use known fields at runtime, but it will not overwrite the future-schema file during a normal UI save.", level: .warning)
-            return
+            return .skippedFutureSchema(version: futureSchemaVersion)
         }
 
         let overrideModel = captureFromSettings()
         do {
             try save(overrideModel)
             applyToSettings(overrideModel)
+            return .saved
         } catch {
             Logger.log("Failed to persist SmartX managed overrides: \(error.localizedDescription)", level: .warning)
+            return .failed(error.localizedDescription)
         }
     }
 

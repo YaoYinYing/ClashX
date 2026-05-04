@@ -56,8 +56,8 @@ class SmartDashboardViewController: NSViewController {
     }
 
     private func setup() {
-        // TODO: Replace the duplicated AppKit LightGBM layout here and in Core settings
-        // with a shared LightGBMSettingsPanel once that refactor is low-risk.
+        // TODO: UI layout remains duplicated, but behavior is centralized in
+        // LightGBMSettingsViewModel.
         let toolbar = NSStackView(views: [refreshButton, flushConfigButton, flushAllButton, updateModelButton, openConfigFolderButton])
         toolbar.orientation = .horizontal
         toolbar.spacing = 8
@@ -309,6 +309,7 @@ class SmartDashboardViewController: NSViewController {
                 Logger.log("[Smart] LightGBM model update failed: \(message)", level: .warning)
             }
             self.applyModelState(state)
+            self.announceLightGBMPersistenceIfNeeded(state)
             self.reloadData()
         }
     }
@@ -321,6 +322,7 @@ class SmartDashboardViewController: NSViewController {
         let state = LightGBMSettingsViewModel.resetModelURL(isCoreRunning: ConfigManager.shared.isRunning,
                                                             capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
         applyModelState(state)
+        announceLightGBMPersistenceIfNeeded(state)
     }
 
     @objc private func actionModelSettingsChanged() {
@@ -331,6 +333,7 @@ class SmartDashboardViewController: NSViewController {
                                                    isCoreRunning: ConfigManager.shared.isRunning,
                                                    capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
         applyModelState(state)
+        announceLightGBMPersistenceIfNeeded(state)
     }
 
     private func updateModelSettingsUI() {
@@ -357,10 +360,16 @@ class SmartDashboardViewController: NSViewController {
                                                                             modelPathLabel: modelPathLabel,
                                                                             modelModifiedLabel: nil,
                                                                             manualUpdateLabel: nil,
-                                                                            overrideSummaryLabel: nil),
+                                                                            overrideSummaryLabel: nil,
+                                                                            noteLabel: modelNoteLabel),
                                         statusTextOverride: String(format: NSLocalizedString("Model.bin: %@, modified %@", comment: ""),
                                                                    state.modelStatusText,
                                                                    state.modelModifiedText))
+    }
+
+    private func announceLightGBMPersistenceIfNeeded(_ state: LightGBMSettingsState) {
+        guard let info = LightGBMSettingsViewModel.persistenceNotificationInfo(for: state) else { return }
+        NSUserNotificationCenter.default.post(title: NSLocalizedString("SmartX LightGBM Override", comment: ""), info: info)
     }
 }
 

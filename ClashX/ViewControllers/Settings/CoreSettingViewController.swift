@@ -108,8 +108,8 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func setupView() {
-        // TODO: Replace the duplicated AppKit LightGBM layout here and in the Smart
-        // dashboard with a shared LightGBMSettingsPanel once that refactor is low-risk.
+        // TODO: UI layout remains duplicated, but behavior is centralized in
+        // LightGBMSettingsViewModel.
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
@@ -549,7 +549,7 @@ class CoreSettingViewController: NSViewController {
         }
 
         if source == "/configs" {
-            return .guardedUpdateAvailable(NSLocalizedString("External controller exposes a tun section through /configs. SmartX can attempt a guarded TUN update, and will restore the previous UI state if the controller rejects it.", comment: ""))
+            return .guardedUpdateAvailable(NSLocalizedString("External controller exposes a tun section through /configs. SmartX can attempt a guarded TUN update and then refresh the UI from the controller if verification fails.", comment: ""))
         }
 
         return .unsupported(NSLocalizedString("External controller TUN support is not verified yet. SmartX keeps it disabled until the controller reports config state reliably.", comment: ""))
@@ -631,7 +631,13 @@ class CoreSettingViewController: NSViewController {
                     prefix = "[Core Settings] TUN update failed"
                 }
                 Logger.log("\(prefix): \(message)", level: .error)
-                NSUserNotificationCenter.default.post(title: "TUN", info: message)
+                let failureInfo: String
+                if case .failed = result {
+                    failureInfo = NSLocalizedString("SmartX could not verify the requested TUN state. It refreshed the UI from the controller.", comment: "")
+                } else {
+                    failureInfo = message
+                }
+                NSUserNotificationCenter.default.post(title: "TUN", info: failureInfo)
                 self.refreshConfigStatus()
             case let .blockedByValidation(issues, recoveryText, previousState):
                 self.currentTunEnabled = previousState.enabled
@@ -653,6 +659,7 @@ class CoreSettingViewController: NSViewController {
                                                    isCoreRunning: ConfigManager.shared.isRunning,
                                                    capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
         applyModelState(state)
+        announceLightGBMPersistenceIfNeeded(state)
     }
 
     @objc private func actionUpdateLightGBMModel() {
@@ -674,6 +681,7 @@ class CoreSettingViewController: NSViewController {
                 Logger.log("[Core Settings] LightGBM model update failed: \(message)", level: .warning)
             }
             self.applyModelState(state)
+            self.announceLightGBMPersistenceIfNeeded(state)
             self.refreshLightGBMInfo()
         }
     }
@@ -682,6 +690,7 @@ class CoreSettingViewController: NSViewController {
         let state = LightGBMSettingsViewModel.resetModelURL(isCoreRunning: ConfigManager.shared.isRunning,
                                                             capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
         applyModelState(state)
+        announceLightGBMPersistenceIfNeeded(state)
     }
 
     @objc private func actionOpenConfigFolder() {
@@ -699,6 +708,12 @@ class CoreSettingViewController: NSViewController {
                                                                             modelPathLabel: modelPathLabel,
                                                                             modelModifiedLabel: modelModifiedLabel,
                                                                             manualUpdateLabel: modelEndpointLabel,
-                                                                            overrideSummaryLabel: modelOverrideStatusLabel))
+                                                                            overrideSummaryLabel: modelOverrideStatusLabel,
+                                                                            noteLabel: modelNoteLabel))
+    }
+
+    private func announceLightGBMPersistenceIfNeeded(_ state: LightGBMSettingsState) {
+        guard let info = LightGBMSettingsViewModel.persistenceNotificationInfo(for: state) else { return }
+        NSUserNotificationCenter.default.post(title: NSLocalizedString("SmartX LightGBM Override", comment: ""), info: info)
     }
 }

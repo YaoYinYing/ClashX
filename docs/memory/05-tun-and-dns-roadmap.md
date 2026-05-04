@@ -42,7 +42,7 @@ The current UI is also explicit that:
 
 - embedded-core TUN remains disabled
 - helper installation does not imply TUN support
-- failed TUN updates restore the previous UI state
+- failed or unverified TUN updates refresh the UI from the controller state when possible and otherwise restore the previous UI state
 
 ## Missing TUN Fields
 

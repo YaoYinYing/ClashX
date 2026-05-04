@@ -13,6 +13,8 @@ That distinction matters because the branch already mixes:
 
 Build success alone does not mean release readiness, notarization readiness, or compatibility with old ClashX Pro distribution behavior.
 
+The current branch is also modern-only by project decision. Active macOS `10.14` support was dropped after the legacy CI lane failed on `CryptoKit.SHA256`, and CI success in this branch does not imply a signed or notarized release is ready.
+
 ## Local Build Flow
 
 The current repository implies the following local build flow.
@@ -118,8 +120,12 @@ The script builds twice:
 It also sets:
 
 - `CGO_ENABLED=1`
-- `CGO_CFLAGS=-mmacosx-version-min=10.14`
-- `CGO_LDFLAGS=-mmacosx-version-min=10.14`
+
+Historical note:
+
+- the older build script snapshot documented here still showed `CGO_CFLAGS=-mmacosx-version-min=10.14`
+- the older build script snapshot documented here still showed `CGO_LDFLAGS=-mmacosx-version-min=10.14`
+- those historical flags should not be read as an active SmartX support promise for macOS `10.14`
 
 The build command uses:
 
@@ -236,7 +242,7 @@ Current CI scope note:
 7. build Go archive
 8. `pod install`
 9. `xcodebuild` Debug
-10. upload unsigned debug artifacts for both Legacy and Modern lanes
+10. upload unsigned debug artifacts for the current modern lane
 
 Recommended details:
 

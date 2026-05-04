@@ -45,6 +45,9 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
 @main
 enum ConfigValidatorSmokeMain {
     static func main() {
+        let nilTunResult = TunConfigValidator.validate(nil as TunConfigValidationInput?)
+        expect(nilTunResult.issues.isEmpty, "nil TUN input should not produce issues")
+
         let nilDNSResult = DNSConfigValidator.validate(nil as DNSConfigValidationInput?)
         expect(nilDNSResult.issues.isEmpty, "nil DNS input should not produce issues")
 
@@ -111,6 +114,21 @@ enum ConfigValidatorSmokeMain {
                                                                                        includeInterface: nil,
                                                                                        excludeInterface: nil))
         expect(invalidPrefixResult.blockingErrors.count == 1, "invalid CIDR prefix should block")
+
+        let invalidIPv6PrefixResult = TunConfigValidator.validate(TunConfigValidationInput(enable: true,
+                                                                                           device: "utun9",
+                                                                                           stack: nil,
+                                                                                           dnsHijack: nil,
+                                                                                           autoRoute: nil,
+                                                                                           autoDetectInterface: nil,
+                                                                                           strictRoute: false,
+                                                                                           mtu: nil,
+                                                                                           udpTimeout: 30,
+                                                                                           routeAddress: ["2001:db8::/129"],
+                                                                                           routeExcludeAddress: nil,
+                                                                                           includeInterface: nil,
+                                                                                           excludeInterface: nil))
+        expect(invalidIPv6PrefixResult.blockingErrors.count == 1, "invalid IPv6 CIDR prefix should block")
 
         let dnsResult = DNSConfigValidator.validate(DNSConfigValidationInput(enable: true,
                                                                              enhancedMode: "fake-ip",

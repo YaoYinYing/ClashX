@@ -28,6 +28,7 @@
 		A1B000000000000000000105 /* DNSConfigValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000205 /* DNSConfigValidator.swift */; };
 		A1B000000000000000000106 /* TunLifecycleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000206 /* TunLifecycleCoordinator.swift */; };
 		A1B000000000000000000107 /* DiagnosticsLogReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000207 /* DiagnosticsLogReader.swift */; };
+		A1B000000000000000000108 /* DiagnosticsArtifactFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000208 /* DiagnosticsArtifactFormatter.swift */; };
 		4929F684258CE07500A435F6 /* UserDefaultWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4929F683258CE07500A435F6 /* UserDefaultWrapper.swift */; };
 		492C4869210EE6B9004554A0 /* ApiRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 492C4868210EE6B9004554A0 /* ApiRequest.swift */; };
 		492C4871210EF62E004554A0 /* ClashConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 492C4870210EF62E004554A0 /* ClashConfig.swift */; };
@@ -203,6 +204,7 @@
 		A1B000000000000000000205 /* DNSConfigValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSConfigValidator.swift; sourceTree = "<group>"; };
 		A1B000000000000000000206 /* TunLifecycleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunLifecycleCoordinator.swift; sourceTree = "<group>"; };
 		A1B000000000000000000207 /* DiagnosticsLogReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogReader.swift; sourceTree = "<group>"; };
+		A1B000000000000000000208 /* DiagnosticsArtifactFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsArtifactFormatter.swift; sourceTree = "<group>"; };
 		4929F683258CE07500A435F6 /* UserDefaultWrapper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UserDefaultWrapper.swift; sourceTree = "<group>"; };
 		492C4868210EE6B9004554A0 /* ApiRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiRequest.swift; sourceTree = "<group>"; };
 		492C4870210EF62E004554A0 /* ClashConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClashConfig.swift; sourceTree = "<group>"; };
@@ -404,6 +406,7 @@
 				A1B000000000000000000203 /* ConfigValidationIssue.swift */,
 				A1B000000000000000000205 /* DNSConfigValidator.swift */,
 				4D534D3C2F444941470109 /* DiagnosticsBundleExporter.swift */,
+				A1B000000000000000000208 /* DiagnosticsArtifactFormatter.swift */,
 				A1B000000000000000000207 /* DiagnosticsLogReader.swift */,
 				4D534D382F444941470105 /* DiagnosticsReportBuilder.swift */,
 				4D534D442F44494147010E /* ControllerEndpointBuilder.swift */,
@@ -1021,6 +1024,7 @@
 				A1B000000000000000000106 /* TunLifecycleCoordinator.swift in Sources */,
 				4D534D3D2F444941470109 /* DiagnosticsBundleExporter.swift in Sources */,
 				A1B000000000000000000105 /* DNSConfigValidator.swift in Sources */,
+				A1B000000000000000000108 /* DiagnosticsArtifactFormatter.swift in Sources */,
 				A1B000000000000000000107 /* DiagnosticsLogReader.swift in Sources */,
 				4D534D392F444941470106 /* DiagnosticsReportBuilder.swift in Sources */,
 				4D534D432F44494147010E /* ControllerEndpointBuilder.swift in Sources */,

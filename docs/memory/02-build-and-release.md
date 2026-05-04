@@ -86,6 +86,30 @@ The workspace is the correct entry point because:
 - Pods are integrated through CocoaPods
 - `KeyboardShortcuts` is integrated through SwiftPM
 
+Important workspace-format note:
+
+- `ClashX.xcworkspace/contents.xcworkspacedata` is XML, not a plist.
+- `plutil` can reject a valid workspace file because the root element is `Workspace`.
+- A valid readiness check is:
+  - XML parses
+  - root tag is `Workspace`
+  - `FileRef` entries exist
+  - `group:ClashX.xcodeproj` resolves
+  - `group:Pods/Pods.xcodeproj` resolves when referenced
+  - `xcodebuild -list -workspace "$PWD/ClashX.xcworkspace"` succeeds
+
+SmartX now carries a dedicated readiness helper:
+
+- `bash scripts/ensure-xcworkspace.sh`
+
+That helper validates the workspace XML structure directly instead of treating it like a plist. If the workspace XML is valid but CocoaPods products are missing, the normal local repair path is:
+
+- `bundle install`
+- `bundle exec pod install`
+- `xcodebuild -list -workspace "$PWD/ClashX.xcworkspace"`
+
+If the global CocoaPods install differs from the Bundler-managed one, prefer `bundle exec pod install` for this repository. Project fallback is diagnostic only and should not replace the normal workspace-based path.
+
 ### 6. Build the `ClashX` scheme
 
 The current project expects the `ClashX` target to link:
@@ -186,6 +210,13 @@ The current [`Podfile`](../../Podfile) pulls in:
 - `SwiftFormat/CLI`
 
 [`Podfile.lock`](../../Podfile.lock) currently pins concrete versions and checksums, so CocoaPods resolution is reasonably reproducible as long as the podspec sources remain available.
+
+The repository now treats Bundler as the preferred CocoaPods entry point whenever [`Gemfile`](../../Gemfile) exists:
+
+- run `bundle install`
+- run `bundle exec pod install`
+
+This matters because the observed `xcodebuild: error: 'ClashX.xcworkspace' is not a workspace file` failure was traced to incomplete workspace/dependency preparation, not to `contents.xcworkspacedata` being malformed.
 
 ### SwiftPM
 

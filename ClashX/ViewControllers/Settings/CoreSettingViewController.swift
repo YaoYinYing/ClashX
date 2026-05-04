@@ -614,6 +614,14 @@ class CoreSettingViewController: NSViewController {
                 AppDelegate.shared.syncConfig {
                     self.refreshConfigStatus()
                 }
+            case let .requestedButUnverified(message, previousState):
+                self.currentTunEnabled = previousState.enabled
+                self.tunEnabledButton.state = previousState.enabled ? .on : .off
+                Logger.log("[Core Settings] TUN update requested but final state is unverified: \(message)", level: .warning)
+                NSUserNotificationCenter.default.post(title: "TUN", info: message)
+                AppDelegate.shared.syncConfig {
+                    self.refreshConfigStatus()
+                }
             case let .unsupported(message, previousState),
                  let .unauthorized(message, previousState),
                  let .failed(message, previousState):
@@ -631,13 +639,7 @@ class CoreSettingViewController: NSViewController {
                     prefix = "[Core Settings] TUN update failed"
                 }
                 Logger.log("\(prefix): \(message)", level: .error)
-                let failureInfo: String
-                if case .failed = result {
-                    failureInfo = NSLocalizedString("SmartX could not verify the requested TUN state. It refreshed the UI from the controller.", comment: "")
-                } else {
-                    failureInfo = message
-                }
-                NSUserNotificationCenter.default.post(title: "TUN", info: failureInfo)
+                NSUserNotificationCenter.default.post(title: "TUN", info: message)
                 self.refreshConfigStatus()
             case let .blockedByValidation(issues, recoveryText, previousState):
                 self.currentTunEnabled = previousState.enabled

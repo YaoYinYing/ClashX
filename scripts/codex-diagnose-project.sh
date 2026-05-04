@@ -7,6 +7,7 @@ set -uo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$ROOT_DIR/.codex-logs"
 LOG_FILE="$LOG_DIR/project-diagnose.log"
+WORKSPACE_FILE="$ROOT_DIR/ClashX.xcworkspace/contents.xcworkspacedata"
 
 mkdir -p "$LOG_DIR"
 : > "$LOG_FILE"
@@ -51,28 +52,40 @@ find . \
     -not -path './.git/*' \
     | sort >> "$LOG_FILE" 2>&1
 
-log_section "Schemes"
-while IFS= read -r workspace; do
-    [[ -z "$workspace" ]] && continue
-    {
-        echo
-        echo "Workspace: $workspace"
-        xcodebuild -list -workspace "$workspace"
-    } >> "$LOG_FILE" 2>&1
-done < <(
-    find . -maxdepth 3 -name '*.xcworkspace' -not -path './Pods/*' -not -path './.git/*' | sort
-)
+log_section "Workspace XML Preview"
+if [[ -f "$WORKSPACE_FILE" ]]; then
+    sed -n '1,80p' "$WORKSPACE_FILE" >> "$LOG_FILE" 2>&1
+else
+    echo "Missing workspace XML: $WORKSPACE_FILE" >> "$LOG_FILE"
+fi
 
-while IFS= read -r project; do
-    [[ -z "$project" ]] && continue
-    {
-        echo
-        echo "Project: $project"
-        xcodebuild -list -project "$project"
-    } >> "$LOG_FILE" 2>&1
-done < <(
-    find . -maxdepth 3 -name '*.xcodeproj' -not -path './Pods/*' -not -path './.git/*' | sort
-)
+log_section "Workspace readiness"
+{
+    echo
+    echo "\$ bash scripts/ensure-xcworkspace.sh"
+    bash scripts/ensure-xcworkspace.sh
+} >> "$LOG_FILE" 2>&1 || true
+
+log_section "xcodebuild list"
+run_optional xcodebuild -list -workspace "$ROOT_DIR/ClashX.xcworkspace"
+run_optional xcodebuild -list -project "$ROOT_DIR/ClashX.xcodeproj"
+
+log_section "Ruby and CocoaPods environment"
+run_optional ruby -v
+run_optional which ruby
+run_optional bundle -v
+run_optional which bundle
+run_optional pod --version
+run_optional which pod
+run_optional bundle exec ruby -v
+run_optional bundle exec pod --version
+
+global_pod_version="$(pod --version 2>/dev/null || true)"
+bundler_pod_version="$(bundle exec pod --version 2>/dev/null || true)"
+if [[ -n "$global_pod_version" && -n "$bundler_pod_version" && "$global_pod_version" != "$bundler_pod_version" ]]; then
+    log_section "Bundler note"
+    echo "Global CocoaPods differs from Bundler CocoaPods. Prefer bundle exec pod install for this repository." >> "$LOG_FILE"
+fi
 
 log_section "Top-level directories"
 find . \

@@ -42,7 +42,8 @@ The current UI is also explicit that:
 
 - embedded-core TUN remains disabled
 - helper installation does not imply TUN support
-- failed or unverified TUN updates refresh the UI from the controller state when possible and otherwise restore the previous UI state
+- failed TUN updates restore the previous UI state, and unverified TUN updates remain explicitly unverified instead of being treated as success
+- SmartX refreshes the UI from controller state when possible after an unverified update, but it still does not implement controller rollback
 
 ## Missing TUN Fields
 

@@ -21,6 +21,7 @@ private struct TunLifecycleLoadError: LocalizedError {
 
 enum TunLifecycleResult {
     case success(message: String, previousState: TunLifecycleUIState)
+    case requestedButUnverified(message: String, previousState: TunLifecycleUIState)
     case unsupported(message: String, previousState: TunLifecycleUIState)
     case unauthorized(message: String, previousState: TunLifecycleUIState)
     case blockedByValidation(issues: [ConfigValidationIssue], recoveryText: String, previousState: TunLifecycleUIState)
@@ -29,6 +30,7 @@ enum TunLifecycleResult {
     var previousState: TunLifecycleUIState {
         switch self {
         case let .success(_, previousState),
+             let .requestedButUnverified(_, previousState),
              let .unsupported(_, previousState),
              let .unauthorized(_, previousState),
              let .blockedByValidation(_, _, previousState),
@@ -40,6 +42,7 @@ enum TunLifecycleResult {
     var recoveryText: String {
         switch self {
         case let .success(message, _),
+             let .requestedButUnverified(message, _),
              let .unsupported(message, _),
              let .unauthorized(message, _),
              let .failed(message, _):
@@ -131,8 +134,8 @@ final class TunLifecycleCoordinator {
         loadCurrentConfig { result in
             switch result {
             case .failure:
-                completion(.success(message: NSLocalizedString("SmartX requested the TUN update successfully, but could not verify the new controller state.", comment: ""),
-                                    previousState: previousState))
+                completion(.requestedButUnverified(message: NSLocalizedString("SmartX sent the TUN update request, but could not verify the new controller state afterward.", comment: ""),
+                                                   previousState: previousState))
             case let .success(config):
                 ConfigManager.shared.currentConfig = config
                 if config.tun?.enable == expected {

@@ -52,3 +52,21 @@ New smoke harness coverage added by the SmartX foundation hardening PR:
 - CI does **not** validate notarization, privileged helper installation by SMJobBless, or production signing requirements.
 - Local release testing still requires real Apple Developer identities and a follow-up helper identity migration.
 - SmartX no longer maintains a dedicated macOS 10.14 CI lane in this branch.
+
+## Workspace readiness
+- `ClashX.xcworkspace/contents.xcworkspacedata` is Xcode workspace XML, not a plist.
+- `plutil` may reject a valid workspace file because the XML root tag is `Workspace`; that is not evidence of corruption.
+- The correct readiness checks are:
+  - XML parses successfully
+  - the root tag is `Workspace`
+  - at least one `FileRef` exists
+  - `group:ClashX.xcodeproj` points to an existing `ClashX.xcodeproj`
+  - `group:Pods/Pods.xcodeproj` points to an existing `Pods/Pods.xcodeproj` when referenced
+  - `xcodebuild -list -workspace "$PWD/ClashX.xcworkspace"` succeeds
+- Use `bash scripts/ensure-xcworkspace.sh` before assuming a workspace problem is an Xcode parser bug.
+- The normal local repair path is:
+  - `bundle install`
+  - `bundle exec pod install`
+  - `xcodebuild -list -workspace "$PWD/ClashX.xcworkspace"`
+- If global Ruby or Homebrew CocoaPods differs from Bundler, prefer `bundle exec pod install` for this repository.
+- Project mode is diagnostic only. Do not use `ClashX.xcodeproj` as the normal build or test path, because it can miss Pods integration.

@@ -1,0 +1,89 @@
+import Foundation
+
+enum LoggerLevel {
+    case warning
+}
+
+enum Logger {
+    static func log(_ message: String, level: LoggerLevel) {
+        _ = (message, level)
+    }
+}
+
+enum Settings {
+    static let defaultSmartLightGBMModelUrl = "https://example.com/default-model.bin"
+    static var smartLightGBMOverrideConfig = false
+    static var smartLightGBMModelUrl = defaultSmartLightGBMModelUrl
+    static var smartLightGBMAutoUpdate = false
+    static var smartLightGBMUpdateIntervalHours = 72
+}
+
+enum Paths {
+    static let baseDirectoryURL = FileManager.default.temporaryDirectory
+        .appendingPathComponent("smartx-managed-override-smoke-\(UUID().uuidString)", isDirectory: true)
+    static let smartXOverridesDirectoryURL = baseDirectoryURL
+        .appendingPathComponent(".smartx/overrides", isDirectory: true)
+    static let smartXManagedOverrideURL = smartXOverridesDirectoryURL
+        .appendingPathComponent("smartx-managed.json", isDirectory: false)
+}
+
+@inline(__always)
+func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
+    if !condition() {
+        fputs("smartx_managed_override_smoke failed: \(message)\n", stderr)
+        exit(1)
+    }
+}
+
+@main
+enum SmartXManagedOverrideSmokeMain {
+    static func main() {
+        do {
+            try FileManager.default.createDirectory(at: Paths.baseDirectoryURL, withIntermediateDirectories: true)
+
+            let keys = [
+                "smartLightGBMOverrideConfig",
+                "smartLightGBMModelUrl",
+                "smartLightGBMAutoUpdate",
+                "smartLightGBMUpdateIntervalHours"
+            ]
+            for key in keys {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+
+            UserDefaults.standard.set(true, forKey: "smartLightGBMOverrideConfig")
+            UserDefaults.standard.set("not-a-url", forKey: "smartLightGBMModelUrl")
+            UserDefaults.standard.set(true, forKey: "smartLightGBMAutoUpdate")
+            UserDefaults.standard.set(0, forKey: "smartLightGBMUpdateIntervalHours")
+
+            Settings.smartLightGBMOverrideConfig = true
+            Settings.smartLightGBMModelUrl = "not-a-url"
+            Settings.smartLightGBMAutoUpdate = true
+            Settings.smartLightGBMUpdateIntervalHours = 0
+
+            SmartXManagedOverrideManager.bootstrapIfNeeded()
+
+            expect(FileManager.default.fileExists(atPath: Paths.smartXManagedOverrideURL.path), "bootstrap should persist the managed override file")
+            expect(Settings.smartLightGBMModelUrl == Settings.defaultSmartLightGBMModelUrl, "bootstrap should normalize invalid model URLs")
+            expect(Settings.smartLightGBMUpdateIntervalHours == 1, "bootstrap should clamp invalid update intervals")
+
+            let loaded = SmartXManagedOverrideManager.load()
+            expect(loaded?.lightGBM?.enabled == true, "loaded override should preserve enabled state")
+            expect(loaded?.lightGBM?.autoUpdate == true, "loaded override should preserve auto-update state")
+            expect(loaded?.lightGBM?.modelURL == Settings.defaultSmartLightGBMModelUrl, "loaded override should use normalized model URL")
+
+            Settings.smartLightGBMModelUrl = "https://example.com/custom-model.bin"
+            Settings.smartLightGBMUpdateIntervalHours = 12
+            SmartXManagedOverrideManager.persistCurrentSettings()
+
+            let persisted = SmartXManagedOverrideManager.load()
+            expect(persisted?.lightGBM?.modelURL == "https://example.com/custom-model.bin", "persist should update the managed override file")
+            expect(persisted?.lightGBM?.updateIntervalHours == 12, "persist should keep valid update intervals")
+
+            print("smartx_managed_override_smoke passed")
+        } catch {
+            fputs("smartx_managed_override_smoke failed: \(error.localizedDescription)\n", stderr)
+            exit(1)
+        }
+    }
+}

@@ -161,6 +161,10 @@ Testing gate:
 
 - artifact metadata and restore semantics should be covered with focused utility-level checks where practical
 
+Current note:
+
+- SmartX now keeps honest `Successful Reload Artifact` and `Last Known Good Config` aliases, but the artifact is still a loaded source copy rather than a true generated effective config
+
 ## Phase 6: SmartX Managed Override Layer
 
 Scope:
@@ -181,6 +185,10 @@ Expected outputs:
 Testing gate:
 
 - override serialization, merge rules, and provenance logic should be tested as standalone logic
+
+Current note:
+
+- SmartX now has an initial persisted managed-override file for LightGBM settings under `.smartx/overrides`, but it is groundwork only and not a full effective-config generator
 
 ## Phase 7: TUN-First Lifecycle
 
@@ -203,6 +211,10 @@ Testing gate:
 
 - lifecycle-state logic and failure transitions should be tested where direct system integration is not practical
 
+Current note:
+
+- SmartX now has an initial guarded `TunLifecycleCoordinator`, but embedded-core TUN remains explicitly unsupported and privileged TUN architecture is still a later prerequisite
+
 ## Phase 8: DNS/TUN Validation Module
 
 Scope:
@@ -218,6 +230,10 @@ Expected outputs:
 
 - DNS/TUN validation rules are centralized
 - warning generation is testable
+
+Current note:
+
+- SmartX now has reusable `TunConfigValidator` and `DNSConfigValidator` utilities, but they are still a first-pass rule set rather than a full config-workspace validation system
 - UI consumes validation results instead of hardcoding rule logic
 
 Testing gate:

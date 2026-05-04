@@ -36,6 +36,7 @@ class SmartDashboardViewController: NSViewController {
     private let modelIntervalField = NSTextField(string: "")
     private let modelStatusLabel = NSTextField(labelWithString: "")
     private let modelPathLabel = NSTextField(labelWithString: "")
+    private let modelNoteLabel = NSTextField(labelWithString: "")
     private let emptyLabel = NSTextField(labelWithString: "")
 
     private var rows = [SmartDashboardRow]()
@@ -85,6 +86,7 @@ class SmartDashboardViewController: NSViewController {
 
         modelOverrideButton.target = self
         modelOverrideButton.action = #selector(actionModelSettingsChanged)
+        modelOverrideButton.toolTip = LightGBMSettingsViewModel.overrideExplanation
         modelAutoUpdateButton.target = self
         modelAutoUpdateButton.action = #selector(actionModelSettingsChanged)
         resetModelUrlButton.target = self
@@ -97,6 +99,11 @@ class SmartDashboardViewController: NSViewController {
         modelIntervalField.maximumNumberOfLines = 1
         modelIntervalField.alignment = .right
         modelIntervalField.widthAnchor.constraint(equalToConstant: 58).isActive = true
+
+        modelNoteLabel.stringValue = LightGBMSettingsViewModel.overrideExplanation
+        modelNoteLabel.lineBreakMode = .byWordWrapping
+        modelNoteLabel.maximumNumberOfLines = 0
+        modelNoteLabel.textColor = .secondaryLabelColor
 
         let modelStatusRow = NSStackView(views: [modelStatusLabel, modelPathLabel])
         modelStatusRow.orientation = .horizontal
@@ -112,6 +119,7 @@ class SmartDashboardViewController: NSViewController {
         modelUrlField.setContentHuggingPriority(.defaultLow, for: .horizontal)
 
         modelPanel.addArrangedSubview(modelStatusRow)
+        modelPanel.addArrangedSubview(modelNoteLabel)
         modelPanel.addArrangedSubview(modelOptionsRow)
         modelPanel.addArrangedSubview(modelURLRow)
         view.addSubview(modelPanel)
@@ -279,26 +287,26 @@ class SmartDashboardViewController: NSViewController {
     }
 
     @objc private func actionUpdateLightGBMModel() {
-        saveModelSettings()
         updateModelButton.isEnabled = false
-        ApiRequest.updateSmartLightGBMModel { [weak self] result in
+        LightGBMSettingsViewModel.requestModelUpdate(overrideEnabled: modelOverrideButton.state == .on,
+                                                     modelURL: modelUrlField.stringValue,
+                                                     autoUpdate: modelAutoUpdateButton.state == .on,
+                                                     updateIntervalHours: max(1, modelIntervalField.integerValue),
+                                                     isCoreRunning: ConfigManager.shared.isRunning) { [weak self] result, state in
             guard let self else { return }
             switch result {
             case .success:
-                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .available)
                 Logger.log("[Smart] LightGBM model update requested")
             case .unsupported:
                 self.lightGBMEndpointAvailable = false
-                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unsupported)
                 Logger.log("[Smart] LightGBM model update is not supported by this core", level: .warning)
             case let .unauthorized(message):
                 self.lightGBMEndpointAvailable = false
-                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unauthorized, message: message)
                 Logger.log("[Smart] LightGBM model update was rejected by controller authentication", level: .warning)
             case let .failed(message):
-                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .degraded, message: message)
                 Logger.log("[Smart] LightGBM model update failed: \(message)", level: .warning)
             }
+            self.applyModelState(state)
             self.reloadData()
         }
     }
@@ -308,51 +316,48 @@ class SmartDashboardViewController: NSViewController {
     }
 
     @objc private func actionResetModelURL() {
-        Settings.smartLightGBMModelUrl = Settings.defaultSmartLightGBMModelUrl
-        updateModelSettingsUI()
-        saveModelSettings()
+        let state = LightGBMSettingsViewModel.resetModelURL(isCoreRunning: ConfigManager.shared.isRunning,
+                                                            capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
+        applyModelState(state)
     }
 
     @objc private func actionModelSettingsChanged() {
-        saveModelSettings()
-        updateModelSettingsUI()
+        let state = LightGBMSettingsViewModel.save(overrideEnabled: modelOverrideButton.state == .on,
+                                                   modelURL: modelUrlField.stringValue,
+                                                   autoUpdate: modelAutoUpdateButton.state == .on,
+                                                   updateIntervalHours: max(1, modelIntervalField.integerValue),
+                                                   isCoreRunning: ConfigManager.shared.isRunning,
+                                                   capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
+        applyModelState(state)
     }
 
     private func updateModelSettingsUI() {
-        modelOverrideButton.state = Settings.smartLightGBMOverrideConfig ? .on : .off
-        modelAutoUpdateButton.state = Settings.smartLightGBMAutoUpdate ? .on : .off
-        modelUrlField.stringValue = Settings.effectiveSmartLightGBMModelUrl
-        modelIntervalField.stringValue = "\(Settings.smartLightGBMUpdateIntervalHours)"
-        let enabled = Settings.smartLightGBMOverrideConfig
+        let state = LightGBMSettingsViewModel.currentState(isCoreRunning: ConfigManager.shared.isRunning,
+                                                           capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
+        applyModelState(state)
+    }
+
+    private func updateModelStatus() {
+        let state = LightGBMSettingsViewModel.currentState(isCoreRunning: ConfigManager.shared.isRunning,
+                                                           capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
+        applyModelState(state)
+        updateModelButton.isHidden = !lightGBMEndpointAvailable
+    }
+
+    private func applyModelState(_ state: LightGBMSettingsState) {
+        modelOverrideButton.state = state.overrideEnabled ? .on : .off
+        modelAutoUpdateButton.state = state.autoUpdateEnabled ? .on : .off
+        modelUrlField.stringValue = state.modelURL
+        modelIntervalField.stringValue = "\(state.updateIntervalHours)"
+        let enabled = LightGBMSettingsViewModel.controlsEnabled(for: state)
         modelUrlField.isEnabled = enabled
         modelAutoUpdateButton.isEnabled = enabled
         modelIntervalField.isEnabled = enabled
         resetModelUrlButton.isEnabled = enabled
-        updateModelStatus()
-    }
-
-    private func saveModelSettings() {
-        Settings.smartLightGBMOverrideConfig = modelOverrideButton.state == .on
-        Settings.smartLightGBMAutoUpdate = modelAutoUpdateButton.state == .on
-        Settings.smartLightGBMModelUrl = modelUrlField.stringValue.isEmpty ? Settings.defaultSmartLightGBMModelUrl : modelUrlField.stringValue
-        Settings.smartLightGBMUpdateIntervalHours = max(1, modelIntervalField.integerValue)
-        Settings.syncSmartLightGBMOptionsToCore()
-    }
-
-    private func updateModelStatus() {
-        let path = Paths.smartLightGBMModelPath
-        let attributes = try? FileManager.default.attributesOfItem(atPath: path)
-        if let size = attributes?[.size] as? NSNumber {
-            let modified = attributes?[.modificationDate] as? Date
-            let modifiedText = modified.map {
-                DateFormatter.localizedString(from: $0, dateStyle: .short, timeStyle: .medium)
-            } ?? NSLocalizedString("unknown", comment: "")
-            modelStatusLabel.stringValue = String(format: NSLocalizedString("Model.bin: %@, modified %@", comment: ""), ByteCountFormatter.string(fromByteCount: size.int64Value, countStyle: .file), modifiedText)
-        } else {
-            modelStatusLabel.stringValue = NSLocalizedString("Model.bin: missing", comment: "")
-        }
-        modelPathLabel.stringValue = path
-        updateModelButton.isHidden = !lightGBMEndpointAvailable
+        modelStatusLabel.stringValue = String(format: NSLocalizedString("Model.bin: %@, modified %@", comment: ""),
+                                              state.modelStatusText,
+                                              state.modelModifiedText)
+        modelPathLabel.stringValue = state.modelPath
     }
 }
 

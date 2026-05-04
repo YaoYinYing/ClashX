@@ -82,6 +82,24 @@ enum Paths {
             .standardizedFileURL
     }
 
+    static var smartXDirectoryURL: URL {
+        configDirectoryURL
+            .appendingPathComponent(".smartx", isDirectory: true)
+            .standardizedFileURL
+    }
+
+    static var smartXOverridesDirectoryURL: URL {
+        smartXDirectoryURL
+            .appendingPathComponent("overrides", isDirectory: true)
+            .standardizedFileURL
+    }
+
+    static var smartXManagedOverrideURL: URL {
+        smartXOverridesDirectoryURL
+            .appendingPathComponent("smartx-managed.json", isDirectory: false)
+            .standardizedFileURL
+    }
+
     static var smartXDiagnosticsDirectoryURL: URL {
         configDirectoryURL
             .appendingPathComponent(".smartx", isDirectory: true)
@@ -89,9 +107,14 @@ enum Paths {
             .standardizedFileURL
     }
 
-    static var generatedEffectiveConfigURL: URL {
+    static var successfulReloadArtifactURL: URL {
         smartXArtifactsDirectoryURL.appendingPathComponent("generated-effective.yaml", isDirectory: false)
             .standardizedFileURL
+    }
+
+    /// Compatibility alias. This is not a real generated effective config until the profile pipeline lands.
+    static var generatedEffectiveConfigURL: URL {
+        successfulReloadArtifactURL
     }
 
     static var lastKnownGoodConfigURL: URL {
@@ -99,9 +122,14 @@ enum Paths {
             .standardizedFileURL
     }
 
-    static var generatedEffectiveMetadataURL: URL {
+    static var successfulReloadMetadataURL: URL {
         smartXArtifactsDirectoryURL.appendingPathComponent("generated-effective.json", isDirectory: false)
             .standardizedFileURL
+    }
+
+    /// Compatibility alias. This metadata currently describes a loaded source copy, not a generated effective config.
+    static var generatedEffectiveMetadataURL: URL {
+        successfulReloadMetadataURL
     }
 
     static var lastKnownGoodMetadataURL: URL {

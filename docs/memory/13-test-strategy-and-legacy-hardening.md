@@ -28,10 +28,14 @@ Artifact upload does **not** imply:
 
 ## What This PR Added
 
-For the controller API foundation work, SmartX now has two additional pure-logic harnesses under [`Tests/SecurityHarness`](../../Tests/SecurityHarness):
+For the controller API foundation and SmartX hardening work, SmartX now has several pure-logic harnesses under [`Tests/SecurityHarness`](../../Tests/SecurityHarness):
 
 - `controller_endpoint_builder_smoke.swift` exercises `ControllerEndpointBuilder` against embedded and external controller bases, WebSocket conversion, query items, trailing-slash handling, query/fragment stripping, and userinfo stripping.
 - `capability_cache_identity_smoke.swift` checks that `CapabilityCache` controller identity keeps the sanitized controller base and `secret-set` marker without leaking raw controller secrets, URL userinfo, or query strings.
+- `smartx_managed_override_smoke.swift` exercises managed-override persistence, legacy UserDefaults migration, normalization of invalid model URLs, and interval clamping for the initial LightGBM override groundwork.
+- `config_validator_smoke.swift` exercises the reusable TUN and DNS validators without duplicating the production validation rules.
+- `diagnostics_log_reader_smoke.swift` exercises the diagnostics log tail reader so large rolling log files do not require full synchronous reads every refresh cycle.
+- `profile_artifact_metadata_smoke.swift` exercises `ProfileArtifactMetadata` encoding so source-copy artifact semantics stay stable while the real generated effective config pipeline is still pending.
 
 These harnesses compile the production files directly with lightweight stubs for app-global state. That keeps the tested logic real while avoiding a second copied implementation.
 
@@ -41,12 +45,16 @@ Local commands:
 
 - `swiftc ClashX/General/Utils/ControllerEndpointBuilder.swift Tests/SecurityHarness/controller_endpoint_builder_smoke.swift -o /tmp/controller-endpoint-builder-smoke && /tmp/controller-endpoint-builder-smoke`
 - `swiftc ClashX/General/Utils/ControllerEndpointBuilder.swift ClashX/General/Managers/CoreCapability.swift Tests/SecurityHarness/capability_cache_identity_smoke.swift -o /tmp/capability-cache-identity-smoke && /tmp/capability-cache-identity-smoke`
+- `swiftc ClashX/General/Managers/SmartXManagedOverrideManager.swift Tests/SecurityHarness/smartx_managed_override_smoke.swift -o /tmp/smartx-managed-override-smoke && /tmp/smartx-managed-override-smoke`
+- `swiftc ClashX/General/Utils/ConfigValidationIssue.swift ClashX/General/Utils/TunConfigValidator.swift ClashX/General/Utils/DNSConfigValidator.swift Tests/SecurityHarness/config_validator_smoke.swift -o /tmp/config-validator-smoke && /tmp/config-validator-smoke`
+- `swiftc ClashX/General/Utils/DiagnosticsLogReader.swift Tests/SecurityHarness/diagnostics_log_reader_smoke.swift -o /tmp/diagnostics-log-reader-smoke && /tmp/diagnostics-log-reader-smoke`
+- `swiftc ClashX/General/Managers/ProfileArtifactManager.swift Tests/SecurityHarness/profile_artifact_metadata_smoke.swift -o /tmp/profile-artifact-metadata-smoke && /tmp/profile-artifact-metadata-smoke`
 
 These are meant for utility-level verification when changing endpoint composition or capability identity handling.
 
 ## Remaining Gaps
 
-- There is still no real XCTest coverage for controller endpoint construction, capability probing, or Smart endpoint result mapping.
+- There is still no real XCTest coverage for controller endpoint construction, capability probing, override persistence, diagnostics log tailing, or config-validation transitions.
 - The smoke harnesses do not exercise the full app target, Alamofire request execution, or AppKit controller wiring.
 - `CoreCapabilityProbe` currently depends on the app request layer and would benefit from later extraction into more directly testable probe helpers.
 

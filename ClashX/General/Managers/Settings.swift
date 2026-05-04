@@ -26,13 +26,19 @@ enum Settings {
     static var smartLightGBMUpdateIntervalHours: Int
 
     static var effectiveSmartLightGBMModelUrl: String {
+        bootstrapSmartXManagedOverridesIfNeeded()
         if smartLightGBMModelUrl.isEmpty {
             return defaultSmartLightGBMModelUrl
         }
         return smartLightGBMModelUrl
     }
 
+    static func bootstrapSmartXManagedOverridesIfNeeded() {
+        SmartXManagedOverrideManager.bootstrapIfNeeded()
+    }
+
     static func syncSmartLightGBMOptionsToCore() {
+        bootstrapSmartXManagedOverridesIfNeeded()
         clash_setLightGBMOptions(smartLightGBMOverrideConfig.goObject(),
                                  effectiveSmartLightGBMModelUrl.goStringBuffer(),
                                  smartLightGBMAutoUpdate.goObject(),

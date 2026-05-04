@@ -133,15 +133,15 @@ enum DiagnosticsReportBuilder {
     }
 
     private static func profileArtifactsSection() -> String {
-        let generatedMetadata = ProfileArtifactManager.loadMetadata(at: Paths.generatedEffectiveMetadataURL)
+        let generatedMetadata = ProfileArtifactManager.loadMetadata(at: Paths.successfulReloadMetadataURL)
         let lastKnownGoodMetadata = ProfileArtifactManager.loadMetadata(at: Paths.lastKnownGoodMetadataURL)
 
         let lines = [
             "Profile Artifacts",
             "-----------------",
-            artifactLine(title: "Successful Reload Artifact", path: Paths.generatedEffectiveConfigURL.path, metadata: generatedMetadata),
+            artifactLine(title: "Successful Reload Artifact", path: Paths.successfulReloadArtifactURL.path, metadata: generatedMetadata),
             artifactLine(title: "Last Known Good Config", path: Paths.lastKnownGoodConfigURL.path, metadata: lastKnownGoodMetadata),
-            metadataLine(title: "Successful Reload Metadata", path: Paths.generatedEffectiveMetadataURL.path),
+            metadataLine(title: "Successful Reload Metadata", path: Paths.successfulReloadMetadataURL.path),
             metadataLine(title: "Last Known Good Metadata", path: Paths.lastKnownGoodMetadataURL.path)
         ]
         return lines.joined(separator: "\n")
@@ -257,7 +257,7 @@ enum DiagnosticsReportBuilder {
             "profile=\(metadata.selectedProfileName)",
             "kind=\(metadata.selectedProfileKind)",
             "source=\(sourcePath)",
-            "mode=\(metadata.generationMode)",
+            "mode=\(metadata.generationMode == "source-copy" ? "Loaded Source Copy" : metadata.generationMode)",
             "smartxOverrides=\(metadata.includesSmartXOverrides ? "yes" : "no")",
             "profileMerge=\(metadata.includesProfileMerge ? "yes" : "no")",
             "runtimeOverrides=\(metadata.includesRuntimeOverrides ? "yes" : "no")"

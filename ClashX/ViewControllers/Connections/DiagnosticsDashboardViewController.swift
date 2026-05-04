@@ -328,39 +328,22 @@ class DiagnosticsDashboardViewController: NSViewController {
             return
         }
 
-        guard let raw = try? String(contentsOfFile: path, encoding: .utf8) else {
+        do {
+            let filter = LogLevelFilter(rawValue: logLevelPopup.indexOfSelectedItem) ?? .all
+            let snapshot = try DiagnosticsLogReader.load(path: path,
+                                                         filterTitle: filter.title,
+                                                         filterToken: filter.token,
+                                                         searchQuery: logSearchField.stringValue,
+                                                         paused: isLogRefreshPaused)
+            logOutput = snapshot.renderedOutput()
+            if announce {
+                setStatus(NSLocalizedString("Log viewer refreshed from the current rolling log file.", comment: ""))
+            }
+        } catch {
             logOutput = String(format: NSLocalizedString("The current log file could not be read: %@", comment: ""), path)
             if announce {
                 setStatus(NSLocalizedString("Failed to read the current log file.", comment: ""))
             }
-            renderOutput()
-            updateCapabilityDrivenState()
-            return
-        }
-
-        let filter = LogLevelFilter(rawValue: logLevelPopup.indexOfSelectedItem) ?? .all
-        let search = logSearchField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let filtered = raw
-            .components(separatedBy: .newlines)
-            .filter { line in
-                let matchesLevel = filter.token.map { line.localizedCaseInsensitiveContains($0) } ?? true
-                let matchesSearch = search.isEmpty || line.lowercased().contains(search)
-                return matchesLevel && matchesSearch
-            }
-
-        let tail = filtered.suffix(200)
-        let header = [
-            "File: \(path)",
-            "Filter: \(filter.title)",
-            "Search: \(search.isEmpty ? "none" : search)",
-            "Paused: \(isLogRefreshPaused ? "yes" : "no")",
-            "Lines: \(filtered.count) showing last \(tail.count)"
-        ].joined(separator: "\n")
-
-        let body = tail.isEmpty ? NSLocalizedString("No log lines match the current filter.", comment: "") : tail.joined(separator: "\n")
-        logOutput = "\(header)\n\n\(body)"
-        if announce {
-            setStatus(NSLocalizedString("Log viewer refreshed from the current rolling log file.", comment: ""))
         }
         renderOutput()
         updateCapabilityDrivenState()
@@ -369,8 +352,8 @@ class DiagnosticsDashboardViewController: NSViewController {
     private func refreshArtifacts(announce: Bool = true) {
         artifactOutput = [
             formatArtifactPreview(title: "Successful Reload Artifact",
-                                  configURL: Paths.generatedEffectiveConfigURL,
-                                  metadataURL: Paths.generatedEffectiveMetadataURL),
+                                  configURL: Paths.successfulReloadArtifactURL,
+                                  metadataURL: Paths.successfulReloadMetadataURL),
             formatArtifactPreview(title: "Last Known Good Config",
                                   configURL: Paths.lastKnownGoodConfigURL,
                                   metadataURL: Paths.lastKnownGoodMetadataURL)
@@ -933,7 +916,7 @@ class DiagnosticsDashboardViewController: NSViewController {
             }
             lines.append("Generated: \(DateFormatter.localizedString(from: metadata.generatedAt, dateStyle: .short, timeStyle: .medium))")
             lines.append("Controller Mode: \(metadata.controllerMode)")
-            lines.append("Generation Mode: \(metadata.generationMode)")
+            lines.append("Generation Mode: \(metadata.generationMode == "source-copy" ? "Loaded Source Copy" : metadata.generationMode)")
             lines.append("Includes SmartX Overrides: \(metadata.includesSmartXOverrides ? "yes" : "no")")
             lines.append("Includes Profile Merge: \(metadata.includesProfileMerge ? "yes" : "no")")
             lines.append("Includes Runtime Overrides: \(metadata.includesRuntimeOverrides ? "yes" : "no")")

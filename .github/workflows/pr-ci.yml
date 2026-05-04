@@ -172,13 +172,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - flavor: legacy
-            display_name: Legacy macOS 10.14
-            runner: macos-15
-            xcode: "16.4"
-            deployment_target: "10.14"
-            configuration: Debug
-            artifact_suffix: Legacy-macOS10.14-Debug
           # The modern lane depends on GitHub-hosted macos-26 and an available Xcode 26.x image.
           # If 26.3 disappears, move to the nearest supported 26.x runner/Xcode pair instead of deleting this lane.
           - flavor: modern

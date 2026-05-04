@@ -221,13 +221,11 @@ They already perform unsigned SmartX builds, including Go archive creation and `
 
 Current CI scope note:
 
-- PR CI now has two unsigned Debug artifact lanes:
-  - Legacy: `macos-15` + Xcode `16.4` + `MACOSX_DEPLOYMENT_TARGET=10.14`
+- PR CI now has one unsigned Debug artifact lane:
   - Modern: `macos-26` + Xcode `26.3`
-- Every PR uploads unsigned SmartX app artifacts and build logs for both lanes.
+- Every PR uploads an unsigned SmartX app artifact and build logs for the modern lane.
 - PR CI also runs the helper fail-closed validation, the security harness, the endpoint-builder smoke harness, and the capability-identity smoke harness.
 - Artifact upload does **not** imply Developer ID signing, notarization, helper installation success, or runtime compatibility on the target OS.
-- The Legacy lane only proves that the deployment-target compile path still works. It does **not** prove real macOS `10.14` runtime behavior.
 
 1. checkout
 2. setup Xcode version

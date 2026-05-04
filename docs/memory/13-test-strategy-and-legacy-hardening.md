@@ -11,13 +11,12 @@ The current repository is still in the second state.
 
 ## Current CI Lanes
 
-PR CI now uses two unsigned Debug build lanes plus a shared validation gate:
+PR CI now uses one unsigned Debug build lane plus a shared validation gate:
 
-- Legacy lane: `macos-15` + Xcode `16.4` + `MACOSX_DEPLOYMENT_TARGET=10.14`
 - Modern lane: `macos-26` + Xcode `26.x`
 - Validation gate: helper fail-closed build-settings check plus pure-logic smoke harnesses
 
-Every PR uploads unsigned SmartX app zip artifacts and `.ci-logs` for the Legacy and Modern lanes.
+Every PR uploads an unsigned SmartX app zip artifact and `.ci-logs` for the Modern lane.
 
 Artifact upload does **not** imply:
 
@@ -68,8 +67,6 @@ The current approach is useful because it verifies the production files directly
 
 ## Legacy Compatibility Boundary
 
-- The Legacy CI lane validates that SmartX still compiles with Xcode `16.4` and `MACOSX_DEPLOYMENT_TARGET=10.14`.
-- That compile success does **not** prove the app actually runs correctly on a real macOS `10.14` machine.
-- GitHub-hosted runners do not provide genuine macOS `10.14` runtime validation, so true legacy runtime checks still require external hardware or a VM.
+- This branch no longer keeps a dedicated macOS `10.14` compile lane in CI.
 
 The long-term target remains a real test bundle with focused unit coverage for endpoint building, capability transitions, and controller result mapping.

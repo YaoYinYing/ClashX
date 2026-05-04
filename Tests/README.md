@@ -45,11 +45,8 @@ New smoke harness coverage added by the SmartX foundation hardening PR:
 - CI uses the same `bash install_dependency.sh` path as local setup so dashboard resources, `Country.mmdb.gz`, Pods, and the Go archive are installed the same way in both environments.
 - CI builds with code signing disabled (`CODE_SIGNING_ALLOWED=NO`) so it can validate compile/build paths without local certificates.
 - PR CI verifies the Release helper client requirement remains fail-closed in a dedicated validation gate before artifact jobs run.
-- Every PR now uploads unsigned Debug app artifacts for two lanes:
-  - Legacy: macOS deployment-target compile check with Xcode 16.4 and `MACOSX_DEPLOYMENT_TARGET=10.14`
-  - Modern: current unsigned build line with Xcode 26.x
+- Every PR now uploads an unsigned Debug app artifact for the current modern build line with Xcode 26.x.
 - CI also runs `Tests/SecurityHarness/security_harness.swift`, the endpoint-builder smoke harness, the capability-identity smoke harness, and the new config-validator, diagnostics-log-reader, profile-artifact-metadata, and SmartX-managed-override smoke harnesses.
 - CI does **not** validate notarization, privileged helper installation by SMJobBless, or production signing requirements.
 - Local release testing still requires real Apple Developer identities and a follow-up helper identity migration.
-- The Legacy artifact is only a deployment-target compile check for macOS 10.14. It does **not** prove runtime behavior on a real macOS 10.14 system.
-- True macOS 10.14 runtime validation still requires a real 10.14 machine or VM outside GitHub-hosted runners.
+- SmartX no longer maintains a dedicated macOS 10.14 CI lane in this branch.

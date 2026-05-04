@@ -115,6 +115,7 @@ enum Paths {
     }
 
     /// Compatibility alias. This is not a real generated effective config until the profile pipeline lands.
+    /// Do not use this name for new UI or reports; it is a legacy path alias only.
     static var generatedEffectiveConfigURL: URL {
         successfulReloadArtifactURL
     }
@@ -130,6 +131,7 @@ enum Paths {
     }
 
     /// Compatibility alias. This metadata currently describes a loaded source copy, not a generated effective config.
+    /// Do not use this name for new UI or reports; it is a legacy path alias only.
     static var generatedEffectiveMetadataURL: URL {
         successfulReloadMetadataURL
     }

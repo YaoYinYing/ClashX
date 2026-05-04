@@ -13,6 +13,10 @@
 import Foundation
 
 struct SmartXManagedOverride: Codable {
+    // Keep schema 1 intentionally small for compatibility. Adding metadata such as
+    // updatedAt or lastWrittenBy would widen migration surface before the real
+    // effective-config pipeline exists, so this groundwork file only stores the
+    // override fields SmartX needs today.
     var schemaVersion: Int
     var lightGBM: LightGBMOverride?
 }
@@ -173,6 +177,9 @@ enum SmartXManagedOverrideManager {
 
     private static func validatedModelURL(_ rawURL: String) -> String {
         let trimmed = rawURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Invalid or unsupported URLs fall back to the SmartX default model URL, but
+        // the other override fields remain intact so enablement, auto-update, and the
+        // persisted interval survive normalization.
         guard !trimmed.isEmpty,
               let components = URLComponents(string: trimmed),
               let scheme = components.scheme?.lowercased(),

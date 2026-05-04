@@ -56,6 +56,8 @@ class SmartDashboardViewController: NSViewController {
     }
 
     private func setup() {
+        // TODO: Replace the duplicated AppKit LightGBM layout here and in Core settings
+        // with a shared LightGBMSettingsPanel once that refactor is low-risk.
         let toolbar = NSStackView(views: [refreshButton, flushConfigButton, flushAllButton, updateModelButton, openConfigFolderButton])
         toolbar.orientation = .horizontal
         toolbar.spacing = 8

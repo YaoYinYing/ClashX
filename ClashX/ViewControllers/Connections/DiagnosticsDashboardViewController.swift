@@ -319,6 +319,8 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     private func refreshLogs(announce: Bool = true) {
+        // TODO: Move log tail reading to a background queue before increasing
+        // maxTailBytes or adding richer parsing to this transitional dashboard.
         let path = Logger.shared.logFilePath()
         guard !path.isEmpty else {
             currentLogSnapshot = nil

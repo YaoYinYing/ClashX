@@ -37,6 +37,7 @@ For the controller API foundation and SmartX hardening work, SmartX now has seve
 - `profile_artifact_metadata_smoke.swift` exercises `ProfileArtifactMetadata` encoding so source-copy artifact semantics stay stable while the real generated effective config pipeline is still pending.
 
 These harnesses compile the production files directly with lightweight stubs for app-global state. That keeps the tested logic real while avoiding a second copied implementation.
+High coverage has not been achieved in this branch, and XCTest migration remains follow-up work.
 
 ## How To Run
 

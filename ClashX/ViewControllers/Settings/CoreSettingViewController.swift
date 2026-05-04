@@ -108,6 +108,8 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func setupView() {
+        // TODO: Replace the duplicated AppKit LightGBM layout here and in the Smart
+        // dashboard with a shared LightGBMSettingsPanel once that refactor is low-risk.
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true

@@ -28,6 +28,16 @@ enum DiagnosticsLogReaderSmokeMain {
             expect(snapshot.displayedLineCount == 200, "log reader should cap displayed lines to the last 200 matches")
             expect(snapshot.body.contains("recent-match-260"), "log reader should keep the newest matching lines")
             expect(!snapshot.body.contains("stale-match"), "log reader should not include old lines outside the tail window")
+            let redactedSnapshot = DiagnosticsLogSnapshot(filePath: NSHomeDirectory() + "/.config/clash/logs/app.log",
+                                                          filterTitle: snapshot.filterTitle,
+                                                          searchQuery: snapshot.searchQuery,
+                                                          paused: snapshot.paused,
+                                                          matchedLineCount: snapshot.matchedLineCount,
+                                                          displayedLineCount: snapshot.displayedLineCount,
+                                                          body: snapshot.body)
+            let redactedOutput = redactedSnapshot.renderedOutput(redactFilePath: true)
+            expect(!redactedOutput.contains(NSHomeDirectory()), "redacted rendered output should not expose the home directory path")
+            expect(redactedOutput.contains("File: ~/.config/clash/logs/app.log"), "redacted rendered output should keep a redacted file header")
 
             print("diagnostics_log_reader_smoke passed")
         } catch {

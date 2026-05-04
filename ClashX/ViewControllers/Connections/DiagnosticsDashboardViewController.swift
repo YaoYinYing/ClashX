@@ -906,7 +906,6 @@ class DiagnosticsDashboardViewController: NSViewController {
         NSApp.activate(ignoringOtherApps: true)
         return alert.runModal() == .alertFirstButtonReturn
     }
-
 }
 
 private extension DateFormatter {

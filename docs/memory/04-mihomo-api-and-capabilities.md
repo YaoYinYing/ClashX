@@ -288,7 +288,7 @@ This is more expressive than a single boolean and helps the UI distinguish “co
 
 - passive probe from `/version`
 - passive probe from `/configs`
-- optimistic write probe with rollback, such as current guarded TUN patch behavior
+- optimistic write probe with UI-state restoration and controller re-read, such as the current guarded TUN patch behavior
 - status-code-based probe for upgrade endpoints
 - WebSocket connect probe for stream endpoints
 - model-based probe when response shape is the real compatibility risk

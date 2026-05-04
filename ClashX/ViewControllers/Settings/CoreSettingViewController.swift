@@ -665,9 +665,9 @@ class CoreSettingViewController: NSViewController {
     @objc private func actionUpdateLightGBMModel() {
         updateModelButton.isEnabled = false
         LightGBMSettingsViewModel.requestModelUpdate(input: LightGBMSettingsViewModel.collectInput(overrideButton: modelOverrideButton,
-                                                                                                    modelURLField: modelUrlField,
-                                                                                                    autoUpdateButton: modelAutoUpdateButton,
-                                                                                                    updateIntervalField: modelIntervalField),
+                                                                                                   modelURLField: modelUrlField,
+                                                                                                   autoUpdateButton: modelAutoUpdateButton,
+                                                                                                   updateIntervalField: modelIntervalField),
                                                      isCoreRunning: ConfigManager.shared.isRunning) { [weak self] result, state in
             guard let self else { return }
             switch result {

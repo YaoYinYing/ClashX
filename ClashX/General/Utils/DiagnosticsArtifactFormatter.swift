@@ -35,7 +35,7 @@ enum DiagnosticsArtifactFormatter {
         }
 
         let preview = (try? String(contentsOf: configURL, encoding: .utf8))
-            .map { previewText(from: $0, maxLines: 20) }
+            .map { SmartXRedactor.sanitizeText(previewText(from: $0, maxLines: 20)) }
             ?? NSLocalizedString("Config preview could not be read.", comment: "")
         lines.append("Preview:")
         lines.append(preview)

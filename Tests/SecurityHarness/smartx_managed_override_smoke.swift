@@ -94,6 +94,33 @@ enum SmartXManagedOverrideSmokeMain {
             let futureLoaded = SmartXManagedOverrideManager.load()
             expect(futureLoaded?.schemaVersion == SmartXManagedOverrideManager.currentSchemaVersion + 1, "future schema version should be preserved on load")
             expect(Logger.loggedWarnings.contains { $0.contains("future SmartX managed override schema version") }, "future schema load should emit a warning")
+            expect(!SmartXManagedOverrideManager.canSafelyWriteCurrentSchema(), "future schema file should disable normal current-schema writes")
+
+            let futureSchemaJSON = """
+            {
+              "futureOnly": {
+                "keep": "me"
+              },
+              "lightGBM": {
+                "autoUpdate": false,
+                "enabled": true,
+                "modelURL": "https://example.com/future-model.bin",
+                "updateIntervalHours": 6
+              },
+              "schemaVersion": \(SmartXManagedOverrideManager.currentSchemaVersion + 1)
+            }
+            """
+            try futureSchemaJSON.write(to: Paths.smartXManagedOverrideURL, atomically: true, encoding: .utf8)
+
+            Settings.smartLightGBMModelUrl = "https://example.com/should-not-overwrite.bin"
+            Settings.smartLightGBMUpdateIntervalHours = 24
+            Logger.loggedWarnings.removeAll()
+            SmartXManagedOverrideManager.persistCurrentSettings()
+
+            let persistedFutureJSON = try String(contentsOf: Paths.smartXManagedOverrideURL, encoding: .utf8)
+            expect(persistedFutureJSON.contains("\"futureOnly\""), "persist should not overwrite a future-schema file")
+            expect(persistedFutureJSON.contains("future-model.bin"), "persist should leave future-schema contents untouched")
+            expect(Logger.loggedWarnings.contains { $0.contains("Skipping SmartX managed override write because schema version") }, "persist should warn when it skips overwriting a future schema file")
 
             print("smartx_managed_override_smoke passed")
         } catch {

@@ -28,6 +28,7 @@ enum SmartXManagedOverrideManager {
     static let currentSchemaVersion = 1
 
     private static var hasBootstrapped = false
+    private static var loadedFutureSchemaVersion: Int?
     private static let legacyKeys = [
         "smartLightGBMOverrideConfig",
         "smartLightGBMModelUrl",
@@ -55,17 +56,9 @@ enum SmartXManagedOverrideManager {
     }
 
     static func load() -> SmartXManagedOverride? {
-        guard let data = try? Data(contentsOf: Paths.smartXManagedOverrideURL) else {
-            return nil
-        }
-
-        do {
-            let overrideModel = try JSONDecoder().decode(SmartXManagedOverride.self, from: data)
-            return normalized(overrideModel)
-        } catch {
-            Logger.log("Failed to decode SmartX managed overrides: \(error.localizedDescription)", level: .warning)
-            return nil
-        }
+        guard let overrideModel = decodedOverride(logFailures: true) else { return nil }
+        recordFutureSchemaIfNeeded(overrideModel)
+        return normalized(overrideModel)
     }
 
     static func save(_ overrideModel: SmartXManagedOverride) throws {
@@ -95,6 +88,11 @@ enum SmartXManagedOverrideManager {
     }
 
     static func persistCurrentSettings() {
+        if let futureSchemaVersion = unsafeFutureSchemaVersionOnDisk() {
+            Logger.log("Skipping SmartX managed override write because schema version \(futureSchemaVersion) is newer than SmartX schema version \(currentSchemaVersion). The current app may use known fields at runtime, but it will not overwrite the future-schema file during a normal UI save.", level: .warning)
+            return
+        }
+
         let overrideModel = captureFromSettings()
         do {
             try save(overrideModel)
@@ -102,6 +100,10 @@ enum SmartXManagedOverrideManager {
         } catch {
             Logger.log("Failed to persist SmartX managed overrides: \(error.localizedDescription)", level: .warning)
         }
+    }
+
+    static func canSafelyWriteCurrentSchema() -> Bool {
+        unsafeFutureSchemaVersionOnDisk() == nil
     }
 
     private static func ensureOverrideDirectory() throws {
@@ -114,10 +116,40 @@ enum SmartXManagedOverrideManager {
         legacyKeys.contains { UserDefaults.standard.object(forKey: $0) != nil }
     }
 
-    private static func normalized(_ overrideModel: SmartXManagedOverride) -> SmartXManagedOverride {
-        if overrideModel.schemaVersion > currentSchemaVersion {
-            Logger.log("Loaded future SmartX managed override schema version \(overrideModel.schemaVersion). SmartX will preserve that file version until settings are saved again.", level: .warning)
+    private static func decodedOverride(logFailures: Bool) -> SmartXManagedOverride? {
+        guard let data = try? Data(contentsOf: Paths.smartXManagedOverrideURL) else {
+            return nil
         }
+
+        do {
+            return try JSONDecoder().decode(SmartXManagedOverride.self, from: data)
+        } catch {
+            if logFailures {
+                Logger.log("Failed to decode SmartX managed overrides: \(error.localizedDescription)", level: .warning)
+            }
+            return nil
+        }
+    }
+
+    @discardableResult
+    private static func recordFutureSchemaIfNeeded(_ overrideModel: SmartXManagedOverride) -> Int? {
+        guard overrideModel.schemaVersion > currentSchemaVersion else { return nil }
+        loadedFutureSchemaVersion = max(loadedFutureSchemaVersion ?? 0, overrideModel.schemaVersion)
+        Logger.log("Loaded future SmartX managed override schema version \(overrideModel.schemaVersion). SmartX will preserve that file version until settings are saved again.", level: .warning)
+        return overrideModel.schemaVersion
+    }
+
+    private static func unsafeFutureSchemaVersionOnDisk() -> Int? {
+        if let loadedFutureSchemaVersion {
+            return loadedFutureSchemaVersion
+        }
+        guard let overrideModel = decodedOverride(logFailures: false) else {
+            return nil
+        }
+        return recordFutureSchemaIfNeeded(overrideModel)
+    }
+
+    private static func normalized(_ overrideModel: SmartXManagedOverride) -> SmartXManagedOverride {
         return SmartXManagedOverride(schemaVersion: max(currentSchemaVersion, overrideModel.schemaVersion),
                                      lightGBM: overrideModel.lightGBM.map(normalized))
     }

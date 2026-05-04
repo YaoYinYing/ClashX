@@ -8,9 +8,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$ROOT_DIR/.codex-logs"
 LOG_FILE="$LOG_DIR/xcode-test-focused.log"
 RESULT_BUNDLE="$LOG_DIR/xcode-test-focused.xcresult"
+WORKSPACE_HELPER="$ROOT_DIR/scripts/ensure-xcworkspace.sh"
 
 WORKSPACE="${SMARTX_WORKSPACE:-ClashX.xcworkspace}"
 PROJECT="${SMARTX_PROJECT:-}"
+USE_PROJECT_FALLBACK="${SMARTX_USE_PROJECT_FALLBACK:-0}"
 SCHEME="${SMARTX_SCHEME:-ClashX}"
 CONFIGURATION="${SMARTX_CONFIGURATION:-Debug}"
 DESTINATION="${SMARTX_TEST_DESTINATION:-platform=macOS}"
@@ -27,7 +29,33 @@ project_args=()
 if [[ -n "$PROJECT" ]]; then
     project_args=(-project "$PROJECT")
 elif [[ -d "$WORKSPACE" ]]; then
-    project_args=(-workspace "$WORKSPACE")
+    workspace_ready=0
+    if bash "$WORKSPACE_HELPER" >> "$LOG_FILE" 2>&1; then
+        workspace_ready=1
+    else
+        if SMARTX_ENSURE_WORKSPACE_REPAIR=1 bash "$WORKSPACE_HELPER" >> "$LOG_FILE" 2>&1; then
+            workspace_ready=1
+        fi
+    fi
+
+    if [[ "$workspace_ready" -eq 1 ]]; then
+        project_args=(-workspace "$WORKSPACE")
+    elif [[ "$USE_PROJECT_FALLBACK" == "1" && -n "$PROJECT" ]]; then
+        project_args=(-project "$PROJECT")
+    else
+        echo "TEST FAILED"
+        echo "Log: $LOG_FILE"
+        echo "Result bundle: $RESULT_BUNDLE"
+        echo "Reason: Workspace is not ready for xcodebuild."
+        echo "Suggested repair:"
+        echo "  bundle install"
+        echo "  bundle exec pod install"
+        echo "  xcodebuild -list -workspace \"$PWD/$WORKSPACE\""
+        echo "If the workspace is still broken, run:"
+        echo "  SMARTX_REGENERATE_WORKSPACE=1 bash scripts/ensure-xcworkspace.sh"
+        echo "Project fallback is diagnostic only and requires SMARTX_USE_PROJECT_FALLBACK=1."
+        exit 2
+    fi
 else
     echo "TEST FAILED"
     echo "Missing workspace: $WORKSPACE"

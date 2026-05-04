@@ -10,6 +10,7 @@ import SwiftyJSON
 
 @available(macOS 10.15, *)
 class DiagnosticsDashboardViewController: NSViewController {
+    // This controller is transitional; new diagnostics logic should move to helpers/view models.
     private enum LogLevelFilter: Int, CaseIterable {
         case all
         case error
@@ -86,6 +87,7 @@ class DiagnosticsDashboardViewController: NSViewController {
     private var latestRuleProviderResult: ControllerJSONResult?
     private var logRefreshTimer: Timer?
     private var isLogRefreshPaused = false
+    private var currentLogSnapshot: DiagnosticsLogSnapshot?
 
     override func loadView() {
         view = NSView(frame: NSRect(origin: .zero, size: CGSize(width: 900, height: 600)))
@@ -317,8 +319,11 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     private func refreshLogs(announce: Bool = true) {
+        // TODO: Move log tail reading to a background queue before increasing
+        // maxTailBytes or adding richer parsing to this transitional dashboard.
         let path = Logger.shared.logFilePath()
         guard !path.isEmpty else {
+            currentLogSnapshot = nil
             logOutput = NSLocalizedString("No active log file is available yet.", comment: "")
             if announce {
                 setStatus(NSLocalizedString("No active log file is available yet.", comment: ""))
@@ -328,39 +333,24 @@ class DiagnosticsDashboardViewController: NSViewController {
             return
         }
 
-        guard let raw = try? String(contentsOfFile: path, encoding: .utf8) else {
+        do {
+            let filter = LogLevelFilter(rawValue: logLevelPopup.indexOfSelectedItem) ?? .all
+            let snapshot = try DiagnosticsLogReader.load(path: path,
+                                                         filterTitle: filter.title,
+                                                         filterToken: filter.token,
+                                                         searchQuery: logSearchField.stringValue,
+                                                         paused: isLogRefreshPaused)
+            currentLogSnapshot = snapshot
+            logOutput = snapshot.renderedOutput()
+            if announce {
+                setStatus(NSLocalizedString("Log viewer refreshed from the current rolling log file.", comment: ""))
+            }
+        } catch {
+            currentLogSnapshot = nil
             logOutput = String(format: NSLocalizedString("The current log file could not be read: %@", comment: ""), path)
             if announce {
                 setStatus(NSLocalizedString("Failed to read the current log file.", comment: ""))
             }
-            renderOutput()
-            updateCapabilityDrivenState()
-            return
-        }
-
-        let filter = LogLevelFilter(rawValue: logLevelPopup.indexOfSelectedItem) ?? .all
-        let search = logSearchField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let filtered = raw
-            .components(separatedBy: .newlines)
-            .filter { line in
-                let matchesLevel = filter.token.map { line.localizedCaseInsensitiveContains($0) } ?? true
-                let matchesSearch = search.isEmpty || line.lowercased().contains(search)
-                return matchesLevel && matchesSearch
-            }
-
-        let tail = filtered.suffix(200)
-        let header = [
-            "File: \(path)",
-            "Filter: \(filter.title)",
-            "Search: \(search.isEmpty ? "none" : search)",
-            "Paused: \(isLogRefreshPaused ? "yes" : "no")",
-            "Lines: \(filtered.count) showing last \(tail.count)"
-        ].joined(separator: "\n")
-
-        let body = tail.isEmpty ? NSLocalizedString("No log lines match the current filter.", comment: "") : tail.joined(separator: "\n")
-        logOutput = "\(header)\n\n\(body)"
-        if announce {
-            setStatus(NSLocalizedString("Log viewer refreshed from the current rolling log file.", comment: ""))
         }
         renderOutput()
         updateCapabilityDrivenState()
@@ -368,12 +358,13 @@ class DiagnosticsDashboardViewController: NSViewController {
 
     private func refreshArtifacts(announce: Bool = true) {
         artifactOutput = [
-            formatArtifactPreview(title: "Successful Reload Artifact",
-                                  configURL: Paths.generatedEffectiveConfigURL,
-                                  metadataURL: Paths.generatedEffectiveMetadataURL),
-            formatArtifactPreview(title: "Last Known Good Config",
-                                  configURL: Paths.lastKnownGoodConfigURL,
-                                  metadataURL: Paths.lastKnownGoodMetadataURL)
+            DiagnosticsArtifactFormatter.formatArtifactPreview(title: "Successful Reload Artifact",
+                                                               configURL: Paths.successfulReloadArtifactURL,
+                                                               metadataURL: Paths.successfulReloadMetadataURL),
+            DiagnosticsArtifactFormatter.formatArtifactPreview(title: "Last Known Good Config",
+                                                               configURL: Paths.lastKnownGoodConfigURL,
+                                                               metadataURL: Paths.lastKnownGoodMetadataURL),
+            DiagnosticsArtifactFormatter.formatManagedOverrideStatus()
         ].joined(separator: "\n\n")
         if announce {
             setStatus(NSLocalizedString("Profile artifact inspection refreshed.", comment: ""))
@@ -805,7 +796,8 @@ class DiagnosticsDashboardViewController: NSViewController {
         let handleSave: (NSApplication.ModalResponse) -> Void = { [weak self] response in
             guard let self, response == .OK, let url = savePanel.url else { return }
             do {
-                try self.logOutput.write(to: url, atomically: true, encoding: .utf8)
+                let exportText = self.currentLogSnapshot?.renderedOutput(redactFilePath: true) ?? self.logOutput
+                try exportText.write(to: url, atomically: true, encoding: .utf8)
                 self.setStatus(NSLocalizedString("Filtered log output was exported successfully.", comment: ""))
             } catch {
                 self.setStatus(String(format: NSLocalizedString("Failed to export filtered log output: %@", comment: ""), error.localizedDescription))
@@ -913,50 +905,6 @@ class DiagnosticsDashboardViewController: NSViewController {
         alert.addButton(withTitle: NSLocalizedString("Cancel", comment: ""))
         NSApp.activate(ignoringOtherApps: true)
         return alert.runModal() == .alertFirstButtonReturn
-    }
-
-    private func formatArtifactPreview(title: String, configURL: URL, metadataURL: URL) -> String {
-        var lines = [title]
-        let fileManager = FileManager.default
-
-        guard fileManager.fileExists(atPath: configURL.path) else {
-            lines.append("Status: missing")
-            return lines.joined(separator: "\n")
-        }
-
-        lines.append("Path: \(SmartXRedactor.redactPath(configURL.path) ?? configURL.path)")
-        if let metadata = ProfileArtifactManager.loadMetadata(at: metadataURL) {
-            lines.append("Profile: \(metadata.selectedProfileName) [\(metadata.selectedProfileKind)]")
-            lines.append("Source: \(SmartXRedactor.redactPath(metadata.sourceConfigPath) ?? metadata.sourceConfigPath)")
-            if let remoteURL = metadata.sourceRemoteURL, !remoteURL.isEmpty {
-                lines.append("Remote Source: \(SmartXRedactor.redactURLString(remoteURL) ?? "<redacted-url>")")
-            }
-            lines.append("Generated: \(DateFormatter.localizedString(from: metadata.generatedAt, dateStyle: .short, timeStyle: .medium))")
-            lines.append("Controller Mode: \(metadata.controllerMode)")
-            lines.append("Generation Mode: \(metadata.generationMode)")
-            lines.append("Includes SmartX Overrides: \(metadata.includesSmartXOverrides ? "yes" : "no")")
-            lines.append("Includes Profile Merge: \(metadata.includesProfileMerge ? "yes" : "no")")
-            lines.append("Includes Runtime Overrides: \(metadata.includesRuntimeOverrides ? "yes" : "no")")
-        } else {
-            lines.append("Metadata: unavailable")
-        }
-
-        let preview = (try? String(contentsOf: configURL, encoding: .utf8))
-            .map { previewText(from: $0, maxLines: 20) }
-            ?? NSLocalizedString("Config preview could not be read.", comment: "")
-        lines.append("Preview:")
-        lines.append(preview)
-        return lines.joined(separator: "\n")
-    }
-
-    private func previewText(from raw: String, maxLines: Int) -> String {
-        let lines = raw.components(separatedBy: .newlines)
-        let head = Array(lines.prefix(maxLines))
-        var preview = head.joined(separator: "\n")
-        if lines.count > maxLines {
-            preview.append("\n...")
-        }
-        return preview.isEmpty ? NSLocalizedString("(empty file)", comment: "") : preview
     }
 }
 

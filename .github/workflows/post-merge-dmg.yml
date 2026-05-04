@@ -1,0 +1,256 @@
+name: Post-merge DMG Artifact
+
+on:
+  push:
+    branches:
+      - smartx
+  workflow_dispatch:
+
+env:
+  FASTLANE_SKIP_UPDATE_CHECK: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GO_VERSION: "1.21.x"
+  RUBY_VERSION: "3.2"
+  BUILD_CONFIGURATION: Debug
+  DERIVED_DATA_PATH: .derivedData-post-merge-dmg
+  MACOSX_DEPLOYMENT_TARGET: "11.0"
+
+jobs:
+  post-merge-dmg:
+    name: Post-merge unsigned DMG
+    # If Xcode 26.3 disappears from GitHub-hosted runners, move to the nearest available 26.x runner/Xcode pair instead of reintroducing the legacy lane.
+    runs-on: macos-26
+    env:
+      CI: true
+      NSUnbufferedIO: YES
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ClashX/goClash/go.sum
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.3"
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Show toolchain versions
+        run: |
+          mkdir -p .ci-logs
+          {
+            echo "::group::xcodebuild -version"
+            xcodebuild -version
+            echo "::endgroup::"
+            echo "::group::xcrun --sdk macosx --show-sdk-version"
+            xcrun --sdk macosx --show-sdk-version
+            echo "::endgroup::"
+            echo "::group::swift --version"
+            swift --version
+            echo "::endgroup::"
+            echo "::group::go version"
+            go version
+            echo "::endgroup::"
+            echo "::group::ruby --version"
+            ruby --version
+            echo "::endgroup::"
+            echo "::group::bundle --version"
+            bundle --version
+            echo "::endgroup::"
+          } | tee .ci-logs/tool-versions.log
+
+      - name: Install dependencies and resources
+        run: |
+          set -o pipefail
+          bash install_dependency.sh | tee .ci-logs/install-dependency.log
+
+      - name: Resolve Swift package dependencies
+        run: |
+          set -o pipefail
+          xcodebuild -resolvePackageDependencies \
+            -workspace ClashX.xcworkspace \
+            -scheme ClashX \
+            | tee .ci-logs/spm-resolve.log
+
+      - name: Build unsigned modern app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace ClashX.xcworkspace \
+            -scheme ClashX \
+            -configuration "${BUILD_CONFIGURATION}" \
+            -destination 'platform=macOS' \
+            -derivedDataPath "${DERIVED_DATA_PATH}" \
+            MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build | tee .ci-logs/xcodebuild-build.log
+
+      - name: Discover built app
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD_SETTINGS_LOG=".ci-logs/show-build-settings.log"
+          DISCOVERY_LOG=".ci-logs/app-discovery.log"
+
+          xcodebuild \
+            -workspace ClashX.xcworkspace \
+            -scheme ClashX \
+            -configuration "${BUILD_CONFIGURATION}" \
+            -derivedDataPath "${DERIVED_DATA_PATH}" \
+            MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            -showBuildSettings | tee "$BUILD_SETTINGS_LOG"
+
+          built_products_dir="$(awk -F ' = ' '/^[[:space:]]*BUILT_PRODUCTS_DIR = / {print $2}' "$BUILD_SETTINGS_LOG" | tail -n 1)"
+          full_product_name="$(awk -F ' = ' '/^[[:space:]]*FULL_PRODUCT_NAME = / {print $2}' "$BUILD_SETTINGS_LOG" | tail -n 1)"
+          wrapper_name="$(awk -F ' = ' '/^[[:space:]]*WRAPPER_NAME = / {print $2}' "$BUILD_SETTINGS_LOG" | tail -n 1)"
+          product_name="$(awk -F ' = ' '/^[[:space:]]*PRODUCT_NAME = / {print $2}' "$BUILD_SETTINGS_LOG" | tail -n 1)"
+
+          {
+            echo "BUILT_PRODUCTS_DIR=$built_products_dir"
+            echo "FULL_PRODUCT_NAME=$full_product_name"
+            echo "WRAPPER_NAME=$wrapper_name"
+            echo "PRODUCT_NAME=$product_name"
+          } | tee "$DISCOVERY_LOG"
+
+          app_path=""
+          if [[ -n "$built_products_dir" && -n "$full_product_name" && -d "$built_products_dir/$full_product_name" ]]; then
+            app_path="$built_products_dir/$full_product_name"
+          fi
+
+          if [[ -z "$app_path" || ! -d "$app_path" ]]; then
+            mapfile -t app_candidates < <(find "${DERIVED_DATA_PATH}/Build/Products/${BUILD_CONFIGURATION}" -maxdepth 1 -name "*.app" -type d | sort)
+            printf 'Fallback app candidates (%s):\n' "${#app_candidates[@]}" | tee -a "$DISCOVERY_LOG"
+            printf '%s\n' "${app_candidates[@]}" | tee -a "$DISCOVERY_LOG"
+
+            if [[ "${#app_candidates[@]}" -eq 1 ]]; then
+              app_path="${app_candidates[0]}"
+            else
+              echo "Expected exactly one .app candidate after fallback discovery." | tee -a "$DISCOVERY_LOG"
+              exit 1
+            fi
+          fi
+
+          echo "APP_PATH=$app_path" | tee -a "$DISCOVERY_LOG"
+          echo "APP_PATH=$app_path" >> "$GITHUB_ENV"
+
+      - name: Inspect app bundle and derive version tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          INSPECTION_LOG=".ci-logs/app-bundle-inspection.log"
+
+          if [[ ! -d "$APP_PATH" ]]; then
+            echo "APP_PATH is missing or not a directory: $APP_PATH" | tee "$INSPECTION_LOG"
+            exit 1
+          fi
+
+          info_plist="$APP_PATH/Contents/Info.plist"
+          macos_dir="$APP_PATH/Contents/MacOS"
+          if [[ ! -f "$info_plist" ]]; then
+            echo "Info.plist missing: $info_plist" | tee "$INSPECTION_LOG"
+            exit 1
+          fi
+          if [[ ! -d "$macos_dir" ]]; then
+            echo "MacOS directory missing: $macos_dir" | tee "$INSPECTION_LOG"
+            exit 1
+          fi
+
+          mapfile -t executables < <(find "$macos_dir" -maxdepth 1 -type f -perm -111 | sort)
+          if [[ "${#executables[@]}" -lt 1 ]]; then
+            echo "No executable found under $macos_dir" | tee "$INSPECTION_LOG"
+            exit 1
+          fi
+
+          bundle_display_name="$(/usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$info_plist" 2>/dev/null || true)"
+          bundle_name="$(/usr/libexec/PlistBuddy -c "Print :CFBundleName" "$info_plist" 2>/dev/null || true)"
+          bundle_executable="$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$info_plist" 2>/dev/null || true)"
+          bundle_identifier="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$info_plist" 2>/dev/null || true)"
+          bundle_short_version="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$info_plist" 2>/dev/null || true)"
+          bundle_version="$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$info_plist" 2>/dev/null || true)"
+
+          if [[ -z "$bundle_short_version" || "$bundle_short_version" == *'$('* ]]; then
+            bundle_short_version="$(awk -F ' = ' '/^[[:space:]]*MARKETING_VERSION = / {print $2}' .ci-logs/show-build-settings.log | tail -n 1)"
+          fi
+
+          if [[ -z "$bundle_short_version" ]]; then
+            bundle_short_version="0.0.0-unknown"
+          fi
+
+          if [[ "$bundle_short_version" == "0.0.0-unknown" ]]; then
+            echo "Failed to discover a usable app version." | tee "$INSPECTION_LOG"
+            exit 1
+          fi
+
+          if [[ -z "$bundle_executable" || -z "$bundle_identifier" ]]; then
+            echo "Bundle executable or identifier could not be read." | tee "$INSPECTION_LOG"
+            exit 1
+          fi
+
+          short_sha="${GITHUB_SHA::8}"
+          version_tag="v${bundle_short_version}+${short_sha}"
+          codesign_status="$(codesign -dv --verbose=2 "$APP_PATH" 2>&1 || true)"
+
+          {
+            echo "APP_PATH=$APP_PATH"
+            echo "Bundle Size:"
+            du -sh "$APP_PATH"
+            echo "CFBundleDisplayName=$bundle_display_name"
+            echo "CFBundleName=$bundle_name"
+            echo "CFBundleExecutable=$bundle_executable"
+            echo "CFBundleIdentifier=$bundle_identifier"
+            echo "CFBundleShortVersionString=$bundle_short_version"
+            echo "CFBundleVersion=$bundle_version"
+            echo "Executable Candidates:"
+            printf '%s\n' "${executables[@]}"
+            echo "Codesign Status:"
+            echo "$codesign_status"
+          } | tee "$INSPECTION_LOG"
+
+          echo "VERSION_TAG=$version_tag" >> "$GITHUB_ENV"
+
+      - name: Create unsigned DMG
+        run: |
+          set -o pipefail
+          mkdir -p .ci-dmg
+          bash scripts/create-dmg.sh \
+            --app-path "$APP_PATH" \
+            --version-tag "$VERSION_TAG" \
+            --output-dir .ci-dmg \
+            | tee .ci-logs/create-dmg.log
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: SmartX-${{ env.VERSION_TAG }}-DMG-${{ github.sha }}
+          path: |
+            .ci-dmg/SmartX-${{ env.VERSION_TAG }}.unsigned.dmg
+            .ci-dmg/SmartX-${{ env.VERSION_TAG }}.unsigned.dmg.sha256
+            .ci-dmg/README.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload DMG logs
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: SmartX-${{ env.VERSION_TAG }}-DMG-Logs-${{ github.sha }}
+          path: .ci-logs/**
+          if-no-files-found: warn
+          retention-days: 30

@@ -22,7 +22,7 @@ This is important memory for future work because the branch is not using a separ
 
 ## Current LightGBM Integration
 
-The current user-facing LightGBM settings live in [`ClashX/General/Managers/Settings.swift`](../../ClashX/General/Managers/Settings.swift).
+The current user-facing LightGBM settings still bridge through [`ClashX/General/Managers/Settings.swift`](../../ClashX/General/Managers/Settings.swift), but they now persist through a SmartX-owned managed-override file handled by [`ClashX/General/Managers/SmartXManagedOverrideManager.swift`](../../ClashX/General/Managers/SmartXManagedOverrideManager.swift).
 
 Current settings are:
 
@@ -32,11 +32,16 @@ Current settings are:
 - `smartLightGBMUpdateIntervalHours`
 - `effectiveSmartLightGBMModelUrl`
 
-The intent is:
+The current intent is:
 
 - by default, SmartX follows the core config unless override is enabled
 - when override is enabled, SmartX supplies its own model URL and update policy
 - if the stored model URL is empty, `effectiveSmartLightGBMModelUrl` falls back to the default Vernesong release URL
+- SmartX persists the override under `~/.config/clash/.smartx/overrides/smartx-managed.json` instead of mutating remote subscription YAML
+- `Paths.smartXManagedOverrideURL` is the concrete JSON path for that SmartX-owned override file
+- the UserDefaults keys remain a compatibility cache, while the managed override file is the first durable SmartX-owned override source
+- bootstrap into that file is now an explicit migration/setup step rather than a hidden Settings getter side effect
+- SmartX preserves newer future-schema override files instead of overwriting them during normal UI saves
 
 These values are passed from Swift to Go through the exported bridge function `clash_setLightGBMOptions`, which is defined in [`ClashX/goClash/main.go`](../../ClashX/goClash/main.go) and called by `Settings.syncSmartLightGBMOptionsToCore()`.
 
@@ -58,7 +63,7 @@ The override is applied in both major core paths:
 - initial startup via `parseDefaultConfigThenStart`
 - config reload via `clashUpdateConfig`
 
-That means SmartX’s LightGBM override is part of the effective runtime config generation for the embedded core, not just a UI setting.
+That means SmartX’s LightGBM override is part of the embedded-core runtime path, but the current branch still does **not** implement a full generated effective config pipeline. The persisted override file is groundwork for later provenance-aware config generation, not proof that the profile pipeline already exists.
 
 ## File Paths
 

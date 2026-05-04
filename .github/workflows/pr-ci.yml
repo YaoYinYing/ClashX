@@ -6,6 +6,7 @@ on:
 
 env:
   FASTLANE_SKIP_UPDATE_CHECK: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   GO_VERSION: "1.21.x"
   RUBY_VERSION: "3.2"
 
@@ -18,15 +19,16 @@ jobs:
       NSUnbufferedIO: YES
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ClashX/goClash/go.sum
 
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -114,9 +116,58 @@ jobs:
             -o /tmp/capability-cache-identity-smoke
           /tmp/capability-cache-identity-smoke | tee .ci-logs/capability-cache-identity-smoke.log
 
+      - name: Config validator smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/ConfigValidationIssue.swift \
+            ClashX/General/Utils/TunConfigValidator.swift \
+            ClashX/General/Utils/DNSConfigValidator.swift \
+            Tests/SecurityHarness/config_validator_smoke.swift \
+            -o /tmp/config-validator-smoke
+          /tmp/config-validator-smoke | tee .ci-logs/config-validator-smoke.log
+
+      - name: Diagnostics log reader smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/SmartXRedactor.swift \
+            ClashX/General/Utils/DiagnosticsLogReader.swift \
+            Tests/SecurityHarness/diagnostics_log_reader_smoke.swift \
+            -o /tmp/diagnostics-log-reader-smoke
+          /tmp/diagnostics-log-reader-smoke | tee .ci-logs/diagnostics-log-reader-smoke.log
+
+      - name: Diagnostics artifact formatter smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/SmartXRedactor.swift \
+            ClashX/General/Utils/DiagnosticsArtifactFormatter.swift \
+            Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift \
+            -o /tmp/diagnostics-artifact-formatter-smoke
+          /tmp/diagnostics-artifact-formatter-smoke | tee .ci-logs/diagnostics-artifact-formatter-smoke.log
+
+      - name: Profile artifact metadata smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Managers/ProfileArtifactManager.swift \
+            Tests/SecurityHarness/profile_artifact_metadata_smoke.swift \
+            -o /tmp/profile-artifact-metadata-smoke
+          /tmp/profile-artifact-metadata-smoke | tee .ci-logs/profile-artifact-metadata-smoke.log
+
+      - name: SmartX managed override smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Managers/SmartXManagedOverrideManager.swift \
+            Tests/SecurityHarness/smartx_managed_override_smoke.swift \
+            -o /tmp/smartx-managed-override-smoke
+          /tmp/smartx-managed-override-smoke | tee .ci-logs/smartx-managed-override-smoke.log
+
       - name: Upload validation logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: validation-logs-PR-${{ github.event.pull_request.number || 'manual' }}-${{ github.sha }}
           path: .ci-logs/**
@@ -131,13 +182,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - flavor: legacy
-            display_name: Legacy macOS 10.14
-            runner: macos-15
-            xcode: "16.4"
-            deployment_target: "10.14"
-            configuration: Debug
-            artifact_suffix: Legacy-macOS10.14-Debug
+          # The modern lane depends on GitHub-hosted macos-26 and an available Xcode 26.x image.
+          # If 26.3 disappears, move to the nearest supported 26.x runner/Xcode pair instead of deleting this lane.
           - flavor: modern
             display_name: Modern
             runner: macos-26
@@ -155,15 +201,16 @@ jobs:
       DERIVED_DATA_PATH: .derivedData-${{ matrix.flavor }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ClashX/goClash/go.sum
 
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -237,6 +284,55 @@ jobs:
             -o /tmp/capability-cache-identity-smoke
           /tmp/capability-cache-identity-smoke | tee .ci-logs/capability-cache-identity-smoke.log
 
+      - name: Config validator smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/ConfigValidationIssue.swift \
+            ClashX/General/Utils/TunConfigValidator.swift \
+            ClashX/General/Utils/DNSConfigValidator.swift \
+            Tests/SecurityHarness/config_validator_smoke.swift \
+            -o /tmp/config-validator-smoke
+          /tmp/config-validator-smoke | tee .ci-logs/config-validator-smoke.log
+
+      - name: Diagnostics log reader smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/SmartXRedactor.swift \
+            ClashX/General/Utils/DiagnosticsLogReader.swift \
+            Tests/SecurityHarness/diagnostics_log_reader_smoke.swift \
+            -o /tmp/diagnostics-log-reader-smoke
+          /tmp/diagnostics-log-reader-smoke | tee .ci-logs/diagnostics-log-reader-smoke.log
+
+      - name: Diagnostics artifact formatter smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/SmartXRedactor.swift \
+            ClashX/General/Utils/DiagnosticsArtifactFormatter.swift \
+            Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift \
+            -o /tmp/diagnostics-artifact-formatter-smoke
+          /tmp/diagnostics-artifact-formatter-smoke | tee .ci-logs/diagnostics-artifact-formatter-smoke.log
+
+      - name: Profile artifact metadata smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Managers/ProfileArtifactManager.swift \
+            Tests/SecurityHarness/profile_artifact_metadata_smoke.swift \
+            -o /tmp/profile-artifact-metadata-smoke
+          /tmp/profile-artifact-metadata-smoke | tee .ci-logs/profile-artifact-metadata-smoke.log
+
+      - name: SmartX managed override smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Managers/SmartXManagedOverrideManager.swift \
+            Tests/SecurityHarness/smartx_managed_override_smoke.swift \
+            -o /tmp/smartx-managed-override-smoke
+          /tmp/smartx-managed-override-smoke | tee .ci-logs/smartx-managed-override-smoke.log
+
       - name: Build unsigned Debug app
         run: |
           set -o pipefail
@@ -268,7 +364,7 @@ jobs:
 
       - name: Upload PR artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: SmartX-${{ matrix.artifact_suffix }}-PR-${{ github.event.pull_request.number || 'manual' }}-${{ github.sha }}
           path: |

@@ -13,6 +13,9 @@ enum Settings {
     static var mmdbDownloadUrl: String
 
     static let defaultSmartLightGBMModelUrl = "https://github.com/vernesong/mihomo/releases/download/LightGBM-Model/Model.bin"
+    // These UserDefaults keys are now a compatibility cache for older installs and
+    // runtime bridging. The SmartX-managed JSON override file is the first durable
+    // managed override source, and bootstrap must stay an explicit migration/setup step.
     @UserDefault("smartLightGBMOverrideConfig", defaultValue: false)
     static var smartLightGBMOverrideConfig: Bool
 
@@ -26,10 +29,16 @@ enum Settings {
     static var smartLightGBMUpdateIntervalHours: Int
 
     static var effectiveSmartLightGBMModelUrl: String {
+        // Settings getters must stay read-only. They should not trigger migration,
+        // disk writes, or UserDefaults-to-file bootstrap side effects.
         if smartLightGBMModelUrl.isEmpty {
             return defaultSmartLightGBMModelUrl
         }
         return smartLightGBMModelUrl
+    }
+
+    static func bootstrapSmartXManagedOverridesIfNeeded() {
+        SmartXManagedOverrideManager.bootstrapIfNeeded()
     }
 
     static func syncSmartLightGBMOptionsToCore() {

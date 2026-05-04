@@ -30,19 +30,20 @@ The current Core settings UI in [`ClashX/ViewControllers/Settings/CoreSettingVie
 - show whether `tun.enable` is currently true or false in config
 - attempt a guarded `tun.enable` patch only for an external controller that exposed `tun` through `/configs`
 - show additional read-only routing/interface/TUN values when present
-- emit validation warnings for contradictory include/exclude interface use, suspicious MTU or UDP timeout values, invalid-looking CIDRs, and `strict-route`
+- surface validator output from reusable `TunConfigValidator` and `DNSConfigValidator` helpers
 
 The current update path in [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift) is intentionally narrow:
 
 - `updateTun(enable:)` only sends `PATCH /configs` with `{"tun":{"enable":...}}`
 
-That means the current branch can only express a limited config toggle. It does not currently provide a complete mihomo TUN model, TUN lifecycle management, or a privileged macOS TUN startup architecture.
+That means the current branch now has an initial guarded TUN lifecycle coordinator around the limited config toggle, but it still does not provide a complete mihomo TUN editor, embedded-core TUN enablement, or a privileged macOS TUN startup architecture.
 
 The current UI is also explicit that:
 
 - embedded-core TUN remains disabled
 - helper installation does not imply TUN support
-- failed TUN updates restore the previous UI state
+- failed TUN updates restore the previous UI state, and unverified TUN updates remain explicitly unverified instead of being treated as success
+- SmartX refreshes the UI from controller state when possible after an unverified update, but it still does not implement controller rollback
 
 ## Missing TUN Fields
 
@@ -153,7 +154,7 @@ What exists today is mostly indirect:
 - [`ClashX/General/ApiRequest.swift`](../../ClashX/General/ApiRequest.swift) now exposes DNS diagnostics helpers such as `/dns/query` and `/cache/dns/flush`
 - [`ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift`](../../ClashX/ViewControllers/Connections/DiagnosticsDashboardViewController.swift) surfaces those helpers for manual diagnostics
 
-The branch now also has a first-pass structured read-only DNS model in [`ClashX/Models/ClashConfig.swift`](../../ClashX/Models/ClashConfig.swift), and the Core settings page surfaces it as status text plus validation notes. The currently decoded fields include:
+The branch now also has a first-pass structured read-only DNS model in [`ClashX/Models/ClashConfig.swift`](../../ClashX/Models/ClashConfig.swift), and the Core settings page surfaces it as status text plus validation notes from the reusable DNS validator. The currently decoded fields include:
 
 - `enable`
 - `enhanced-mode`

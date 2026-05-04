@@ -36,9 +36,9 @@ enum ProfileArtifactManager {
 
         do {
             try ensureArtifactsDirectory()
-            try copyArtifact(from: sourceConfigPath, to: Paths.generatedEffectiveConfigURL)
+            try copyArtifact(from: sourceConfigPath, to: Paths.successfulReloadArtifactURL)
             try copyArtifact(from: sourceConfigPath, to: Paths.lastKnownGoodConfigURL)
-            try writeMetadata(metadata, to: Paths.generatedEffectiveMetadataURL)
+            try writeMetadata(metadata, to: Paths.successfulReloadMetadataURL)
             try writeMetadata(metadata, to: Paths.lastKnownGoodMetadataURL)
         } catch {
             Logger.log("Failed to persist profile artifacts: \(error.localizedDescription)", level: .warning)

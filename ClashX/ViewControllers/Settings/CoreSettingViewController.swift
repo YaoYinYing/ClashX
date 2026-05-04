@@ -60,10 +60,13 @@ class CoreSettingViewController: NSViewController {
     private let updateModelButton = NSButton(title: NSLocalizedString("Update LightGBM Model", comment: ""), target: nil, action: nil)
     private let resetModelUrlButton = NSButton(title: NSLocalizedString("Reset URL", comment: ""), target: nil, action: nil)
     private let openConfigFolderButton = NSButton(title: NSLocalizedString("Open Config Folder", comment: ""), target: nil, action: nil)
+    private let modelNoteLabel = CoreSettingViewController.makeSecondaryWrapLabel()
 
     private var currentTunEnabled = false
     private var tunCapability: TunCapability = .unsupported("")
     private var currentConfigSource: String?
+    private var currentDisplayedConfig: ClashConfig?
+    private let tunLifecycleCoordinator = TunLifecycleCoordinator()
 
     private var helperCapabilityNote: String {
         NSLocalizedString("ProxyConfigHelper manages macOS system proxy settings only. Installing the helper does not enable TUN support. TUN requires additional privileges beyond system proxy modification.", comment: "")
@@ -105,6 +108,8 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func setupView() {
+        // TODO: UI layout remains duplicated, but behavior is centralized in
+        // LightGBMSettingsViewModel.
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
@@ -179,6 +184,7 @@ class CoreSettingViewController: NSViewController {
 
         modelOverrideButton.target = self
         modelOverrideButton.action = #selector(actionModelSettingsChanged)
+        modelOverrideButton.toolTip = LightGBMSettingsViewModel.overrideExplanation
         modelAutoUpdateButton.target = self
         modelAutoUpdateButton.action = #selector(actionModelSettingsChanged)
         modelUrlField.target = self
@@ -195,6 +201,8 @@ class CoreSettingViewController: NSViewController {
         resetModelUrlButton.action = #selector(actionResetModelURL)
         openConfigFolderButton.target = self
         openConfigFolderButton.action = #selector(actionOpenConfigFolder)
+
+        modelNoteLabel.stringValue = LightGBMSettingsViewModel.overrideExplanation
 
         let modelControls = NSStackView(views: [modelOverrideButton, modelAutoUpdateButton, NSTextField(labelWithString: NSLocalizedString("Interval Hours", comment: "")), modelIntervalField])
         modelControls.orientation = .horizontal
@@ -219,6 +227,7 @@ class CoreSettingViewController: NSViewController {
             labeledRow(title: NSLocalizedString("Manual Update", comment: ""), view: modelEndpointLabel),
             labeledRow(title: NSLocalizedString("App Override", comment: ""), view: modelOverrideStatusLabel),
             labeledRow(title: NSLocalizedString("Model URL", comment: ""), view: modelURLControls),
+            modelNoteLabel,
             modelControls,
             modelButtons
         ]))
@@ -291,6 +300,7 @@ class CoreSettingViewController: NSViewController {
 
     private func applyLoadingState() {
         currentConfigSource = nil
+        currentDisplayedConfig = nil
         tunCapability = makeTunCapability(config: nil, source: nil)
         modeLabel.stringValue = NSLocalizedString("unknown", comment: "")
         versionLabel.stringValue = NSLocalizedString("unknown", comment: "")
@@ -306,7 +316,7 @@ class CoreSettingViewController: NSViewController {
 
         tunStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
         tunDetailLabel.stringValue = NSLocalizedString("Current mihomo config has not been loaded yet.", comment: "")
-        tunNoteLabel.stringValue = tunCapabilityNoteText()
+        tunNoteLabel.stringValue = tunCapabilityNoteText(config: nil)
         tunEnabledButton.state = .off
         tunEnabledButton.isEnabled = false
         dnsStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
@@ -443,6 +453,7 @@ class CoreSettingViewController: NSViewController {
 
     private func applyConfig(_ config: ClashConfig, source: String, detail: String) {
         currentConfigSource = source
+        currentDisplayedConfig = config
         configStatusLabel.stringValue = NSLocalizedString("loaded", comment: "")
         configSourceLabel.stringValue = source
         configDetailLabel.stringValue = "\(detail)  mode=\(config.mode.name)  http=\(config.usedHttpPort)  socks=\(config.usedSocksPort)"
@@ -452,6 +463,7 @@ class CoreSettingViewController: NSViewController {
 
     private func refreshTunInfo(using config: ClashConfig?, detail: String?) {
         let tun = config?.tun
+        currentDisplayedConfig = config
         tunCapability = makeTunCapability(config: config, source: currentConfigSource)
         currentTunEnabled = tun?.enable ?? false
         tunEnabledButton.state = currentTunEnabled ? .on : .off
@@ -481,7 +493,7 @@ class CoreSettingViewController: NSViewController {
             tunDetailLabel.stringValue = detail ?? NSLocalizedString("No tun section was found in the current mihomo config.", comment: "")
         }
 
-        tunNoteLabel.stringValue = tunCapabilityNoteText()
+        tunNoteLabel.stringValue = tunCapabilityNoteText(config: config)
         if case .guardedUpdateAvailable = tunCapability, ConfigManager.shared.isRunning, tun != nil {
             tunEnabledButton.isEnabled = true
         } else {
@@ -537,76 +549,28 @@ class CoreSettingViewController: NSViewController {
         }
 
         if source == "/configs" {
-            return .guardedUpdateAvailable(NSLocalizedString("External controller exposes a tun section through /configs. SmartX can attempt a guarded TUN update, and will restore the previous UI state if the controller rejects it.", comment: ""))
+            return .guardedUpdateAvailable(NSLocalizedString("External controller exposes a tun section through /configs. SmartX can attempt a guarded TUN update and then refresh the UI from the controller if verification fails.", comment: ""))
         }
 
         return .unsupported(NSLocalizedString("External controller TUN support is not verified yet. SmartX keeps it disabled until the controller reports config state reliably.", comment: ""))
     }
 
-    private func tunCapabilityNoteText() -> String {
+    private func tunCapabilityNoteText(config: ClashConfig?) -> String {
         let capabilityReason: String
         switch tunCapability {
         case let .unsupported(reason), let .guardedUpdateAvailable(reason):
             capabilityReason = reason
         }
-        let warnings = validateTunWarnings(from: ConfigManager.shared.currentConfig)
+        let warnings = TunConfigValidator.validate(config?.tun).issues.map(\.message)
         let warningText = warnings.isEmpty ? NSLocalizedString("No additional TUN validation warnings were detected.", comment: "") : warnings.joined(separator: "\n")
         return "\(capabilityReason)\n\(helperCapabilityNote)\n\(warningText)"
     }
 
     private func dnsCapabilityNoteText(config: ClashConfig?) -> String {
         let base = NSLocalizedString("SmartX currently exposes DNS as structured read-only status plus diagnostics helpers. This page does not yet provide a full DNS editor or embedded-core DNS override path.", comment: "")
-        let warnings = validateDNSWarnings(from: config)
+        let warnings = DNSConfigValidator.validate(config?.dns).issues.map(\.message)
         let warningText = warnings.isEmpty ? NSLocalizedString("No additional DNS validation warnings were detected.", comment: "") : warnings.joined(separator: "\n")
         return "\(base)\n\(warningText)"
-    }
-
-    private func validateTunWarnings(from config: ClashConfig?) -> [String] {
-        guard let tun = config?.tun else { return [] }
-        var warnings = [String]()
-        if let include = tun.includeInterface, !include.isEmpty,
-           let exclude = tun.excludeInterface, !exclude.isEmpty {
-            warnings.append(NSLocalizedString("Warning: include-interface and exclude-interface are both set. SmartX should treat that as expert-only until a structured editor exists.", comment: ""))
-        }
-        if tun.strictRoute == true {
-            warnings.append(NSLocalizedString("Warning: strict-route can break local macOS workflows and needs careful testing.", comment: ""))
-        }
-        if let mtu = tun.mtu, !(576 ... 9000).contains(mtu) {
-            warnings.append(String(format: NSLocalizedString("Warning: mtu=%d is outside the usual safe range SmartX expects.", comment: ""), mtu))
-        }
-        if let udpTimeout = tun.udpTimeout, udpTimeout <= 0 {
-            warnings.append(NSLocalizedString("Warning: udp-timeout should be a positive integer.", comment: ""))
-        }
-        if !invalidCIDRs(in: tun.routeAddress).isEmpty || !invalidCIDRs(in: tun.routeExcludeAddress).isEmpty {
-            warnings.append(NSLocalizedString("Warning: one or more route-address or route-exclude-address entries do not look like valid CIDR values.", comment: ""))
-        }
-        return warnings
-    }
-
-    private func validateDNSWarnings(from config: ClashConfig?) -> [String] {
-        guard let dns = config?.dns else { return [] }
-        var warnings = [String]()
-        if dns.respectRules == true, (dns.directNameserver ?? []).isEmpty, (dns.nameserver ?? []).isEmpty {
-            warnings.append(NSLocalizedString("Warning: respect-rules is enabled without an obvious configured resolver path.", comment: ""))
-        }
-        if dns.enhancedMode?.caseInsensitiveCompare("fake-ip") == .orderedSame {
-            warnings.append(NSLocalizedString("Warning: fake-ip mode can break software that expects direct real-IP DNS answers.", comment: ""))
-        }
-        if dns.preferH3 == true, dns.respectRules == true {
-            warnings.append(NSLocalizedString("Warning: prefer-h3 with respect-rules may need extra resolver testing.", comment: ""))
-        }
-        return warnings
-    }
-
-    private func invalidCIDRs(in values: [String]?) -> [String] {
-        (values ?? []).filter { !looksLikeCIDR($0) }
-    }
-
-    private func looksLikeCIDR(_ value: String) -> Bool {
-        let parts = value.split(separator: "/")
-        guard parts.count == 2 else { return false }
-        guard let prefix = Int(parts[1]), (0 ... 128).contains(prefix) else { return false }
-        return !parts[0].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func joinedListLabel(title: String, values: [String]?) -> String? {
@@ -615,135 +579,143 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func refreshLightGBMInfo() {
-        updateModelSettingsUI()
-
-        let path = Paths.smartLightGBMModelPath
-        let attributes = try? FileManager.default.attributesOfItem(atPath: path)
-        if let size = attributes?[.size] as? NSNumber {
-            modelStatusLabel.stringValue = String(format: NSLocalizedString("present (%@)", comment: ""), ByteCountFormatter.string(fromByteCount: size.int64Value, countStyle: .file))
-            let modified = attributes?[.modificationDate] as? Date
-            modelModifiedLabel.stringValue = modified.map {
-                DateFormatter.localizedString(from: $0, dateStyle: .short, timeStyle: .medium)
-            } ?? NSLocalizedString("unknown", comment: "")
-        } else {
-            modelStatusLabel.stringValue = NSLocalizedString("missing", comment: "")
-            modelModifiedLabel.stringValue = NSLocalizedString("not available", comment: "")
-            Logger.log("[Core Settings] model file missing at \(path)", level: .warning)
-        }
-        modelPathLabel.stringValue = path
-
-        let lightGBMAvailability = CapabilityCache.shared.availability(for: .lightGBMUpgrade)
-        let manualUpdateSupported = Settings.isUsingEmbeddedCore || (lightGBMAvailability != .unsupported && lightGBMAvailability != .unauthorized)
-        if !ConfigManager.shared.isRunning {
-            modelEndpointLabel.stringValue = NSLocalizedString("unavailable while the core is stopped", comment: "")
-        } else if Settings.isUsingEmbeddedCore {
-            modelEndpointLabel.stringValue = NSLocalizedString("appears available for the embedded core", comment: "")
-        } else if lightGBMAvailability == .unsupported {
-            modelEndpointLabel.stringValue = NSLocalizedString("unsupported by the current controller", comment: "")
-        } else if lightGBMAvailability == .unauthorized {
-            modelEndpointLabel.stringValue = NSLocalizedString("controller authentication rejected this endpoint", comment: "")
-        } else if lightGBMAvailability == .available || lightGBMAvailability == .degraded {
-            modelEndpointLabel.stringValue = NSLocalizedString("appears available", comment: "")
-        } else {
-            modelEndpointLabel.stringValue = NSLocalizedString("not checked yet", comment: "")
-        }
-
-        let overrideStatus = Settings.smartLightGBMOverrideConfig ? NSLocalizedString("enabled", comment: "") : NSLocalizedString("disabled", comment: "")
-        let autoUpdateStatus = Settings.smartLightGBMAutoUpdate ? NSLocalizedString("auto update on", comment: "") : NSLocalizedString("auto update off", comment: "")
-        modelOverrideStatusLabel.stringValue = "\(overrideStatus), \(autoUpdateStatus), \(Settings.smartLightGBMUpdateIntervalHours)h"
-
+        let state = LightGBMSettingsViewModel.currentState(isCoreRunning: ConfigManager.shared.isRunning,
+                                                           capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
+        applyModelState(state)
+        let availability = CapabilityCache.shared.availability(for: .lightGBMUpgrade)
+        let manualUpdateSupported = Settings.isUsingEmbeddedCore || (availability != .unsupported && availability != .unauthorized)
         updateModelButton.isEnabled = ConfigManager.shared.isRunning && manualUpdateSupported
     }
 
     private func updateModelSettingsUI() {
-        modelOverrideButton.state = Settings.smartLightGBMOverrideConfig ? .on : .off
-        modelAutoUpdateButton.state = Settings.smartLightGBMAutoUpdate ? .on : .off
-        modelUrlField.stringValue = Settings.effectiveSmartLightGBMModelUrl
-        modelIntervalField.stringValue = "\(Settings.smartLightGBMUpdateIntervalHours)"
-
-        let enabled = Settings.smartLightGBMOverrideConfig
-        modelAutoUpdateButton.isEnabled = enabled
-        modelUrlField.isEnabled = enabled
-        modelIntervalField.isEnabled = enabled
-        resetModelUrlButton.isEnabled = enabled
+        let state = LightGBMSettingsViewModel.currentState(isCoreRunning: ConfigManager.shared.isRunning,
+                                                           capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
+        applyModelState(state)
     }
 
     @objc private func actionToggleTun() {
         guard case .guardedUpdateAvailable = tunCapability, tunEnabledButton.isEnabled else {
             tunEnabledButton.state = currentTunEnabled ? .on : .off
-            let info = tunCapabilityNoteText()
+            let info = tunCapabilityNoteText(config: currentDisplayedConfig)
             Logger.log("[Core Settings] TUN toggle blocked: \(info)", level: .warning)
             NSUserNotificationCenter.default.post(title: "TUN", info: info)
             return
         }
 
         let targetState = tunEnabledButton.state == .on
-        ApiRequest.updateTunResult(enable: targetState) { [weak self] result in
+        tunLifecycleCoordinator.setTunEnabled(targetState) { [weak self] result in
             guard let self else { return }
             switch result {
-            case .success:
-                Logger.log("[Core Settings] TUN updated enable=\(targetState)", level: .debug)
+            case let .success(message, _):
+                self.currentTunEnabled = targetState
+                self.tunEnabledButton.state = targetState ? .on : .off
+                Logger.log("[Core Settings] TUN update verified enable=\(targetState)", level: .debug)
+                NSUserNotificationCenter.default.post(title: "TUN", info: message)
                 AppDelegate.shared.syncConfig {
                     self.refreshConfigStatus()
                 }
-            case .unsupported:
-                self.tunEnabledButton.state = self.currentTunEnabled ? .on : .off
-                let info = NSLocalizedString("The active controller does not support guarded TUN updates.", comment: "")
-                Logger.log("[Core Settings] TUN update failure: \(info)", level: .error)
+            case let .requestedButUnverified(message, previousState):
+                self.currentTunEnabled = previousState.enabled
+                self.tunEnabledButton.state = previousState.enabled ? .on : .off
+                Logger.log("[Core Settings] TUN update requested but final state is unverified: \(message)", level: .warning)
+                NSUserNotificationCenter.default.post(title: "TUN", info: message)
+                AppDelegate.shared.syncConfig {
+                    self.refreshConfigStatus()
+                }
+            case let .unsupported(message, previousState),
+                 let .unauthorized(message, previousState),
+                 let .failed(message, previousState):
+                self.currentTunEnabled = previousState.enabled
+                self.tunEnabledButton.state = previousState.enabled ? .on : .off
+                let prefix: String
+                switch result {
+                case .unsupported:
+                    prefix = "[Core Settings] TUN update unsupported"
+                case .unauthorized:
+                    prefix = "[Core Settings] TUN update unauthorized"
+                case .failed:
+                    prefix = "[Core Settings] TUN update failed after request or verify mismatch"
+                default:
+                    prefix = "[Core Settings] TUN update failed"
+                }
+                Logger.log("\(prefix): \(message)", level: .error)
+                NSUserNotificationCenter.default.post(title: "TUN", info: message)
+                self.refreshConfigStatus()
+            case let .blockedByValidation(issues, recoveryText, previousState):
+                self.currentTunEnabled = previousState.enabled
+                self.tunEnabledButton.state = previousState.enabled ? .on : .off
+                let issueLines = issues.map { "\($0.severity.rawValue.capitalized): \($0.message)" }
+                let info = ([recoveryText] + issueLines).joined(separator: "\n")
+                Logger.log("[Core Settings] TUN update blocked by validation: \(info)", level: .warning)
                 NSUserNotificationCenter.default.post(title: "TUN", info: info)
-            case let .unauthorized(message), let .failed(message):
-                self.tunEnabledButton.state = self.currentTunEnabled ? .on : .off
-                let info = message
-                Logger.log("[Core Settings] TUN update failure: \(info)", level: .error)
-                NSUserNotificationCenter.default.post(title: "TUN", info: info)
+                self.refreshConfigStatus()
             }
         }
     }
 
     @objc private func actionModelSettingsChanged() {
-        saveLightGBMSettings()
-        refreshLightGBMInfo()
+        let state = LightGBMSettingsViewModel.save(input: LightGBMSettingsViewModel.collectInput(overrideButton: modelOverrideButton,
+                                                                                                 modelURLField: modelUrlField,
+                                                                                                 autoUpdateButton: modelAutoUpdateButton,
+                                                                                                 updateIntervalField: modelIntervalField),
+                                                   isCoreRunning: ConfigManager.shared.isRunning,
+                                                   capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
+        applyModelState(state)
+        announceLightGBMPersistenceIfNeeded(state)
     }
 
     @objc private func actionUpdateLightGBMModel() {
-        saveLightGBMSettings()
         updateModelButton.isEnabled = false
-        ApiRequest.updateSmartLightGBMModel { [weak self] result in
+        LightGBMSettingsViewModel.requestModelUpdate(input: LightGBMSettingsViewModel.collectInput(overrideButton: modelOverrideButton,
+                                                                                                   modelURLField: modelUrlField,
+                                                                                                   autoUpdateButton: modelAutoUpdateButton,
+                                                                                                   updateIntervalField: modelIntervalField),
+                                                     isCoreRunning: ConfigManager.shared.isRunning) { [weak self] result, state in
             guard let self else { return }
             switch result {
             case .success:
-                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .available)
                 Logger.log("[Core Settings] LightGBM model update requested", level: .debug)
             case .unsupported:
-                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unsupported)
                 Logger.log("[Core Settings] LightGBM endpoint unsupported", level: .warning)
-            case let .unauthorized(message):
-                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .unauthorized, message: message)
+            case .unauthorized:
                 Logger.log("[Core Settings] LightGBM endpoint unauthorized", level: .warning)
             case let .failed(message):
-                CapabilityCache.shared.set(.lightGBMUpgrade, availability: .degraded, message: message)
                 Logger.log("[Core Settings] LightGBM model update failed: \(message)", level: .warning)
             }
+            self.applyModelState(state)
+            self.announceLightGBMPersistenceIfNeeded(state)
             self.refreshLightGBMInfo()
         }
     }
 
     @objc private func actionResetModelURL() {
-        Settings.smartLightGBMModelUrl = Settings.defaultSmartLightGBMModelUrl
-        modelUrlField.stringValue = Settings.defaultSmartLightGBMModelUrl
-        saveLightGBMSettings()
-        refreshLightGBMInfo()
+        let state = LightGBMSettingsViewModel.resetModelURL(isCoreRunning: ConfigManager.shared.isRunning,
+                                                            capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
+        applyModelState(state)
+        announceLightGBMPersistenceIfNeeded(state)
     }
 
     @objc private func actionOpenConfigFolder() {
         NSWorkspace.shared.openFile(kConfigFolderPath)
     }
 
-    private func saveLightGBMSettings() {
-        Settings.smartLightGBMOverrideConfig = modelOverrideButton.state == .on
-        Settings.smartLightGBMAutoUpdate = modelAutoUpdateButton.state == .on
-        Settings.smartLightGBMModelUrl = modelUrlField.stringValue.isEmpty ? Settings.defaultSmartLightGBMModelUrl : modelUrlField.stringValue
-        Settings.smartLightGBMUpdateIntervalHours = max(1, modelIntervalField.integerValue)
-        Settings.syncSmartLightGBMOptionsToCore()
+    private func applyModelState(_ state: LightGBMSettingsState) {
+        LightGBMSettingsViewModel.apply(state,
+                                        to: LightGBMSettingsControlBindings(overrideButton: modelOverrideButton,
+                                                                            autoUpdateButton: modelAutoUpdateButton,
+                                                                            modelURLField: modelUrlField,
+                                                                            updateIntervalField: modelIntervalField,
+                                                                            resetModelURLButton: resetModelUrlButton,
+                                                                            modelStatusLabel: modelStatusLabel,
+                                                                            modelPathLabel: modelPathLabel,
+                                                                            modelModifiedLabel: modelModifiedLabel,
+                                                                            manualUpdateLabel: modelEndpointLabel,
+                                                                            overrideSummaryLabel: modelOverrideStatusLabel,
+                                                                            noteLabel: modelNoteLabel))
+    }
+
+    private func announceLightGBMPersistenceIfNeeded(_ state: LightGBMSettingsState) {
+        guard let info = LightGBMSettingsViewModel.persistenceNotificationInfo(for: state) else { return }
+        NSUserNotificationCenter.default.post(title: NSLocalizedString("SmartX LightGBM Override", comment: ""), info: info)
     }
 }

@@ -79,11 +79,11 @@ That means the application’s config lifecycle is still centered on mutable fil
 
 There is now a limited artifact layer around that reload path:
 
-- after a successful reload, SmartX copies the selected source YAML into `~/.config/clash/.smartx/profiles/generated-effective.yaml`
+- after a successful reload, SmartX copies the selected source YAML into `~/.config/clash/.smartx/profiles/generated-effective.yaml`, now surfaced in the UI as the `Successful Reload Artifact`
 - the same successful reload also refreshes `~/.config/clash/.smartx/profiles/last-known-good.yaml`
 - matching JSON metadata files record profile name, profile kind, source path, remote URL, generation time, and controller mode
 
-This is still not a true merge/script/generated pipeline, because the “generated effective config” is currently just a deterministic copy of the exact file that was successfully loaded. It is nevertheless a meaningful step toward inspectability and rollback.
+This is still not a true merge/script/generated pipeline, because the compatibility `generated-effective.*` files are currently just deterministic copies of the exact file that was successfully loaded. New code should treat them as `Successful Reload Artifact` / `Loaded Source Copy` semantics until the real profile pipeline lands.
 
 ### URL scheme import and update
 
@@ -181,7 +181,7 @@ This should be:
 
 ### Last-known-good profile snapshot
 
-A Last-known-good profile snapshot is the most recent generated effective config that successfully validated and loaded.
+A Last-known-good profile snapshot is the most recent successfully loaded source-copy artifact that SmartX kept as a rollback anchor.
 
 This is the rollback anchor when:
 

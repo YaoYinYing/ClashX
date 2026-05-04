@@ -13,6 +13,8 @@ That distinction matters because the branch already mixes:
 
 Build success alone does not mean release readiness, notarization readiness, or compatibility with old ClashX Pro distribution behavior.
 
+The current branch is also modern-only by project decision. Active macOS `10.14` support was dropped after the legacy CI lane failed on `CryptoKit.SHA256`, and CI success in this branch does not imply a signed or notarized release is ready.
+
 ## Local Build Flow
 
 The current repository implies the following local build flow.
@@ -84,6 +86,30 @@ The workspace is the correct entry point because:
 - Pods are integrated through CocoaPods
 - `KeyboardShortcuts` is integrated through SwiftPM
 
+Important workspace-format note:
+
+- `ClashX.xcworkspace/contents.xcworkspacedata` is XML, not a plist.
+- `plutil` can reject a valid workspace file because the root element is `Workspace`.
+- A valid readiness check is:
+  - XML parses
+  - root tag is `Workspace`
+  - `FileRef` entries exist
+  - `group:ClashX.xcodeproj` resolves
+  - `group:Pods/Pods.xcodeproj` resolves when referenced
+  - `xcodebuild -list -workspace "$PWD/ClashX.xcworkspace"` succeeds
+
+SmartX now carries a dedicated readiness helper:
+
+- `bash scripts/ensure-xcworkspace.sh`
+
+That helper validates the workspace XML structure directly instead of treating it like a plist. If the workspace XML is valid but CocoaPods products are missing, the normal local repair path is:
+
+- `bundle install`
+- `bundle exec pod install`
+- `xcodebuild -list -workspace "$PWD/ClashX.xcworkspace"`
+
+If the global CocoaPods install differs from the Bundler-managed one, prefer `bundle exec pod install` for this repository. Project fallback is diagnostic only and should not replace the normal workspace-based path.
+
 ### 6. Build the `ClashX` scheme
 
 The current project expects the `ClashX` target to link:
@@ -118,8 +144,12 @@ The script builds twice:
 It also sets:
 
 - `CGO_ENABLED=1`
-- `CGO_CFLAGS=-mmacosx-version-min=10.14`
-- `CGO_LDFLAGS=-mmacosx-version-min=10.14`
+
+Historical note:
+
+- the older build script snapshot documented here still showed `CGO_CFLAGS=-mmacosx-version-min=10.14`
+- the older build script snapshot documented here still showed `CGO_LDFLAGS=-mmacosx-version-min=10.14`
+- those historical flags should not be read as an active SmartX support promise for macOS `10.14`
 
 The build command uses:
 
@@ -181,6 +211,13 @@ The current [`Podfile`](../../Podfile) pulls in:
 
 [`Podfile.lock`](../../Podfile.lock) currently pins concrete versions and checksums, so CocoaPods resolution is reasonably reproducible as long as the podspec sources remain available.
 
+The repository now treats Bundler as the preferred CocoaPods entry point whenever [`Gemfile`](../../Gemfile) exists:
+
+- run `bundle install`
+- run `bundle exec pod install`
+
+This matters because the observed `xcodebuild: error: 'ClashX.xcworkspace' is not a workspace file` failure was traced to incomplete workspace/dependency preparation, not to `contents.xcworkspacedata` being malformed.
+
 ### SwiftPM
 
 The project also uses SwiftPM for `KeyboardShortcuts`. [`ClashX.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`](../../ClashX.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved) pins:
@@ -221,13 +258,41 @@ They already perform unsigned SmartX builds, including Go archive creation and `
 
 Current CI scope note:
 
-- PR CI now has two unsigned Debug artifact lanes:
-  - Legacy: `macos-15` + Xcode `16.4` + `MACOSX_DEPLOYMENT_TARGET=10.14`
+- PR CI now has one unsigned Debug artifact lane:
   - Modern: `macos-26` + Xcode `26.3`
-- Every PR uploads unsigned SmartX app artifacts and build logs for both lanes.
+- Every PR uploads an unsigned SmartX app artifact and build logs for the modern lane.
 - PR CI also runs the helper fail-closed validation, the security harness, the endpoint-builder smoke harness, and the capability-identity smoke harness.
 - Artifact upload does **not** imply Developer ID signing, notarization, helper installation success, or runtime compatibility on the target OS.
-- The Legacy lane only proves that the deployment-target compile path still works. It does **not** prove real macOS `10.14` runtime behavior.
+
+### Post-merge DMG artifacts
+
+The branch now also has a dedicated post-merge artifact workflow for manual testing after code lands on `smartx`.
+
+- It runs on `push` to `smartx` and `workflow_dispatch`.
+- It uses the same modern-only baseline as PR artifacts:
+  - `macos-26`
+  - Xcode `26.3`
+  - deployment target `11.0`
+  - Go `1.21.x`
+  - Ruby `3.2`
+- It discovers the built app bundle from `xcodebuild -showBuildSettings` instead of hardcoding `SmartX.app`.
+- It derives the user-facing DMG version tag as `v<SmartX-version>+<git-hash[:8]>`.
+- It creates an unsigned DMG that contains:
+  - the built app bundle
+  - an `Applications` symlink
+  - a drag-to-Applications background image
+  - a README explaining that the artifact is unsigned and not notarized
+- It uploads the DMG and the workflow logs as separate GitHub Actions artifacts.
+
+Important artifact semantics:
+
+- The DMG is unsigned.
+- The DMG is not notarized.
+- The DMG is not a release build.
+- It is meant for manual testing after merge.
+- Privileged helper behavior may not work correctly in unsigned builds.
+- Signed/notarized DMG packaging remains future release work.
+- macOS `10.14` is not supported.
 
 1. checkout
 2. setup Xcode version
@@ -238,7 +303,7 @@ Current CI scope note:
 7. build Go archive
 8. `pod install`
 9. `xcodebuild` Debug
-10. upload unsigned debug artifacts for both Legacy and Modern lanes
+10. upload unsigned debug artifacts for the current modern lane
 
 Recommended details:
 

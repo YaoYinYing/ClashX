@@ -137,6 +137,16 @@ jobs:
             -o /tmp/diagnostics-log-reader-smoke
           /tmp/diagnostics-log-reader-smoke | tee .ci-logs/diagnostics-log-reader-smoke.log
 
+      - name: Diagnostics artifact formatter smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/SmartXRedactor.swift \
+            ClashX/General/Utils/DiagnosticsArtifactFormatter.swift \
+            Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift \
+            -o /tmp/diagnostics-artifact-formatter-smoke
+          /tmp/diagnostics-artifact-formatter-smoke | tee .ci-logs/diagnostics-artifact-formatter-smoke.log
+
       - name: Profile artifact metadata smoke harness
         run: |
           set -o pipefail
@@ -294,6 +304,16 @@ jobs:
             Tests/SecurityHarness/diagnostics_log_reader_smoke.swift \
             -o /tmp/diagnostics-log-reader-smoke
           /tmp/diagnostics-log-reader-smoke | tee .ci-logs/diagnostics-log-reader-smoke.log
+
+      - name: Diagnostics artifact formatter smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/SmartXRedactor.swift \
+            ClashX/General/Utils/DiagnosticsArtifactFormatter.swift \
+            Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift \
+            -o /tmp/diagnostics-artifact-formatter-smoke
+          /tmp/diagnostics-artifact-formatter-smoke | tee .ci-logs/diagnostics-artifact-formatter-smoke.log
 
       - name: Profile artifact metadata smoke harness
         run: |

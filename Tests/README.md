@@ -23,12 +23,13 @@ Notes:
 - A minimal local SmartX managed-override smoke check is available at `Tests/SecurityHarness/smartx_managed_override_smoke.swift` and should be run with `swiftc ClashX/General/Managers/SmartXManagedOverrideManager.swift Tests/SecurityHarness/smartx_managed_override_smoke.swift -o /tmp/smartx-managed-override-smoke && /tmp/smartx-managed-override-smoke` when changing persisted LightGBM override storage, normalization, future-schema warning behavior, legacy migration behavior, or the no-hidden-write expectation around explicit bootstrap.
 - A minimal local config-validator smoke check is available at `Tests/SecurityHarness/config_validator_smoke.swift` and should be run with `swiftc ClashX/General/Utils/ConfigValidationIssue.swift ClashX/General/Utils/TunConfigValidator.swift ClashX/General/Utils/DNSConfigValidator.swift Tests/SecurityHarness/config_validator_smoke.swift -o /tmp/config-validator-smoke && /tmp/config-validator-smoke` when changing the reusable TUN or DNS validation rules.
 - A minimal local diagnostics-log-reader smoke check is available at `Tests/SecurityHarness/diagnostics_log_reader_smoke.swift` and should be run with `swiftc ClashX/General/Utils/SmartXRedactor.swift ClashX/General/Utils/DiagnosticsLogReader.swift Tests/SecurityHarness/diagnostics_log_reader_smoke.swift -o /tmp/diagnostics-log-reader-smoke && /tmp/diagnostics-log-reader-smoke` when changing log tailing, filtering, or display limits for diagnostics.
+- A minimal local diagnostics-artifact-formatter smoke check is available at `Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift` and should be run with `swiftc ClashX/General/Utils/SmartXRedactor.swift ClashX/General/Utils/DiagnosticsArtifactFormatter.swift Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift -o /tmp/diagnostics-artifact-formatter-smoke && /tmp/diagnostics-artifact-formatter-smoke` when changing artifact preview redaction behavior in diagnostics.
 - A minimal local profile-artifact metadata smoke check is available at `Tests/SecurityHarness/profile_artifact_metadata_smoke.swift` and should be run with `swiftc ClashX/General/Managers/ProfileArtifactManager.swift Tests/SecurityHarness/profile_artifact_metadata_smoke.swift -o /tmp/profile-artifact-metadata-smoke && /tmp/profile-artifact-metadata-smoke` when changing artifact metadata shape or source-copy semantics.
 - These harnesses intentionally either compile production files directly, compile production files with small stubs, or keep narrow mirrored legacy coverage. They are still temporary coverage, not a substitute for a real XCTest bundle.
 
 Current temporary-vs-production split:
 
-- `controller_endpoint_builder_smoke.swift`, `redactor_smoke.swift`, `config_validator_smoke.swift`, `diagnostics_log_reader_smoke.swift`, and `profile_artifact_metadata_smoke.swift` call production code directly.
+- `controller_endpoint_builder_smoke.swift`, `redactor_smoke.swift`, `config_validator_smoke.swift`, `diagnostics_log_reader_smoke.swift`, `diagnostics_artifact_formatter_smoke.swift`, and `profile_artifact_metadata_smoke.swift` call production code directly or with minimal compile-only stubs for unrelated app types.
 - `smartx_managed_override_smoke.swift` calls production code with small stubs for unrelated app infrastructure.
 - `security_harness.swift` remains a temporary mirrored compatibility smoke harness because there is no real XCTest target yet.
 - None of these harnesses replace a dedicated Xcode unit-test bundle; they are focused guardrails until the repo gains one.
@@ -37,6 +38,7 @@ New smoke harness coverage added by the SmartX foundation hardening PR:
 
 - `config_validator_smoke.swift` compiles `ConfigValidationIssue.swift`, `TunConfigValidator.swift`, and `DNSConfigValidator.swift` to cover reusable TUN and DNS validation behavior.
 - `diagnostics_log_reader_smoke.swift` compiles `SmartXRedactor.swift` and `DiagnosticsLogReader.swift` to cover bounded log tailing, filtering behavior, and redacted export headers.
+- `diagnostics_artifact_formatter_smoke.swift` compiles `SmartXRedactor.swift` and `DiagnosticsArtifactFormatter.swift` with tiny metadata/path stubs to cover redacted artifact-preview output in the Diagnostics dashboard.
 - `profile_artifact_metadata_smoke.swift` compiles `ProfileArtifactManager.swift` to cover source-copy artifact metadata encoding.
 - `smartx_managed_override_smoke.swift` compiles `SmartXManagedOverrideManager.swift` with lightweight stubs for unrelated app infrastructure to cover explicit bootstrap, no-hidden-write behavior, future-schema persistence skips, normalization, and migration behavior.
 
@@ -46,7 +48,7 @@ New smoke harness coverage added by the SmartX foundation hardening PR:
 - CI builds with code signing disabled (`CODE_SIGNING_ALLOWED=NO`) so it can validate compile/build paths without local certificates.
 - PR CI verifies the Release helper client requirement remains fail-closed in a dedicated validation gate before artifact jobs run.
 - Every PR now uploads an unsigned Debug app artifact for the current modern build line with Xcode 26.x.
-- CI also runs `Tests/SecurityHarness/security_harness.swift`, the endpoint-builder smoke harness, the capability-identity smoke harness, and the new config-validator, diagnostics-log-reader, profile-artifact-metadata, and SmartX-managed-override smoke harnesses.
+- CI also runs `Tests/SecurityHarness/security_harness.swift`, the endpoint-builder smoke harness, the capability-identity smoke harness, and the config-validator, diagnostics-log-reader, diagnostics-artifact-formatter, profile-artifact-metadata, and SmartX-managed-override smoke harnesses.
 - CI does **not** validate notarization, privileged helper installation by SMJobBless, or production signing requirements.
 - Local release testing still requires real Apple Developer identities and a follow-up helper identity migration.
 - SmartX no longer maintains a dedicated macOS 10.14 CI lane in this branch.

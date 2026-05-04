@@ -233,6 +233,36 @@ Current CI scope note:
 - PR CI also runs the helper fail-closed validation, the security harness, the endpoint-builder smoke harness, and the capability-identity smoke harness.
 - Artifact upload does **not** imply Developer ID signing, notarization, helper installation success, or runtime compatibility on the target OS.
 
+### Post-merge DMG artifacts
+
+The branch now also has a dedicated post-merge artifact workflow for manual testing after code lands on `smartx`.
+
+- It runs on `push` to `smartx` and `workflow_dispatch`.
+- It uses the same modern-only baseline as PR artifacts:
+  - `macos-26`
+  - Xcode `26.3`
+  - deployment target `11.0`
+  - Go `1.21.x`
+  - Ruby `3.2`
+- It discovers the built app bundle from `xcodebuild -showBuildSettings` instead of hardcoding `SmartX.app`.
+- It derives the user-facing DMG version tag as `v<SmartX-version>+<git-hash[:8]>`.
+- It creates an unsigned DMG that contains:
+  - the built app bundle
+  - an `Applications` symlink
+  - a drag-to-Applications background image
+  - a README explaining that the artifact is unsigned and not notarized
+- It uploads the DMG and the workflow logs as separate GitHub Actions artifacts.
+
+Important artifact semantics:
+
+- The DMG is unsigned.
+- The DMG is not notarized.
+- The DMG is not a release build.
+- It is meant for manual testing after merge.
+- Privileged helper behavior may not work correctly in unsigned builds.
+- Signed/notarized DMG packaging remains future release work.
+- macOS `10.14` is not supported.
+
 1. checkout
 2. setup Xcode version
 3. setup Go version

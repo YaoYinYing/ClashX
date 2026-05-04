@@ -60,7 +60,7 @@ These should be treated as baseline or near-baseline features for a mihomo-compa
 | proxy groups | `ApiRequest.getMergedProxyData`, `ClashProxy` model | baseline |
 | proxy providers | `ApiRequest.requestProxyProvidersDiagnostics`, `CoreCapability.proxyProviders` | baseline |
 | rule providers | `ApiRequest.requestRuleProvidersDiagnostics`, `CoreCapability.ruleProviders` | baseline |
-| rules / policy groups | `requestPolicyGroups`, `requestPolicyGroup`, `requestPolicyGroupDelay` | baseline |
+| rules / policy groups | `requestPolicyGroups`, `requestPolicyGroup` | baseline |
 | connections | `ClashConnection`, `ConnectionsViewModel` | baseline |
 | logs | stream support in `ApiRequest`, log viewer helpers in diagnostics | baseline |
 | traffic | `ApiRequest` stream delegate and dashboard usage | baseline |
@@ -73,6 +73,8 @@ These should be treated as baseline or near-baseline features for a mihomo-compa
 | debug GC / pprof helper | `runDebugGC`, `copy pprof URLs`, `CoreCapability.debugGC`, `CoreCapability.debugPprof` | optional baseline diagnostics, not ordinary UX |
 
 These should remain usable even if Smart-specific functions are absent.
+
+`requestPolicyGroupDelay` should stay outside the baseline set until SmartX explicitly verifies that it behaves as a stable mihomo-compatible capability across the runtimes SmartX cares about.
 
 ### B. Smart extension capabilities
 
@@ -127,6 +129,7 @@ The current branch already points in this direction:
 - `SmartDashboardViewController` disables Smart surfaces when `smartWeights` or `lightGBMUpgrade` are unsupported or unauthorized.
 - `CoreSettingViewController` explicitly separates helper support from TUN support and now treats unverified TUN updates as unverified rather than as success.
 - `DiagnosticsDashboardViewController` already hides or disables actions based on capability state instead of assuming support.
+- `ConnectionDetailViewModel` only adds Smart explanation sections when Smart metadata is present.
 
 This model should become the standard rule:
 
@@ -164,7 +167,7 @@ Version/build metadata must stay explicit so SmartX can record the exact embedde
 - `build_clash_universal.py`
 - `install_dependency.sh`
 - `.github/workflows/pr-ci.yml`
-- `.github/workflows/post-merge-dmg.yml`
+- `.github/workflows/post-merge-dmg.yml` as a future release-workflow surface, not as a core runtime boundary
 - `scripts/codex-build-debug.sh`
 
 Build and packaging should depend on one runtime boundary instead of scattering core-specific assumptions across CI and release steps.
@@ -229,24 +232,33 @@ The current branch already has several foundations that align with this plan:
 
 - Vernesong Smart fork wiring through `ClashX/goClash/go.mod`
 - Go c-archive bridge in `ClashX/goClash/main.go`
-- Smart LightGBM override path through app settings, override persistence, and Go-side raw-config mutation
 - `ControllerEndpointBuilder`
-- `CoreCapability`
 - `CoreCapabilityProbe`
+- `SmartXRedactor`
+- `SmartXManagedOverrideManager`
+- `LightGBMSettingsViewModel`
+- `TunLifecycleCoordinator`
+- `TunConfigValidator` / `DNSConfigValidator`
+- Smart LightGBM override path through app settings, managed-override persistence, and Go-side raw-config mutation
 - Smart Dashboard
 - Core Settings page
 - Diagnostics Dashboard
-- Profile artifact layer
+- source-copy profile artifacts through `ProfileArtifactManager`
 - `DiagnosticsBundleExporter`
-- `SmartXRedactor`
+- `DiagnosticsReportBuilder`
 - provider health history
 - helper scripts and lightweight smoke harnesses in `Tests/SecurityHarness`
 
 The same inspection also shows why these foundations should be hardened rather than expanded as another feature blob:
 
 - `ApiRequest.swift` is still a dumping ground for both baseline and Smart-only endpoints.
-- `CoreCapabilityProbe` is still a minimal read-only probe layer and does not yet cover the full capability matrix.
+- `CoreCapabilityProbe` is already present as first-pass groundwork, but it is still a minimal read-only probe layer and does not yet cover the full capability matrix.
 - `CoreSettingViewController.swift`, `SmartDashboardViewController.swift`, and `DiagnosticsDashboardViewController.swift` still carry large controller responsibilities even after some helper extraction.
+- `DiagnosticsDashboardViewController` is explicitly transitional and should be decomposed before more panels are added.
+- `SmartXManagedOverrideManager` is groundwork for Smart-managed overrides, not a full profile workspace or effective-config generator.
+- `LightGBMSettingsViewModel` centralizes shared behavior, but it does not by itself solve the remaining runtime/capability boundary work.
+- `TunLifecycleCoordinator` is guarded external-controller config patching, not embedded-core TUN support or a full privileged TUN lifecycle.
+- `TunConfigValidator` and `DNSConfigValidator` are reusable validation groundwork, not the end state of structured write flows.
 - `ProfileArtifactManager` is still source-copy oriented rather than a true generated effective config pipeline.
 - `ConnectionDetailViewModel` provides Smart decision explanation by inference from current observable state, not from a dedicated core-side explanation endpoint.
 - `build_clash_universal.py` and `upgrade_core.py` still reflect an operationally fragile core-upgrade path.
@@ -256,117 +268,99 @@ The right next step is not more product surface. The right next step is to make 
 
 ## Update Phases
 
-### Phase 0: Stabilize Current SmartX Foundation
+### Phase 1: Documentation and Memory Sync
 
 Goals:
 
-- keep build scripts and CI reliable
-- align docs with actual implementation
+- keep `README.md`, `docs/memory/`, and planning docs aligned with the actual branch
 - keep SmartX terminology honest
-- avoid new feature expansion until current preview surfaces are stable
+- document current groundwork as groundwork, not as completed architecture
+- avoid new feature expansion while preview surfaces are still settling
 
 Concrete repo anchors:
 
-- `scripts/ensure-xcworkspace.sh`
-- `scripts/codex-build-debug.sh`
-- `scripts/codex-test-focused.sh`
-- `.github/workflows/pr-ci.yml`
+- `README.md`
 - `docs/memory/`
+- `docs/plan/`
+- `.github/workflows/pr-ci.yml`
+- `scripts/`
 
-This phase should keep merge quality high and avoid feature drift.
+This phase keeps the branch explainable and prevents future PRs from building on stale assumptions.
 
-### Phase 1: API Layer and Endpoint Boundary
+### Phase 2: `ApiRequest` Domain Split
 
 Goals:
 
-- split `ApiRequest` into smaller domain clients
+- split `ApiRequest.swift` into smaller domain clients
 - require `ControllerEndpointBuilder` for all new or touched controller paths
 - unify result types and error mapping
-- distinguish unsupported, unauthorized, unavailable, degraded, and failed
+- separate baseline mihomo-compatible endpoints from Smart-only wrappers
 
 Likely slices:
 
-- config/runtime client
+- runtime/config client
+- provider and policy client
 - Smart extension client
-- diagnostics/maintenance client
-- provider/policy client
+- diagnostics and maintenance client
 
-`ApiRequest` should stop being the permanent home for every endpoint.
+The target is decomposition and boundary cleanup, not a new feature surface.
 
-### Phase 2: Capability Probe Completion
+### Phase 3: Diagnostics Dashboard Decomposition
+
+Goals:
+
+- decompose `DiagnosticsDashboardViewController`
+- move formatting, state derivation, maintenance actions, and report/export logic into smaller helpers or view models
+- keep the dashboard transitional until this decomposition exists
+- avoid adding more panels to the current monolithic controller first
+
+Diagnostics growth should come after structure, not before it.
+
+### Phase 4: Generated Effective Config MVP
+
+Goals:
+
+- evolve from current source-copy profile artifacts toward a generated effective config MVP
+- keep subscription sources read-only
+- store local SmartX-managed adjustments as overlays instead of editing source material
+- generate a reproducible effective config for reload
+- validate before reload and keep rollback behavior explicit
+
+Current managed override and source-copy artifact layers are groundwork for this phase, not completion of it.
+
+### Phase 5: TUN Lifecycle Hardening
+
+Goals:
+
+- keep current TUN wording honest: guarded external-controller patching only
+- harden preflight, request, verification, degraded-result, and recovery behavior
+- define what rollback actually means before claiming it
+- keep embedded-core TUN support explicitly out of scope until a real privileged architecture exists
+
+This phase is about hardening the existing guarded lifecycle seam, not claiming full TUN support.
+
+### Phase 6: Capability Probe Expansion
 
 Goals:
 
 - expand `CoreCapabilityProbe`
 - key capability cache by controller identity plus core version and metadata
-- probe Smart endpoints safely
-- probe generic mihomo endpoints separately
-- avoid mutating user state during probes unless using an explicit guarded write-and-restore flow
+- probe baseline mihomo-compatible endpoints separately from Smart extensions
+- keep probes read-only unless an explicit guarded write-and-restore path is justified
+- make UI and diagnostics rely on probe state instead of endpoint folklore
 
-This phase should complete the capability-based graceful degradation model.
+This phase completes the capability-based graceful degradation model around the groundwork that already exists.
 
-### Phase 3: Smart Extension Layer
-
-Goals:
-
-- isolate Smart-specific API wrappers
-- model Smart weights, cache, LightGBM, Smart block, and Smart target as optional extension capabilities
-- make Smart Dashboard consume capability state instead of fork assumptions
-- ensure ordinary mihomo fallback disables Smart features cleanly
-
-This is where the optional Smart capability layer becomes an explicit architecture surface instead of a set of opportunistic additions.
-
-### Phase 4: Profile Workspace and Override Layer
+### Phase 7: Real Test Target and Harness Promotion
 
 Goals:
 
-- evolve from selected YAML filenames to a profile workspace
-- define Remote, Local, Merge, Script, Generated Effective, and Last-known-good profiles
-- keep subscription sources read-only
-- store local adjustments as overlays
-- generate reproducible effective configs
-- validate before reload
-- roll back on failure
+- add a real Xcode test target
+- promote the most valuable smoke harness logic into direct unit coverage where practical
+- keep pure-logic harnesses only where full test-target integration is still impractical
+- cover endpoint composition, capability transitions, override persistence, diagnostics redaction, and artifact semantics with real tests over time
 
-Current profile artifacts and managed override groundwork should lead into this phase, not be mistaken for its completion.
-
-### Phase 5: TUN and DNS as Structured Models
-
-Goals:
-
-- keep current TUN support honest as limited config patching
-- design TUN lifecycle: preflight, enable, verify, rollback, disable, recover
-- model DNS as a first-class structure
-- distinguish macOS-supported fields from Linux/Android-only fields
-- add validation before writes
-
-This phase should not pretend config visibility equals runtime support.
-
-### Phase 6: Diagnostics and Observability
-
-Goals:
-
-- decompose `DiagnosticsDashboardViewController`
-- build structured route explanation where practical
-- add memory, traffic, provider, and Smart history surfaces where they are genuinely useful
-- improve DNS query workflow
-- improve provider and rule provenance
-- keep diagnostics bundles redacted by design
-
-Diagnostics should remain useful for maintainers without turning into a new monolithic controller or a sensitive-data leak.
-
-### Phase 7: Release, Signing, and Supply Chain
-
-Goals:
-
-- finalize SmartX bundle/helper identity migration
-- remove or deliberately own inherited analytics and crash reporting
-- configure Developer ID signing, notarization, stapling, and update signing if used
-- pin dashboard and resource assets
-- record core source, commit, and build metadata
-- keep AGPL corresponding-source discipline
-
-This phase is necessary for a real SmartX release, not just for a working preview branch.
+This phase should turn the current smoke-harness safety net into a more maintainable test strategy.
 
 ## Non-goals
 
@@ -380,6 +374,7 @@ This plan does not mean:
 - treating current preview panels as final architecture
 - pretending config visibility equals TUN runtime support
 - letting Smart-only failures break baseline mihomo-compatible functionality
+- assuming the current managed override layer is already a full profile workspace
 
 The plan is intentionally about maintainer-visible core migration boundaries, not user-visible runtime complexity.
 
@@ -397,6 +392,11 @@ SmartX should be considered aligned with this plan when:
 - diagnostics exports redact secrets, subscription URLs, proxy credentials, and sensitive paths
 - build and release metadata record the exact embedded core source and version
 - future Smart-to-mihomo migration mainly touches adapter, probe, and build boundaries
+
+Current branch note:
+
+- SmartX already has first-pass groundwork in `ControllerEndpointBuilder`, `CoreCapabilityProbe`, `SmartXRedactor`, `SmartXManagedOverrideManager`, `LightGBMSettingsViewModel`, `TunLifecycleCoordinator`, `TunConfigValidator`, `DNSConfigValidator`, and source-copy profile artifacts.
+- SmartX does not yet have a generated effective config pipeline, a decomposed diagnostics dashboard, embedded-core TUN support, or a fully expanded capability-probe architecture.
 
 ## Implementation Guidance for Future PRs
 

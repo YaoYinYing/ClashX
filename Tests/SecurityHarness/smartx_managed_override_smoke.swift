@@ -5,8 +5,12 @@ enum LoggerLevel {
 }
 
 enum Logger {
+    static var loggedWarnings = [String]()
+
     static func log(_ message: String, level: LoggerLevel) {
-        _ = (message, level)
+        if level == .warning {
+            loggedWarnings.append(message)
+        }
     }
 }
 
@@ -79,6 +83,17 @@ enum SmartXManagedOverrideSmokeMain {
             let persisted = SmartXManagedOverrideManager.load()
             expect(persisted?.lightGBM?.modelURL == "https://example.com/custom-model.bin", "persist should update the managed override file")
             expect(persisted?.lightGBM?.updateIntervalHours == 12, "persist should keep valid update intervals")
+
+            let futureOverride = SmartXManagedOverride(schemaVersion: SmartXManagedOverrideManager.currentSchemaVersion + 1,
+                                                       lightGBM: LightGBMOverride(enabled: true,
+                                                                                  modelURL: "https://example.com/future-model.bin",
+                                                                                  autoUpdate: false,
+                                                                                  updateIntervalHours: 6))
+            try SmartXManagedOverrideManager.save(futureOverride)
+            Logger.loggedWarnings.removeAll()
+            let futureLoaded = SmartXManagedOverrideManager.load()
+            expect(futureLoaded?.schemaVersion == SmartXManagedOverrideManager.currentSchemaVersion + 1, "future schema version should be preserved on load")
+            expect(Logger.loggedWarnings.contains { $0.contains("future SmartX managed override schema version") }, "future schema load should emit a warning")
 
             print("smartx_managed_override_smoke passed")
         } catch {

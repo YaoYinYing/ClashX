@@ -181,7 +181,7 @@ This should be:
 
 ### Last-known-good profile snapshot
 
-A Last-known-good profile snapshot is the most recent generated effective config that successfully validated and loaded.
+A Last-known-good profile snapshot is the most recent successfully loaded source-copy artifact that SmartX kept as a rollback anchor.
 
 This is the rollback anchor when:
 

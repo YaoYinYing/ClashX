@@ -130,6 +130,7 @@ jobs:
         run: |
           set -o pipefail
           swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/SmartXRedactor.swift \
             ClashX/General/Utils/DiagnosticsLogReader.swift \
             Tests/SecurityHarness/diagnostics_log_reader_smoke.swift \
             -o /tmp/diagnostics-log-reader-smoke
@@ -155,7 +156,7 @@ jobs:
 
       - name: Upload validation logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: validation-logs-PR-${{ github.event.pull_request.number || 'manual' }}-${{ github.sha }}
           path: .ci-logs/**
@@ -177,6 +178,8 @@ jobs:
             deployment_target: "10.14"
             configuration: Debug
             artifact_suffix: Legacy-macOS10.14-Debug
+          # The modern lane depends on GitHub-hosted macos-26 and an available Xcode 26.x image.
+          # If 26.3 disappears, move to the nearest supported 26.x runner/Xcode pair instead of deleting this lane.
           - flavor: modern
             display_name: Modern
             runner: macos-26
@@ -292,6 +295,7 @@ jobs:
         run: |
           set -o pipefail
           swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/SmartXRedactor.swift \
             ClashX/General/Utils/DiagnosticsLogReader.swift \
             Tests/SecurityHarness/diagnostics_log_reader_smoke.swift \
             -o /tmp/diagnostics-log-reader-smoke
@@ -346,7 +350,7 @@ jobs:
 
       - name: Upload PR artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: SmartX-${{ matrix.artifact_suffix }}-PR-${{ github.event.pull_request.number || 'manual' }}-${{ github.sha }}
           path: |

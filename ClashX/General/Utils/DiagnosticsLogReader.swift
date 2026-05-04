@@ -16,9 +16,10 @@ struct DiagnosticsLogSnapshot {
     let displayedLineCount: Int
     let body: String
 
-    func renderedOutput() -> String {
+    func renderedOutput(redactFilePath: Bool = false) -> String {
+        let displayPath = redactFilePath ? (SmartXRedactor.redactPath(filePath) ?? filePath) : filePath
         let header = [
-            "File: \(filePath)",
+            "File: \(displayPath)",
             "Filter: \(filterTitle)",
             "Search: \(searchQuery.isEmpty ? "none" : searchQuery)",
             "Paused: \(paused ? "yes" : "no")",

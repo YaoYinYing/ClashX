@@ -4,6 +4,11 @@
 //
 //  Created by Codex on 2026/5/4.
 //
+//  This file persists SmartX-owned JSON overrides at Paths.smartXManagedOverrideURL.
+//  It does not mutate remote subscription YAML, and it is not yet merged into a
+//  generated effective config pipeline. The current override file exists to keep
+//  SmartX-managed LightGBM settings durable and to sync those runtime settings
+//  into the active core path.
 
 import Foundation
 
@@ -110,8 +115,11 @@ enum SmartXManagedOverrideManager {
     }
 
     private static func normalized(_ overrideModel: SmartXManagedOverride) -> SmartXManagedOverride {
-        SmartXManagedOverride(schemaVersion: max(currentSchemaVersion, overrideModel.schemaVersion),
-                              lightGBM: overrideModel.lightGBM.map(normalized))
+        if overrideModel.schemaVersion > currentSchemaVersion {
+            Logger.log("Loaded future SmartX managed override schema version \(overrideModel.schemaVersion). SmartX will preserve that file version until settings are saved again.", level: .warning)
+        }
+        return SmartXManagedOverride(schemaVersion: max(currentSchemaVersion, overrideModel.schemaVersion),
+                                     lightGBM: overrideModel.lightGBM.map(normalized))
     }
 
     private static func normalized(_ overrideValue: LightGBMOverride) -> LightGBMOverride {

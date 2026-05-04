@@ -38,6 +38,7 @@ The current intent is:
 - when override is enabled, SmartX supplies its own model URL and update policy
 - if the stored model URL is empty, `effectiveSmartLightGBMModelUrl` falls back to the default Vernesong release URL
 - SmartX persists the override under `~/.config/clash/.smartx/overrides/smartx-managed.json` instead of mutating remote subscription YAML
+- `Paths.smartXManagedOverrideURL` is the concrete JSON path for that SmartX-owned override file
 
 These values are passed from Swift to Go through the exported bridge function `clash_setLightGBMOptions`, which is defined in [`ClashX/goClash/main.go`](../../ClashX/goClash/main.go) and called by `Settings.syncSmartLightGBMOptionsToCore()`.
 

@@ -5,6 +5,7 @@
 //  Created by Codex on 2026/5/4.
 //
 
+import AppKit
 import Foundation
 
 struct LightGBMSettingsState {
@@ -19,6 +20,26 @@ struct LightGBMSettingsState {
     let manualUpdateText: String
 }
 
+struct LightGBMSettingsInput {
+    let overrideEnabled: Bool
+    let modelURL: String
+    let autoUpdateEnabled: Bool
+    let updateIntervalHours: Int
+}
+
+struct LightGBMSettingsControlBindings {
+    let overrideButton: NSButton
+    let autoUpdateButton: NSButton
+    let modelURLField: NSTextField
+    let updateIntervalField: NSTextField
+    let resetModelURLButton: NSButton
+    let modelStatusLabel: NSTextField
+    let modelPathLabel: NSTextField
+    let modelModifiedLabel: NSTextField?
+    let manualUpdateLabel: NSTextField?
+    let overrideSummaryLabel: NSTextField?
+}
+
 enum LightGBMSettingsUpdateResult {
     case success
     case unsupported
@@ -28,6 +49,35 @@ enum LightGBMSettingsUpdateResult {
 
 enum LightGBMSettingsViewModel {
     static let overrideExplanation = NSLocalizedString("This override is stored by SmartX. It is not written into remote subscription files. Full generated effective config support is planned.", comment: "")
+
+    static func collectInput(overrideButton: NSButton,
+                             modelURLField: NSTextField,
+                             autoUpdateButton: NSButton,
+                             updateIntervalField: NSTextField) -> LightGBMSettingsInput {
+        LightGBMSettingsInput(overrideEnabled: overrideButton.state == .on,
+                              modelURL: modelURLField.stringValue,
+                              autoUpdateEnabled: autoUpdateButton.state == .on,
+                              updateIntervalHours: max(1, updateIntervalField.integerValue))
+    }
+
+    static func apply(_ state: LightGBMSettingsState,
+                      to controls: LightGBMSettingsControlBindings,
+                      statusTextOverride: String? = nil) {
+        controls.overrideButton.state = state.overrideEnabled ? .on : .off
+        controls.autoUpdateButton.state = state.autoUpdateEnabled ? .on : .off
+        controls.modelURLField.stringValue = state.modelURL
+        controls.updateIntervalField.stringValue = "\(state.updateIntervalHours)"
+        let enabled = controlsEnabled(for: state)
+        controls.autoUpdateButton.isEnabled = enabled
+        controls.modelURLField.isEnabled = enabled
+        controls.updateIntervalField.isEnabled = enabled
+        controls.resetModelURLButton.isEnabled = enabled
+        controls.modelStatusLabel.stringValue = statusTextOverride ?? state.modelStatusText
+        controls.modelPathLabel.stringValue = state.modelPath
+        controls.modelModifiedLabel?.stringValue = state.modelModifiedText
+        controls.manualUpdateLabel?.stringValue = state.manualUpdateText
+        controls.overrideSummaryLabel?.stringValue = state.overrideSummaryText
+    }
 
     static func currentState(isCoreRunning: Bool, capabilityAvailability: CoreEndpointAvailability) -> LightGBMSettingsState {
         SmartXManagedOverrideManager.bootstrapIfNeeded()
@@ -83,6 +133,17 @@ enum LightGBMSettingsViewModel {
         return currentState(isCoreRunning: isCoreRunning, capabilityAvailability: capabilityAvailability)
     }
 
+    static func save(input: LightGBMSettingsInput,
+                     isCoreRunning: Bool,
+                     capabilityAvailability: CoreEndpointAvailability) -> LightGBMSettingsState {
+        save(overrideEnabled: input.overrideEnabled,
+             modelURL: input.modelURL,
+             autoUpdate: input.autoUpdateEnabled,
+             updateIntervalHours: input.updateIntervalHours,
+             isCoreRunning: isCoreRunning,
+             capabilityAvailability: capabilityAvailability)
+    }
+
     static func resetModelURL(isCoreRunning: Bool, capabilityAvailability: CoreEndpointAvailability) -> LightGBMSettingsState {
         save(overrideEnabled: Settings.smartLightGBMOverrideConfig,
              modelURL: Settings.defaultSmartLightGBMModelUrl,
@@ -135,6 +196,17 @@ enum LightGBMSettingsViewModel {
                                         capabilityAvailability: .degraded))
             }
         }
+    }
+
+    static func requestModelUpdate(input: LightGBMSettingsInput,
+                                   isCoreRunning: Bool,
+                                   completion: @escaping (LightGBMSettingsUpdateResult, LightGBMSettingsState) -> Void) {
+        requestModelUpdate(overrideEnabled: input.overrideEnabled,
+                           modelURL: input.modelURL,
+                           autoUpdate: input.autoUpdateEnabled,
+                           updateIntervalHours: input.updateIntervalHours,
+                           isCoreRunning: isCoreRunning,
+                           completion: completion)
     }
 
     static func controlsEnabled(for state: LightGBMSettingsState) -> Bool {

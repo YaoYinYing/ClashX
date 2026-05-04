@@ -288,10 +288,10 @@ class SmartDashboardViewController: NSViewController {
 
     @objc private func actionUpdateLightGBMModel() {
         updateModelButton.isEnabled = false
-        LightGBMSettingsViewModel.requestModelUpdate(overrideEnabled: modelOverrideButton.state == .on,
-                                                     modelURL: modelUrlField.stringValue,
-                                                     autoUpdate: modelAutoUpdateButton.state == .on,
-                                                     updateIntervalHours: max(1, modelIntervalField.integerValue),
+        LightGBMSettingsViewModel.requestModelUpdate(input: LightGBMSettingsViewModel.collectInput(overrideButton: modelOverrideButton,
+                                                                                                    modelURLField: modelUrlField,
+                                                                                                    autoUpdateButton: modelAutoUpdateButton,
+                                                                                                    updateIntervalField: modelIntervalField),
                                                      isCoreRunning: ConfigManager.shared.isRunning) { [weak self] result, state in
             guard let self else { return }
             switch result {
@@ -322,10 +322,10 @@ class SmartDashboardViewController: NSViewController {
     }
 
     @objc private func actionModelSettingsChanged() {
-        let state = LightGBMSettingsViewModel.save(overrideEnabled: modelOverrideButton.state == .on,
-                                                   modelURL: modelUrlField.stringValue,
-                                                   autoUpdate: modelAutoUpdateButton.state == .on,
-                                                   updateIntervalHours: max(1, modelIntervalField.integerValue),
+        let state = LightGBMSettingsViewModel.save(input: LightGBMSettingsViewModel.collectInput(overrideButton: modelOverrideButton,
+                                                                                                 modelURLField: modelUrlField,
+                                                                                                 autoUpdateButton: modelAutoUpdateButton,
+                                                                                                 updateIntervalField: modelIntervalField),
                                                    isCoreRunning: ConfigManager.shared.isRunning,
                                                    capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
         applyModelState(state)
@@ -345,19 +345,20 @@ class SmartDashboardViewController: NSViewController {
     }
 
     private func applyModelState(_ state: LightGBMSettingsState) {
-        modelOverrideButton.state = state.overrideEnabled ? .on : .off
-        modelAutoUpdateButton.state = state.autoUpdateEnabled ? .on : .off
-        modelUrlField.stringValue = state.modelURL
-        modelIntervalField.stringValue = "\(state.updateIntervalHours)"
-        let enabled = LightGBMSettingsViewModel.controlsEnabled(for: state)
-        modelUrlField.isEnabled = enabled
-        modelAutoUpdateButton.isEnabled = enabled
-        modelIntervalField.isEnabled = enabled
-        resetModelUrlButton.isEnabled = enabled
-        modelStatusLabel.stringValue = String(format: NSLocalizedString("Model.bin: %@, modified %@", comment: ""),
-                                              state.modelStatusText,
-                                              state.modelModifiedText)
-        modelPathLabel.stringValue = state.modelPath
+        LightGBMSettingsViewModel.apply(state,
+                                        to: LightGBMSettingsControlBindings(overrideButton: modelOverrideButton,
+                                                                            autoUpdateButton: modelAutoUpdateButton,
+                                                                            modelURLField: modelUrlField,
+                                                                            updateIntervalField: modelIntervalField,
+                                                                            resetModelURLButton: resetModelUrlButton,
+                                                                            modelStatusLabel: modelStatusLabel,
+                                                                            modelPathLabel: modelPathLabel,
+                                                                            modelModifiedLabel: nil,
+                                                                            manualUpdateLabel: nil,
+                                                                            overrideSummaryLabel: nil),
+                                        statusTextOverride: String(format: NSLocalizedString("Model.bin: %@, modified %@", comment: ""),
+                                                                   state.modelStatusText,
+                                                                   state.modelModifiedText))
     }
 }
 

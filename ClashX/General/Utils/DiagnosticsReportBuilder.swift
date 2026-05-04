@@ -141,6 +141,7 @@ enum DiagnosticsReportBuilder {
             "-----------------",
             artifactLine(title: "Successful Reload Artifact", path: Paths.successfulReloadArtifactURL.path, metadata: generatedMetadata),
             artifactLine(title: "Last Known Good Config", path: Paths.lastKnownGoodConfigURL.path, metadata: lastKnownGoodMetadata),
+            managedOverrideLine(),
             metadataLine(title: "Successful Reload Metadata", path: Paths.successfulReloadMetadataURL.path),
             metadataLine(title: "Last Known Good Metadata", path: Paths.lastKnownGoodMetadataURL.path)
         ]
@@ -270,6 +271,10 @@ enum DiagnosticsReportBuilder {
 
     private static func metadataLine(title: String, path: String) -> String {
         fileStatusLine(title: title, path: path)
+    }
+
+    private static func managedOverrideLine() -> String {
+        fileStatusLine(title: "SmartX Managed Override", path: Paths.smartXManagedOverrideURL.path)
     }
 
     private static func buildProfileDescriptor(named name: String) -> ConfigProfileDescriptor {

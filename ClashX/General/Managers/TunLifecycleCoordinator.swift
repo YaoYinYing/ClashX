@@ -11,6 +11,14 @@ struct TunLifecycleUIState {
     let enabled: Bool
 }
 
+private struct TunLifecycleLoadError: LocalizedError {
+    let message: String
+
+    var errorDescription: String? {
+        message
+    }
+}
+
 enum TunLifecycleResult {
     case success(message: String, previousState: TunLifecycleUIState)
     case unsupported(message: String, previousState: TunLifecycleUIState)
@@ -44,25 +52,26 @@ enum TunLifecycleResult {
 
 final class TunLifecycleCoordinator {
     func setTunEnabled(_ enabled: Bool, completion: @escaping (TunLifecycleResult) -> Void) {
-        let previousState = TunLifecycleUIState(enabled: ConfigManager.shared.currentConfig?.tun?.enable ?? false)
+        let fallbackPreviousState = TunLifecycleUIState(enabled: ConfigManager.shared.currentConfig?.tun?.enable ?? false)
 
         guard ConfigManager.shared.isRunning else {
             completion(.failed(message: NSLocalizedString("The active controller is not running, so SmartX cannot attempt a TUN update.", comment: ""),
-                               previousState: previousState))
+                               previousState: fallbackPreviousState))
             return
         }
 
         guard !Settings.isUsingEmbeddedCore else {
             completion(.unsupported(message: NSLocalizedString("Embedded core TUN cannot be enabled from SmartX yet. It requires a privileged core startup path or another TUN-capable architecture.", comment: ""),
-                                    previousState: previousState))
+                                    previousState: fallbackPreviousState))
             return
         }
 
         loadCurrentConfig { result in
             switch result {
-            case let .failure(message):
-                completion(.failed(message: message, previousState: previousState))
+            case let .failure(error):
+                completion(.failed(message: error.localizedDescription, previousState: fallbackPreviousState))
             case let .success(config):
+                let previousState = TunLifecycleUIState(enabled: config.tun?.enable ?? fallbackPreviousState.enabled)
                 guard config.tun != nil else {
                     completion(.unsupported(message: NSLocalizedString("The current controller config does not expose a tun section, so SmartX keeps TUN disabled.", comment: ""),
                                             previousState: previousState))
@@ -75,7 +84,7 @@ final class TunLifecycleCoordinator {
                     let blockingIssues = tunValidation.blockingErrors + dnsValidation.issues.filter { $0.severity == .blocking }
                     if !blockingIssues.isEmpty {
                         completion(.blockedByValidation(issues: blockingIssues,
-                                                        recoveryText: NSLocalizedString("SmartX blocked the TUN update because the current config has blocking validation issues. Review the warnings on the Core settings page, fix the config, and try again.", comment: ""),
+                                                        recoveryText: NSLocalizedString("SmartX blocked the TUN update because the current config has blocking validation issues. SmartX will restore the previous UI state, but it does not roll back controller state automatically. Review the warnings on the Core settings page, fix the config, and try again.", comment: ""),
                                                         previousState: previousState))
                         return
                     }
@@ -98,7 +107,7 @@ final class TunLifecycleCoordinator {
         }
     }
 
-    private func loadCurrentConfig(completion: @escaping (Result<ClashConfig, String>) -> Void) {
+    private func loadCurrentConfig(completion: @escaping (Result<ClashConfig, TunLifecycleLoadError>) -> Void) {
         if ApiRequest.useDirectApi(), let config = ConfigManager.shared.currentConfig {
             completion(.success(config))
             return
@@ -109,9 +118,9 @@ final class TunLifecycleCoordinator {
             case let .success(config):
                 completion(.success(config))
             case .unsupported:
-                completion(.failure(NSLocalizedString("/configs is unsupported by the active controller.", comment: "")))
+                completion(.failure(TunLifecycleLoadError(message: NSLocalizedString("/configs is unsupported by the active controller.", comment: ""))))
             case let .unauthorized(message), let .failed(message):
-                completion(.failure(message))
+                completion(.failure(TunLifecycleLoadError(message: message)))
             }
         }
     }

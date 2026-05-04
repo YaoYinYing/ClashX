@@ -55,6 +55,7 @@ enum DNSConfigValidator {
             issues.append(ConfigValidationIssue(severity: .warning,
                                                 message: NSLocalizedString("Warning: respect-rules is enabled without an obvious configured resolver path.", comment: "")))
         }
+        // fake-ip mode is a compatibility risk, but it should remain non-blocking here.
         if dns.enhancedMode?.caseInsensitiveCompare("fake-ip") == .orderedSame {
             issues.append(ConfigValidationIssue(severity: .warning,
                                                 message: NSLocalizedString("Warning: fake-ip mode can break software that expects direct real-IP DNS answers.", comment: "")))

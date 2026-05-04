@@ -10,6 +10,7 @@ import SwiftyJSON
 
 @available(macOS 10.15, *)
 class DiagnosticsDashboardViewController: NSViewController {
+    // TODO: This controller is still transitional. Keep moving formatting and export helpers out in small pieces instead of adding more unrelated logic here.
     private enum LogLevelFilter: Int, CaseIterable {
         case all
         case error
@@ -86,6 +87,7 @@ class DiagnosticsDashboardViewController: NSViewController {
     private var latestRuleProviderResult: ControllerJSONResult?
     private var logRefreshTimer: Timer?
     private var isLogRefreshPaused = false
+    private var currentLogSnapshot: DiagnosticsLogSnapshot?
 
     override func loadView() {
         view = NSView(frame: NSRect(origin: .zero, size: CGSize(width: 900, height: 600)))
@@ -319,6 +321,7 @@ class DiagnosticsDashboardViewController: NSViewController {
     private func refreshLogs(announce: Bool = true) {
         let path = Logger.shared.logFilePath()
         guard !path.isEmpty else {
+            currentLogSnapshot = nil
             logOutput = NSLocalizedString("No active log file is available yet.", comment: "")
             if announce {
                 setStatus(NSLocalizedString("No active log file is available yet.", comment: ""))
@@ -335,11 +338,13 @@ class DiagnosticsDashboardViewController: NSViewController {
                                                          filterToken: filter.token,
                                                          searchQuery: logSearchField.stringValue,
                                                          paused: isLogRefreshPaused)
+            currentLogSnapshot = snapshot
             logOutput = snapshot.renderedOutput()
             if announce {
                 setStatus(NSLocalizedString("Log viewer refreshed from the current rolling log file.", comment: ""))
             }
         } catch {
+            currentLogSnapshot = nil
             logOutput = String(format: NSLocalizedString("The current log file could not be read: %@", comment: ""), path)
             if announce {
                 setStatus(NSLocalizedString("Failed to read the current log file.", comment: ""))
@@ -356,7 +361,8 @@ class DiagnosticsDashboardViewController: NSViewController {
                                   metadataURL: Paths.successfulReloadMetadataURL),
             formatArtifactPreview(title: "Last Known Good Config",
                                   configURL: Paths.lastKnownGoodConfigURL,
-                                  metadataURL: Paths.lastKnownGoodMetadataURL)
+                                  metadataURL: Paths.lastKnownGoodMetadataURL),
+            formatManagedOverrideStatus()
         ].joined(separator: "\n\n")
         if announce {
             setStatus(NSLocalizedString("Profile artifact inspection refreshed.", comment: ""))
@@ -788,7 +794,8 @@ class DiagnosticsDashboardViewController: NSViewController {
         let handleSave: (NSApplication.ModalResponse) -> Void = { [weak self] response in
             guard let self, response == .OK, let url = savePanel.url else { return }
             do {
-                try self.logOutput.write(to: url, atomically: true, encoding: .utf8)
+                let exportText = self.currentLogSnapshot?.renderedOutput(redactFilePath: true) ?? self.logOutput
+                try exportText.write(to: url, atomically: true, encoding: .utf8)
                 self.setStatus(NSLocalizedString("Filtered log output was exported successfully.", comment: ""))
             } catch {
                 self.setStatus(String(format: NSLocalizedString("Failed to export filtered log output: %@", comment: ""), error.localizedDescription))
@@ -930,6 +937,15 @@ class DiagnosticsDashboardViewController: NSViewController {
         lines.append("Preview:")
         lines.append(preview)
         return lines.joined(separator: "\n")
+    }
+
+    private func formatManagedOverrideStatus() -> String {
+        let path = Paths.smartXManagedOverrideURL.path
+        let redactedPath = SmartXRedactor.redactPath(path) ?? path
+        if FileManager.default.fileExists(atPath: path) {
+            return "SmartX Managed Override\nStatus: present at \(redactedPath)"
+        }
+        return "SmartX Managed Override\nStatus: missing"
     }
 
     private func previewText(from raw: String, maxLines: Int) -> String {

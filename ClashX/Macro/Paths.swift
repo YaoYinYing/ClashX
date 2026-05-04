@@ -94,6 +94,8 @@ enum Paths {
             .standardizedFileURL
     }
 
+    /// SmartX-owned JSON override file for persisted LightGBM settings. This is separate
+    /// from remote subscription YAML and separate from the future generated effective config.
     static var smartXManagedOverrideURL: URL {
         smartXOverridesDirectoryURL
             .appendingPathComponent("smartx-managed.json", isDirectory: false)

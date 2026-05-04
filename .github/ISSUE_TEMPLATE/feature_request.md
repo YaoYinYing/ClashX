@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 <!-- The English version is available. -->
-感谢你向 ClashX 提交 Feature Request！
+感谢你向 SmartX 提交 Feature Request！
 在提交之前，请确认：
 
 - [ ] 我已经在 [Issue Tracker](……/) 中找过我要提出的请求
@@ -16,7 +16,7 @@ assignees: ''
 请注意，如果你并没有遵照这个 issue template 填写内容，我们将直接关闭这个 issue。
 
 <!--
-Thanks for submitting a feature request towards the ClashX!
+Thanks for submitting a feature request towards SmartX!
 But before so, please do the following checklist:
 
 - [ ] I have searched on the [issue tracker](……/) before creating the issue.

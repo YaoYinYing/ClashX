@@ -111,8 +111,14 @@ class StructedLogReq: WebSocketDelegate {
     let onLogUpdate = PassthroughSubject<StructedLog, Never>()
     init(level: ClashLogLevel = .warning) {
         logLevel = level
-        if let url = URL(string: ConfigManager.webSocketUrl.appending("/logs?format=structured&level=\(logLevel.rawValue)")) {
+        if let url = try? ControllerEndpointBuilder.websocketURL(path: "/logs",
+                                                                 queryItems: [
+                                                                     URLQueryItem(name: "format", value: "structured"),
+                                                                     URLQueryItem(name: "level", value: logLevel.rawValue)
+                                                                 ]) {
             socket = WebSocket(url: url)
+        } else {
+            Logger.log("structured log websocket unavailable: invalid controller URL", level: .warning)
         }
         for header in ApiRequest.authHeader() {
             socket?.request.setValue(header.value, forHTTPHeaderField: header.name)

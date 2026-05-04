@@ -56,7 +56,7 @@ class DebugSettingViewController: NSViewController {
 
     @IBAction func actionSetUseApiMode(_ sender: Any) {
         let alert = NSAlert()
-        alert.informativeText = NSLocalizedString("Need to Restart the ClashX to Take effect, Please start clashX manually", comment: "")
+        alert.informativeText = NSLocalizedString("Restart SmartX to apply the change, then launch SmartX manually.", comment: "")
         alert.addButton(withTitle: NSLocalizedString("Apply and Quit", comment: ""))
         alert.addButton(withTitle: NSLocalizedString("Cancel", comment: ""))
         if alert.runModal() == .alertFirstButtonReturn {

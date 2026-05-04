@@ -24,3 +24,14 @@ build_derived_data
 /.derivedData
 /.derivedData-local
 /.omx
+/.codex-logs
+*.psd
+ps/icon_512x512.png
+ps/icon_32x32@2x.png
+ps/icon_32x32.png
+ps/icon_256x256@2x.png
+ps/icon_256x256.png
+ps/icon_16x16@2x.png
+ps/icon_16x16.png
+ps/icon_128x128@2x.png
+/vendor

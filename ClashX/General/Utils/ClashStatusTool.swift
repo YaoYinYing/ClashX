@@ -15,8 +15,8 @@ class ClashStatusTool {
         if cfg.usedHttpPort == 0 {
             Logger.log("checkPortConfig: \(cfg.mixedPort) ", level: .error)
             let alert = NSAlert()
-            alert.messageText = NSLocalizedString("ClashX Start Error!", comment: "")
-            alert.informativeText = NSLocalizedString("Ports Open Fail, Please try to restart ClashX", comment: "")
+            alert.messageText = NSLocalizedString("SmartX Start Error!", comment: "")
+            alert.informativeText = NSLocalizedString("Ports failed to open. Try restarting SmartX.", comment: "")
             alert.addButton(withTitle: NSLocalizedString("Quit", comment: ""))
             alert.addButton(withTitle: "Edit Config")
             DispatchQueue.main.async {

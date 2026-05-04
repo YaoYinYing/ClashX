@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
-<dictionary xmlns:xi="http://www.w3.org/2003/XInclude" title="ClashX Terminonoly">
+<dictionary xmlns:xi="http://www.w3.org/2003/XInclude" title="SmartX Terminology">
     <suite name="Proxy Suite" code="????" description="Proxy setting for AppleScript.">
         <command name="toggleProxy" code="clashtog" description="Toggle the system proxy.">
             <cocoa class="ClashX.ProxySettingCommand"/>

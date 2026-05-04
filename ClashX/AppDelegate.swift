@@ -165,7 +165,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ aNotification: Notification) {
         UserDefaults.standard.set(0, forKey: "launch_fail_times")
-        Logger.log("ClashX will terminate")
+        Logger.log("SmartX will terminate")
         if NetworkChangeNotifier.isCurrentSystemSetToClash(looser: true) ||
             NetworkChangeNotifier.hasInterfaceProxySetToClash() {
             Logger.log("Need Reset Proxy Setting again", level: .error)
@@ -474,6 +474,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             ConfigManager.shared.isRunning = true
             proxyModeMenuItem.isEnabled = true
             dashboardMenuItem.isEnabled = true
+            CoreCapabilityProbe.shared.probeCurrentController { _ in }
         } else {
             ConfigManager.shared.isRunning = false
             proxyModeMenuItem.isEnabled = false
@@ -580,6 +581,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.resetStreamApi()
                 self.runAfterConfigReload?()
                 self.runAfterConfigReload = nil
+                CoreCapabilityProbe.shared.probeCurrentController { _ in }
                 if showNotification {
                     NSUserNotificationCenter.default.post(title: successTitle, info: successInfo)
                 }

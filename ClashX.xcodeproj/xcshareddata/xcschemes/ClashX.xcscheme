@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "49CF3B1C20CD7463001EBF94"
-               BuildableName = "ClashX.app"
+               BuildableName = "SmartX.app"
                BlueprintName = "ClashX"
                ReferencedContainer = "container:ClashX.xcodeproj">
             </BuildableReference>
@@ -31,7 +31,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "49CF3B1C20CD7463001EBF94"
-            BuildableName = "ClashX.app"
+            BuildableName = "SmartX.app"
             BlueprintName = "ClashX"
             ReferencedContainer = "container:ClashX.xcodeproj">
          </BuildableReference>
@@ -54,7 +54,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "49CF3B1C20CD7463001EBF94"
-            BuildableName = "ClashX.app"
+            BuildableName = "SmartX.app"
             BlueprintName = "ClashX"
             ReferencedContainer = "container:ClashX.xcodeproj">
          </BuildableReference>
@@ -71,7 +71,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "49CF3B1C20CD7463001EBF94"
-            BuildableName = "ClashX.app"
+            BuildableName = "SmartX.app"
             BlueprintName = "ClashX"
             ReferencedContainer = "container:ClashX.xcodeproj">
          </BuildableReference>

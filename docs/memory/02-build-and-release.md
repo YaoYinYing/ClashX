@@ -37,7 +37,7 @@ The branch selection matters because the Smart core integration, Core settings U
 The inspected files imply these toolchains are expected:
 
 - Go `1.21` family from [`ClashX/goClash/go.mod`](../../ClashX/goClash/go.mod)
-- Ruby `3.2` in current GitHub Actions workflows
+- Ruby `3.2.4` from [`.ruby-version`](../../.ruby-version), matching the current GitHub Actions Ruby `3.2` family
 - Bundler for the [`Gemfile`](../../Gemfile)
 - CocoaPods for the [`Podfile`](../../Podfile)
 - Xcode with SwiftPM support and macOS SDK compatible with the project
@@ -48,11 +48,14 @@ The `Gemfile` currently pins:
 - `cocoapods`
 - `activesupport = 7.0.8`
 
+The repository should be installed with a project Ruby, not macOS system Ruby 2.6. `activesupport = 7.0.8` requires Ruby `>= 2.7`, and the documented local recommendation is Ruby `3.2.4`. Run `bundle install` using that project Ruby before invoking the rest of the dependency flow.
+
 ### 4. Run `install_dependency.sh`
 
 [`install_dependency.sh`](../../install_dependency.sh) currently performs four main jobs:
 
 - builds the Go core by running `python3 build_clash_universal.py` inside `ClashX/goClash`
+- checks that the active Ruby is at least `2.7.0` and recommends Ruby `3.2.4`
 - runs `bundle install`
 - runs `bundle exec pod install`
 - deletes and redownloads runtime resources
@@ -216,6 +219,16 @@ The repository already contains GitHub Actions workflows:
 
 They already perform unsigned SmartX builds, including Go archive creation and `xcodebuild` Debug builds. A future stable SmartX CI plan should keep that direction and standardize on the following pipeline:
 
+Current CI scope note:
+
+- PR CI now has two unsigned Debug artifact lanes:
+  - Legacy: `macos-15` + Xcode `16.4` + `MACOSX_DEPLOYMENT_TARGET=10.14`
+  - Modern: `macos-26` + Xcode `26.3`
+- Every PR uploads unsigned SmartX app artifacts and build logs for both lanes.
+- PR CI also runs the helper fail-closed validation, the security harness, the endpoint-builder smoke harness, and the capability-identity smoke harness.
+- Artifact upload does **not** imply Developer ID signing, notarization, helper installation success, or runtime compatibility on the target OS.
+- The Legacy lane only proves that the deployment-target compile path still works. It does **not** prove real macOS `10.14` runtime behavior.
+
 1. checkout
 2. setup Xcode version
 3. setup Go version
@@ -225,7 +238,7 @@ They already perform unsigned SmartX builds, including Go archive creation and `
 7. build Go archive
 8. `pod install`
 9. `xcodebuild` Debug
-10. upload unsigned debug artifact
+10. upload unsigned debug artifacts for both Legacy and Modern lanes
 
 Recommended details:
 

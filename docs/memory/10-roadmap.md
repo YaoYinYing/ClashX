@@ -39,6 +39,10 @@ Expected outputs:
 - SmartX identity text is consistent in new user-facing surfaces
 - review findings are captured in memory docs
 
+Current note:
+
+- A focused user-facing identity cleanup PR is acceptable in this phase as long as it does not attempt full bundle/helper/signing migration in the same patch.
+
 Testing gate:
 
 - every fix PR in this phase should run the relevant build and lightweight harness checks
@@ -65,6 +69,10 @@ Testing gate:
 
 - endpoint building and result mapping should have direct utility-level coverage where practical
 
+Current note:
+
+- the first pass of `ControllerEndpointBuilder`, stopped-core result cleanup, and Smart endpoint result unification is now implemented, but `ApiRequest` is still only partially decomposed
+
 ## Phase 2: Capability Probing System
 
 Scope:
@@ -85,6 +93,10 @@ Expected outputs:
 Testing gate:
 
 - probe-state transitions and invalidation rules should be covered with focused tests where feasible
+
+Current note:
+
+- SmartX now has a baseline `CoreCapabilityProbe` snapshot flow, but it is still a minimal read-only probe layer rather than the final capability architecture
 
 ## Phase 3: Redaction and Diagnostics Safety
 

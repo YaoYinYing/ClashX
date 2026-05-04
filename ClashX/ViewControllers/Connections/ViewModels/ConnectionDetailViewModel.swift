@@ -93,7 +93,22 @@ class ConnectionDetailViewModel {
     }
 
     func blockSmartConnection() {
-        ApiRequest.blockSmartConnection(uuid)
+        ApiRequest.blockSmartConnection(uuid) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success:
+                Logger.log("[Connection Detail] Smart block requested for \(self.uuid)", level: .debug)
+            case .unsupported:
+                Logger.log("[Connection Detail] Smart block unsupported for current controller", level: .warning)
+                self.appendSmartStatusLine(NSLocalizedString("Smart block request is unsupported by the active controller.", comment: ""))
+            case let .unauthorized(message):
+                Logger.log("[Connection Detail] Smart block unauthorized: \(message)", level: .warning)
+                self.appendSmartStatusLine(String(format: NSLocalizedString("Smart block request was rejected: %@", comment: ""), message))
+            case let .failed(message):
+                Logger.log("[Connection Detail] Smart block failed: \(message)", level: .warning)
+                self.appendSmartStatusLine(String(format: NSLocalizedString("Smart block request failed: %@", comment: ""), message))
+            }
+        }
     }
 
     private func formatNetworkType(_ metadata: ClashConnectionSnapShot.MetaData) -> String {
@@ -206,7 +221,7 @@ class ConnectionDetailViewModel {
                 guard let self, self.uuid == connectionID else { return }
                 let explanation = self.formatSmartExplanation(for: connection,
                                                               candidateGroups: candidateGroups,
-                                                              weightsResponse: response,
+                                                              weightsResult: response,
                                                               modelStatus: modelStatus)
                 self.otherText = [self.baseOtherText, explanation]
                     .filter { !$0.isEmpty }
@@ -234,7 +249,7 @@ class ConnectionDetailViewModel {
 
     private func formatSmartExplanation(for connection: ClashConnectionSnapShot.Connection,
                                         candidateGroups: [ClashProxy],
-                                        weightsResponse: SmartWeightsResponse?,
+                                        weightsResult: ControllerDecodedResult<SmartWeightsResponse>,
                                         modelStatus: String) -> String {
         let smartTarget = connection.metadata.smartTarget?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let smartBlock = connection.metadata.smartBlock?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -254,6 +269,21 @@ class ConnectionDetailViewModel {
         }
 
         lines.append(modelStatus)
+
+        let weightsResponse: SmartWeightsResponse?
+        switch weightsResult {
+        case let .success(response):
+            weightsResponse = response
+        case .unsupported:
+            weightsResponse = nil
+            lines.append("Weights Endpoint: unsupported by the active controller.")
+        case let .unauthorized(message):
+            weightsResponse = nil
+            lines.append("Weights Endpoint: unauthorized (\(message))")
+        case let .failed(message):
+            weightsResponse = nil
+            lines.append("Weights Endpoint: failed (\(message))")
+        }
 
         guard !candidateGroups.isEmpty else {
             lines.append("Smart Group: unable to map this connection to a Smart group from current proxy data.")
@@ -314,6 +344,13 @@ class ConnectionDetailViewModel {
         }
 
         return lines.joined(separator: "\n")
+    }
+
+    private func appendSmartStatusLine(_ line: String) {
+        let next = [otherText, line]
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
+        otherText = next
     }
 
     private func formatModelStatus() -> String {

@@ -32,16 +32,16 @@
 "Cancel" = "Cancel";
 
 /* No comment provided by engineer. */
-"ClashX fail to create ~/.config/clash folder. Please check privileges or manually create folder and restart ClashX." = "ClashX fail to create ~/.config/clash folder. Please check privileges or manually create folder and restart ClashX.";
+"SmartX failed to create ~/.config/clash. Check permissions or create the folder manually, then restart SmartX." = "SmartX failed to create ~/.config/clash. Check permissions or create the folder manually, then restart SmartX.";
 
 /* No comment provided by engineer. */
-"ClashX needs to install/update a helper tool with administrator privileges, otherwise ClashX won't be able to configure system proxy." = "ClashX needs to install/update a helper tool with administrator privileges, otherwise ClashX won't be able to configure system proxy.";
+"SmartX needs to install or update a helper tool with administrator privileges, otherwise SmartX cannot configure the system proxy." = "SmartX needs to install or update a helper tool with administrator privileges, otherwise SmartX cannot configure the system proxy.";
 
 /* No comment provided by engineer. */
-"ClashX Start Error!" = "ClashX Start Error!";
+"SmartX Start Error!" = "SmartX Start Error!";
 
 /* No comment provided by engineer. */
-"ClashX use a daemon helper to setup your system proxy. Please enable ClashX in the Login Items under the Allow in the Background section and relaunch the app" = "ClashX use a daemon helper to setup your system proxy. Please enable ClashX in the Login Items under the Allow in the Background section and relaunch the app";
+"SmartX uses a daemon helper to configure the system proxy. Enable SmartX in Login Items under Allow in the Background, then relaunch the app." = "SmartX uses a daemon helper to configure the system proxy. Enable SmartX in Login Items under Allow in the Background, then relaunch the app.";
 
 /* No comment provided by engineer. */
 "Click OK to quit the app and apply change." = "Click OK to quit the app and apply change.";
@@ -128,7 +128,7 @@
 "iCloud not available" = "iCloud not available";
 
 /* No comment provided by engineer. */
-"If you can not find ClashX in the settings, you can try reset daemon" = "If you can not find ClashX in the settings, you can try reset daemon";
+"If you cannot find SmartX in Settings, try resetting the daemon." = "If you cannot find SmartX in Settings, try resetting the daemon.";
 
 /* No comment provided by engineer. */
 "Install" = "Install";
@@ -146,7 +146,7 @@
 "Local Clients" = "Local Clients";
 
 /* No comment provided by engineer. */
-"Need to Restart the ClashX to Take effect, Please start clashX manually" = "Need to Restart the ClashX to Take effect, Please start clashX manually";
+"Restart SmartX to apply the change, then launch SmartX manually." = "Restart SmartX to apply the change, then launch SmartX manually.";
 
 /* No comment provided by engineer. */
 "Never" = "Never";
@@ -173,10 +173,10 @@
 "Open System Login Item Setting" = "Open System Login Item Setting";
 
 /* No comment provided by engineer. */
-"Please enable the location service for ClashX to detect your current WiFi network's SSID name and provide the auto-suspend services." = "Please enable the location service for ClashX to detect your current WiFi network's SSID name and provide the auto-suspend services.";
+"Enable location services for SmartX so it can detect the current Wi-Fi SSID and provide auto-suspend behavior." = "Enable location services for SmartX so it can detect the current Wi-Fi SSID and provide auto-suspend behavior.";
 
 /* No comment provided by engineer. */
-"Ports Open Fail, Please try to restart ClashX" = "Ports Open Fail, Please try to restart ClashX";
+"Ports failed to open. Try restarting SmartX." = "Ports failed to open. Try restarting SmartX.";
 
 /* No comment provided by engineer. */
 "Prelease" = "Prelease";
@@ -185,13 +185,13 @@
 "Proxy Mode" = "Proxy Mode";
 
 /* No comment provided by engineer. */
-"Proxy settings are changed by another process. ClashX is no longer the default system proxy." = "Proxy settings are changed by another process. ClashX is no longer the default system proxy.";
+"Proxy settings were changed by another process. SmartX is no longer the default system proxy." = "Proxy settings were changed by another process. SmartX is no longer the default system proxy.";
 
 /* No comment provided by engineer. */
 "Quit" = "Quit";
 
 /* No comment provided by engineer. */
-"Quit ClashX?" = "Quit ClashX?";
+"Quit SmartX?" = "Quit SmartX?";
 
 /* No comment provided by engineer. */
 "Recent Connections" = "Recent Connections";
@@ -275,7 +275,7 @@
 "The status icon is coverd or hide by other app." = "The status icon is coverd or hide by other app.";
 
 /* No comment provided by engineer. */
-"This version of ClashX contains a break change due to clash core 1.0 released. Check if your config is not working properly." = "This version of ClashX contains a break change due to clash core 1.0 released. Check if your config is not working properly.";
+"Check whether your config still works correctly with this SmartX build." = "Check whether your config still works correctly with this SmartX build.";
 
 /* No comment provided by engineer. */
 "total: %d, success: %d" = "total: %d, success: %d";

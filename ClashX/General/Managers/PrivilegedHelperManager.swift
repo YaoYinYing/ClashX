@@ -44,8 +44,8 @@ class PrivilegedHelperManager {
                     let status = SMAppService.statusForLegacyPlist(at: url)
                     if status == .requiresApproval {
                         let alert = NSAlert()
-                        let notice = NSLocalizedString("ClashX use a daemon helper to setup your system proxy. Please enable ClashX in the Login Items under the Allow in the Background section and relaunch the app", comment: "")
-                        let addition = NSLocalizedString("If you can not find ClashX in the settings, you can try reset daemon", comment: "")
+                        let notice = NSLocalizedString("SmartX uses a daemon helper to configure the system proxy. Enable SmartX in Login Items under Allow in the Background, then relaunch the app.", comment: "")
+                        let addition = NSLocalizedString("If you cannot find SmartX in Settings, try resetting the daemon.", comment: "")
                         alert.messageText = notice + "\n" + addition
                         alert.addButton(withTitle: NSLocalizedString("Open System Login Item Setting", comment: ""))
                         alert.addButton(withTitle: NSLocalizedString("Reset Daemon", comment: ""))
@@ -257,7 +257,7 @@ extension PrivilegedHelperManager {
 
     private func showInstallHelperAlert() -> Bool {
         let alert = NSAlert()
-        alert.messageText = NSLocalizedString("ClashX needs to install/update a helper tool with administrator privileges, otherwise ClashX won't be able to configure system proxy.", comment: "")
+        alert.messageText = NSLocalizedString("SmartX needs to install or update a helper tool with administrator privileges, otherwise SmartX cannot configure the system proxy.", comment: "")
         alert.alertStyle = .warning
         if useLegacyInstall {
             alert.addButton(withTitle: NSLocalizedString("Legacy Install", comment: ""))
@@ -310,7 +310,7 @@ private enum DaemonInstallResult {
             case kSMErrorToolNotValid: return "blessError: kSMErrorToolNotValid"
             case kSMErrorJobNotFound: return "blessError: kSMErrorJobNotFound"
             case kSMErrorServiceUnavailable: return "blessError: kSMErrorServiceUnavailable"
-            case kSMErrorJobMustBeEnabled: return "ClashX Helper is disabled by other process. Please run \"sudo launchctl enable system/\(PrivilegedHelperManager.machServiceName)\" in your terminal. The command has been copied to your pasteboard"
+            case kSMErrorJobMustBeEnabled: return "SmartX Helper is disabled by another process. Run \"sudo launchctl enable system/\(PrivilegedHelperManager.machServiceName)\" in Terminal. The command has been copied to your pasteboard."
             case kSMErrorInvalidPlist: return "blessError: kSMErrorInvalidPlist"
             default:
                 return "bless unknown error:\(code)"

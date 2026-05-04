@@ -1,14 +1,8 @@
-<h1 align="center">
-  <img src="https://github.com/Dreamacro/clash/raw/master/docs/logo.png" alt="Clash" width="200">
-  <br>
-  ClashX
-  <br>
-</h1>
+# SmartX
 
+SmartX is a macOS native proxy client derived from ClashX and integrating the Vernesong Smart fork of mihomo through the existing Go c-archive bridge.
 
-A rule-based proxy client for macOS on the SmartX `smartx` branch, embedding the Vernesong Smart fork of mihomo through the existing Go c-archive bridge.
-
-This branch is for preview hardening and is not an official upstream ClashX/ClashX Pro release.
+This branch is for preview hardening. It is not an official ClashX or ClashX Pro release, and it does not provide proxy servers or subscriptions.
 
 
 ## SmartX branch status
@@ -18,6 +12,12 @@ This branch is for preview hardening and is not an official upstream ClashX/Clas
 - Legacy ClashX Pro branding/wording is obsolete in this branch.
 - The app keeps the legacy local config directory at `~/.config/clash/`, with additional safe-path validation for config names and writes.
 - Before any public distribution, replace signing identities, helper trust requirements, bundle metadata, and complete notarization/release hardening.
+
+## Legacy identity note
+- Some internal bundle, helper, and signing identifiers still use ClashX-era values.
+- Those values are retained temporarily to avoid breaking helper installation, URL import compatibility, and config migration behavior.
+- A later signing migration PR will replace bundle IDs, helper ID, Mach service name, iCloud container, and SMJobBless requirements.
+- User-facing branding in this branch should be SmartX.
 
 ## Security model
 - Config names are validated by a strict allowlist before building local file paths.
@@ -40,6 +40,17 @@ Build from source on this branch for preview validation. Legacy public AppCenter
 
 ## Build
 - Make sure have python3 and golang installed in your computer.
+- Use the project Ruby in [`.ruby-version`](./.ruby-version). macOS system Ruby 2.6 is not supported for this repository's Bundler dependencies.
+- Ruby 4 is currently unsupported for the locked Bundler/CocoaPods toolchain in this repository.
+- Recommended Ruby setup:
+  ```
+  brew install rbenv ruby-build
+  rbenv install 3.2.4
+  rbenv local 3.2.4
+  gem install bundler
+  bundle install
+  ```
+- Run `bundle install` with the project Ruby before `bash install_dependency.sh` if Bundler gems are not already installed.
 
 - Install Golang
   ```
@@ -80,7 +91,7 @@ For mihomo-compatible config details, refer to mihomo documentation and rule res
 
 ### Change your status menu icon
 
-  Place your icon file in the `~/.config/clash/menuImage.png`  then restart ClashX
+  Place your icon file in the `~/.config/clash/menuImage.png`  then restart SmartX
 
 ### Change default system ignore list.
 
@@ -88,14 +99,22 @@ For mihomo-compatible config details, refer to mihomo documentation and rule res
 
 ### URL Schemes.
 
-- Using url scheme to import remote config.
+- Preferred SmartX import scheme:
 
   ```
+  smartx://install-config?url=http%3A%2F%2Fexample.com&name=example
+  ```
+- Legacy compatibility schemes remain available for existing automations and links:
+
+  ```
+  clashx://install-config?url=http%3A%2F%2Fexample.com&name=example
   clash://install-config?url=http%3A%2F%2Fexample.com&name=example
   ```
-- Using url scheme to reload current config.
+- Reload current config:
 
   ```
+  smartx://update-config
+  clashx://update-config
   clash://update-config
   ```
 
@@ -169,7 +188,7 @@ Manual test checklist for Settings -> Core:
 
 ### Get process name
 
-You can add the follow config in your config file, and set your proxy mode to rule. Then open the log via help menu in ClashX.
+You can add the follow config in your config file, set your proxy mode to rule, and then open the log via the help menu in SmartX.
 ```
 script:
   code: |
@@ -182,14 +201,14 @@ script:
 ### FAQ
 
 - Q: How to get shell command with external IP?  
-  A: Click the clashX menu icon and then press `Option-Command-C`  
+  A: Click the SmartX menu icon and then press `Option-Command-C`  
 
-### 关闭ClashX的通知
+### 关闭 SmartX 的通知
 
-1. 在系统设置中关闭 clashx 的推送权限
+1. 在系统设置中关闭 SmartX 的推送权限
 2. 在菜单栏->配置->更多设置中选中减少通知
 
-Note：强烈不推荐这么做，这可能导致clashx的很多重要错误提醒无法显示。
+Note：强烈不推荐这么做，这可能导致 SmartX 的很多重要错误提醒无法显示。
 
 ### 全局快捷键
 - 在菜单栏配置->更多配置中，自定义对应功能的快捷键。（需要1.116.1之后的版本）

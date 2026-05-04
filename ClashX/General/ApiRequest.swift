@@ -47,13 +47,6 @@ struct SmartWeightsResponse: Decodable {
     let message: String?
 }
 
-enum SmartEndpointResult {
-    case success
-    case unsupported
-    case unauthorized(String)
-    case failed
-}
-
 enum ControllerEndpointResult {
     case success
     case unsupported
@@ -63,6 +56,13 @@ enum ControllerEndpointResult {
 
 enum ControllerJSONResult {
     case success(JSON)
+    case unsupported
+    case unauthorized(String)
+    case failed(String)
+}
+
+enum ControllerDecodedResult<T> {
+    case success(T)
     case unsupported
     case unauthorized(String)
     case failed(String)
@@ -95,24 +95,63 @@ class ApiRequest {
         return (!secret.isEmpty) ? ["Authorization": "Bearer \(secret)"] : [:]
     }
 
-    @discardableResult
     private static func req(
-        _ url: String,
+        _ path: String,
         method: HTTPMethod = .get,
         parameters: Parameters? = nil,
-        encoding: ParameterEncoding = URLEncoding.default
+        encoding: ParameterEncoding = URLEncoding.default,
+        queryItems: [URLQueryItem] = []
     )
-        -> DataRequest {
-        guard ConfigManager.shared.isRunning else {
-            return AF.request("")
+        -> DataRequest? {
+        do {
+            let url = try ControllerEndpointBuilder.httpURL(path: path, queryItems: queryItems)
+            return shared.alamoFireManager
+                .request(url,
+                         method: method,
+                         parameters: parameters,
+                         encoding: encoding,
+                         headers: authHeader())
+        } catch {
+            Logger.log("[ApiRequest] request unavailable path=\(path) error=\(error.localizedDescription)", level: .warning)
+            return nil
         }
+    }
 
-        return shared.alamoFireManager
-            .request(ConfigManager.apiUrl + url,
-                     method: method,
-                     parameters: parameters,
-                     encoding: encoding,
-                     headers: authHeader())
+    private static func req(
+        pathComponents: [String],
+        method: HTTPMethod = .get,
+        parameters: Parameters? = nil,
+        encoding: ParameterEncoding = URLEncoding.default,
+        queryItems: [URLQueryItem] = []
+    ) -> DataRequest? {
+        do {
+            let url = try ControllerEndpointBuilder.httpURL(pathComponents: pathComponents, queryItems: queryItems)
+            return shared.alamoFireManager
+                .request(url,
+                         method: method,
+                         parameters: parameters,
+                         encoding: encoding,
+                         headers: authHeader())
+        } catch {
+            Logger.log("[ApiRequest] request unavailable pathComponents=\(pathComponents) error=\(error.localizedDescription)", level: .warning)
+            return nil
+        }
+    }
+
+    private static func controllerUnavailableMessage() -> String {
+        NSLocalizedString("Core is stopped or controller is unavailable.", comment: "")
+    }
+
+    private static func unavailableEndpointResult() -> ControllerEndpointResult {
+        .failed(controllerUnavailableMessage())
+    }
+
+    private static func unavailableJSONResult() -> ControllerJSONResult {
+        .failed(controllerUnavailableMessage())
+    }
+
+    private static func unavailableDecodedResult<T>() -> ControllerDecodedResult<T> {
+        .failed(controllerUnavailableMessage())
     }
 
     private static func endpointResult(from response: AFDataResponse<Data>, defaultMessage: String, unsupportedStatusCodes: Set<Int> = [400, 404, 405, 501]) -> ControllerEndpointResult {
@@ -159,6 +198,30 @@ class ApiRequest {
         }
     }
 
+    private static func decodedResult<T: Decodable>(from response: AFDataResponse<Data>,
+                                                    as type: T.Type,
+                                                    defaultMessage: String,
+                                                    unsupportedStatusCodes: Set<Int> = [400, 404, 405, 501],
+                                                    decoder: JSONDecoder = JSONDecoder()) -> ControllerDecodedResult<T> {
+        switch endpointResult(from: response, defaultMessage: defaultMessage, unsupportedStatusCodes: unsupportedStatusCodes) {
+        case .success:
+            guard let data = try? response.result.get() else {
+                return .failed(defaultMessage)
+            }
+            do {
+                return try .success(decoder.decode(type, from: data))
+            } catch {
+                return .failed(error.localizedDescription)
+            }
+        case .unsupported:
+            return .unsupported
+        case let .unauthorized(message):
+            return .unauthorized(message)
+        case let .failed(message):
+            return .failed(message)
+        }
+    }
+
     weak var delegate: ApiRequestStreamDelegate?
 
     private var trafficWebSocket: WebSocket?
@@ -180,7 +243,11 @@ class ApiRequest {
 
     static func requestConfig(completeHandler: @escaping ((ClashConfig) -> Void)) {
         if !useDirectApi() {
-            req("/configs").responseDecodable(of: ClashConfig.self) {
+            guard let request = req("/configs") else {
+                Logger.log("request config unavailable: controller not running", level: .warning)
+                return
+            }
+            request.responseDecodable(of: ClashConfig.self) {
                 resp in
                 switch resp.result {
                 case let .success(config):
@@ -195,7 +262,7 @@ class ApiRequest {
 
         let data = clashGetConfigs()?.toString().data(using: .utf8) ?? Data()
         guard let config = ClashConfig.fromData(data) else {
-            NSUserNotificationCenter.default.post(title: "Error", info: "Get clash config failed. Try Fix your config file then reload config or restart ClashX.")
+            NSUserNotificationCenter.default.post(title: "Error", info: "Get clash config failed. Try fixing your config file, then reload the config or restart SmartX.")
             (NSApplication.shared.delegate as? AppDelegate)?.startProxy()
             return
         }
@@ -214,11 +281,15 @@ class ApiRequest {
     }
 
     static func requestConfigUpdate(configPath: String, callback: @escaping ((ErrorString?) -> Void)) {
-        let placeHolderErrorDesp = "Error occoured, Please try to fix it by restarting ClashX. "
+        let placeHolderErrorDesp = "An error occurred. Try fixing it by restarting SmartX. "
 
         // DEV MODE: Use API
         if !useDirectApi() {
-            req("/configs", method: .put, parameters: ["Path": configPath], encoding: JSONEncoding.default).responseData { res in
+            guard let request = req("/configs", method: .put, parameters: ["Path": configPath], encoding: JSONEncoding.default) else {
+                callback(controllerUnavailableMessage())
+                return
+            }
+            request.responseData { res in
                 if res.response?.statusCode == 204 {
                     ConfigManager.shared.isRunning = true
                     callback(nil)
@@ -248,7 +319,11 @@ class ApiRequest {
     }
 
     static func updateOutBoundMode(mode: ClashProxyMode, callback: ((Bool) -> Void)? = nil) {
-        req("/configs", method: .patch, parameters: ["mode": mode.rawValue], encoding: JSONEncoding.default)
+        guard let request = req("/configs", method: .patch, parameters: ["mode": mode.rawValue], encoding: JSONEncoding.default) else {
+            callback?(false)
+            return
+        }
+        request
             .responseData { response in
                 switch response.result {
                 case .success:
@@ -260,7 +335,11 @@ class ApiRequest {
     }
 
     static func updateLogLevel(level: ClashLogLevel, callback: ((Bool) -> Void)? = nil) {
-        req("/configs", method: .patch, parameters: ["log-level": level.rawValue], encoding: JSONEncoding.default).responseData(completionHandler: { response in
+        guard let request = req("/configs", method: .patch, parameters: ["log-level": level.rawValue], encoding: JSONEncoding.default) else {
+            callback?(false)
+            return
+        }
+        request.responseData(completionHandler: { response in
             switch response.result {
             case .success:
                 callback?(true)
@@ -271,7 +350,11 @@ class ApiRequest {
     }
 
     static func requestProxyGroupList(completeHandler: ((ClashProxyResp) -> Void)? = nil) {
-        req("/proxies").responseData {
+        guard let request = req("/proxies") else {
+            completeHandler?(ClashProxyResp(nil))
+            return
+        }
+        request.responseData {
             res in
             let proxies = ClashProxyResp(try? res.result.get())
             ApiRequest.shared.proxyRespCache = proxies
@@ -280,7 +363,11 @@ class ApiRequest {
     }
 
     static func requestProxyProviderList(completeHandler: ((ClashProviderResp) -> Void)? = nil) {
-        req("/providers/proxies")
+        guard let request = req("/providers/proxies") else {
+            completeHandler?(ClashProviderResp())
+            return
+        }
+        request
             .responseDecodable(of: ClashProviderResp.self, decoder: ClashProviderResp.decoder) { resp in
                 switch resp.result {
                 case let .success(providerResp):
@@ -294,23 +381,44 @@ class ApiRequest {
 
     static func updateAllowLan(allow: Bool, completeHandler: (() -> Void)? = nil) {
         Logger.log("update allow lan:\(allow)", level: .debug)
-        req("/configs",
-            method: .patch,
-            parameters: ["allow-lan": allow],
-            encoding: JSONEncoding.default).response {
+        guard let request = req("/configs",
+                                method: .patch,
+                                parameters: ["allow-lan": allow],
+                                encoding: JSONEncoding.default) else {
+            completeHandler?()
+            return
+        }
+        request.response {
             _ in
             completeHandler?()
         }
     }
 
     static func updateTun(enable: Bool, completeHandler: @escaping (Bool, ErrorString?) -> Void) {
-        let controllerMode = Settings.isUsingEmbeddedCore ? "embedded core" : "external controller"
-        req("/configs",
-            method: .patch,
-            parameters: ["tun": ["enable": enable]],
-            encoding: JSONEncoding.default).responseData { response in
-            if response.response?.statusCode == 204 {
+        updateTunResult(enable: enable) { result in
+            switch result {
+            case .success:
                 completeHandler(true, nil)
+            case .unsupported:
+                completeHandler(false, NSLocalizedString("The active controller does not support guarded TUN updates.", comment: ""))
+            case let .unauthorized(message), let .failed(message):
+                completeHandler(false, message)
+            }
+        }
+    }
+
+    static func updateTunResult(enable: Bool, completeHandler: @escaping (ControllerEndpointResult) -> Void) {
+        let controllerMode = Settings.isUsingEmbeddedCore ? "embedded core" : "external controller"
+        guard let request = req("/configs",
+                                method: .patch,
+                                parameters: ["tun": ["enable": enable]],
+                                encoding: JSONEncoding.default) else {
+            completeHandler(unavailableEndpointResult())
+            return
+        }
+        request.responseData { response in
+            if response.response?.statusCode == 204 {
+                completeHandler(.success)
                 return
             }
 
@@ -330,15 +438,25 @@ class ApiRequest {
             }
 
             Logger.log("[ApiRequest] updateTun failed enable=\(enable) mode=\(controllerMode) status=\(statusCode.map(String.init) ?? "none") controllerMessage=\(controllerMessage ?? "none")", level: .warning)
-            completeHandler(false, messageParts.joined(separator: " "))
+            if let statusCode, [401, 403].contains(statusCode) {
+                completeHandler(.unauthorized(messageParts.joined(separator: " ")))
+            } else if let statusCode, [400, 404, 405, 501].contains(statusCode) {
+                completeHandler(.unsupported)
+            } else {
+                completeHandler(.failed(messageParts.joined(separator: " ")))
+            }
         }
     }
 
     static func updateProxyGroup(group: String, selectProxy: String, callback: @escaping ((Bool) -> Void)) {
-        req("/proxies/\(group.encoded)",
-            method: .put,
-            parameters: ["name": selectProxy],
-            encoding: JSONEncoding.default)
+        guard let request = req(pathComponents: ["proxies", group],
+                                method: .put,
+                                parameters: ["name": selectProxy],
+                                encoding: JSONEncoding.default) else {
+            callback(false)
+            return
+        }
+        request
             .responseData { response in
                 callback(response.response?.statusCode == 204)
             }
@@ -383,9 +501,13 @@ class ApiRequest {
     }
 
     static func getProxyDelay(proxyName: String, callback: @escaping ((Int) -> Void)) {
-        req("/proxies/\(proxyName.encoded)/delay",
-            method: .get,
-            parameters: ["timeout": 5000, "url": Settings.benchMarkUrl])
+        guard let request = req(pathComponents: ["proxies", proxyName, "delay"],
+                                method: .get,
+                                parameters: ["timeout": 5000, "url": Settings.benchMarkUrl]) else {
+            callback(0)
+            return
+        }
+        request
             .responseData { res in
                 switch res.result {
                 case let .success(value):
@@ -398,7 +520,11 @@ class ApiRequest {
     }
 
     static func getRules(completeHandler: @escaping ([ClashRule]) -> Void) {
-        req("/rules").responseData { res in
+        guard let request = req("/rules") else {
+            completeHandler([])
+            return
+        }
+        request.responseData { res in
             guard let data = try? res.result.get() else { return }
             let rule = ClashRuleResponse.fromData(data)
             completeHandler(rule.rules ?? [])
@@ -407,7 +533,11 @@ class ApiRequest {
 
     static func healthCheck(proxy: ClashProviderName, completeHandler: (() -> Void)? = nil) {
         Logger.log("HeathCheck for \(proxy) started")
-        req("/providers/proxies/\(proxy.encoded)/healthcheck").response { res in
+        guard let request = req(pathComponents: ["providers", "proxies", proxy, "healthcheck"]) else {
+            completeHandler?()
+            return
+        }
+        request.response { res in
             if res.response?.statusCode == 204 {
                 Logger.log("HeathCheck for \(proxy) finished")
             } else {
@@ -419,7 +549,11 @@ class ApiRequest {
 
     static func healthCheckProvider(proxy: ClashProviderName, completeHandler: ((Bool) -> Void)? = nil) {
         Logger.log("HeathCheck for \(proxy) started")
-        req("/providers/proxies/\(proxy.encoded)/healthcheck").response { res in
+        guard let request = req(pathComponents: ["providers", "proxies", proxy, "healthcheck"]) else {
+            completeHandler?(false)
+            return
+        }
+        request.response { res in
             let success = res.response?.statusCode == 204
             if success {
                 Logger.log("HeathCheck for \(proxy) finished")
@@ -431,89 +565,149 @@ class ApiRequest {
     }
 
     static func requestMemorySnapshot(completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        req("/memory").responseData { response in
+        guard let request = req("/memory") else {
+            completeHandler(unavailableJSONResult())
+            return
+        }
+        request.responseData { response in
             completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load memory diagnostics.", comment: "")))
         }
     }
 
     static func requestProxyProvidersDiagnostics(completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        req("/providers/proxies").responseData { response in
+        guard let request = req("/providers/proxies") else {
+            completeHandler(unavailableJSONResult())
+            return
+        }
+        request.responseData { response in
             completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load proxy provider diagnostics.", comment: "")))
         }
     }
 
     static func requestRuleProvidersDiagnostics(completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        req("/providers/rules").responseData { response in
+        guard let request = req("/providers/rules") else {
+            completeHandler(unavailableJSONResult())
+            return
+        }
+        request.responseData { response in
             completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load rule provider diagnostics.", comment: "")))
         }
     }
 
     static func requestDNSQuery(name: String, type: String? = nil, completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        var parameters: Parameters = ["name": name]
+        var queryItems = [URLQueryItem(name: "name", value: name)]
         if let type, !type.isEmpty {
-            parameters["type"] = type
+            queryItems.append(URLQueryItem(name: "type", value: type))
         }
-        req("/dns/query", parameters: parameters).responseData { response in
+        guard let request = req("/dns/query", queryItems: queryItems) else {
+            completeHandler(unavailableJSONResult())
+            return
+        }
+        request.responseData { response in
             completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to query DNS diagnostics.", comment: "")))
         }
     }
 
     static func resetDNSCache(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        req("/cache/dns/flush", method: .post).responseData { response in
+        guard let request = req("/cache/dns/flush", method: .post) else {
+            completeHandler?(unavailableEndpointResult())
+            return
+        }
+        request.responseData { response in
             completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to flush DNS cache.", comment: "")))
         }
     }
 
     static func reloadGeoDatabase(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        req("/configs/geo", method: .post).responseData { response in
+        guard let request = req("/configs/geo", method: .post) else {
+            completeHandler?(unavailableEndpointResult())
+            return
+        }
+        request.responseData { response in
             completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to reload GEO data.", comment: "")))
         }
     }
 
     static func restartCore(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        req("/restart", method: .post).responseData { response in
+        guard let request = req("/restart", method: .post) else {
+            completeHandler?(unavailableEndpointResult())
+            return
+        }
+        request.responseData { response in
             completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to restart the active core.", comment: "")))
         }
     }
 
     static func updateDashboardAssets(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        req("/upgrade/ui", method: .post).responseData { response in
+        guard let request = req("/upgrade/ui", method: .post) else {
+            completeHandler?(unavailableEndpointResult())
+            return
+        }
+        request.responseData { response in
             completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to update dashboard assets.", comment: "")))
         }
     }
 
     static func updateGeoAssets(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        req("/upgrade/geo", method: .post).responseData { response in
+        guard let request = req("/upgrade/geo", method: .post) else {
+            completeHandler?(unavailableEndpointResult())
+            return
+        }
+        request.responseData { response in
             completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to update GEO assets.", comment: "")))
         }
     }
 
     static func runDebugGC(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        req("/debug/gc", method: .put).responseData { response in
+        guard let request = req("/debug/gc", method: .put) else {
+            completeHandler?(unavailableEndpointResult())
+            return
+        }
+        request.responseData { response in
             completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to trigger controller garbage collection.", comment: "")))
         }
     }
 
     static func requestPolicyGroups(completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        req("/group").responseData { response in
+        guard let request = req("/group") else {
+            completeHandler(unavailableJSONResult())
+            return
+        }
+        request.responseData { response in
             completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load policy group diagnostics.", comment: "")))
         }
     }
 
     static func requestPolicyGroup(name: String, completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        req("/group/\(name.encoded)").responseData { response in
+        guard let request = req(pathComponents: ["group", name]) else {
+            completeHandler(unavailableJSONResult())
+            return
+        }
+        request.responseData { response in
             completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load policy group details.", comment: "")))
         }
     }
 
     static func deletePolicyGroup(name: String, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        req("/group/\(name.encoded)", method: .delete).responseData { response in
+        guard let request = req(pathComponents: ["group", name], method: .delete) else {
+            completeHandler?(unavailableEndpointResult())
+            return
+        }
+        request.responseData { response in
             completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to delete policy group state.", comment: "")))
         }
     }
 
     static func requestPolicyGroupDelay(name: String, timeout: Int = 5000, url: String = Settings.benchMarkUrl, completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        req("/group/\(name.encoded)/delay", parameters: ["timeout": timeout, "url": url]).responseData { response in
+        let queryItems = [
+            URLQueryItem(name: "timeout", value: String(timeout)),
+            URLQueryItem(name: "url", value: url)
+        ]
+        guard let request = req(pathComponents: ["group", name, "delay"], queryItems: queryItems) else {
+            completeHandler(unavailableJSONResult())
+            return
+        }
+        request.responseData { response in
             completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load policy group delay diagnostics.", comment: "")))
         }
     }
@@ -523,7 +717,11 @@ class ApiRequest {
 
 extension ApiRequest {
     static func getConnections(completeHandler: @escaping ([ClashConnectionBaseSnapShot.Connection]) -> Void) {
-        req("/connections").responseDecodable(of: ClashConnectionBaseSnapShot.self) { resp in
+        guard let request = req("/connections") else {
+            completeHandler([])
+            return
+        }
+        request.responseDecodable(of: ClashConnectionBaseSnapShot.self) { resp in
             switch resp.result {
             case let .success(snapshot):
                 completeHandler(snapshot.connections)
@@ -535,14 +733,14 @@ extension ApiRequest {
     }
 
     static func closeConnection(_ id: String) {
-        req("/connections/\(id)", method: .delete).response { _ in }
+        req(pathComponents: ["connections", id], method: .delete)?.response { _ in }
     }
 
     static func closeAllConnection() {
         if useDirectApi() {
             clash_closeAllConnections()
         } else {
-            req("/connections", method: .delete).response { _ in }
+            req("/connections", method: .delete)?.response { _ in }
         }
     }
 
@@ -557,30 +755,38 @@ extension ApiRequest {
         var providers = AllProviders()
         let group = DispatchGroup()
         group.enter()
-        ApiRequest.req("/providers/proxies").responseData { resp in
-            switch resp.result {
-            case let .success(res):
-                let json = JSON(res)
-                let provoders = json["providers"].dictionaryValue
-                    .filter { $0.value["vehicleType"] == "HTTP" }.map(\.key)
-                providers.proxies = provoders
-            case let .failure(err):
-                Logger.log(err.localizedDescription, level: .warning)
+        if let request = ApiRequest.req("/providers/proxies") {
+            request.responseData { resp in
+                switch resp.result {
+                case let .success(res):
+                    let json = JSON(res)
+                    let provoders = json["providers"].dictionaryValue
+                        .filter { $0.value["vehicleType"] == "HTTP" }.map(\.key)
+                    providers.proxies = provoders
+                case let .failure(err):
+                    Logger.log(err.localizedDescription, level: .warning)
+                }
+                group.leave()
             }
+        } else {
             group.leave()
         }
 
         group.enter()
-        ApiRequest.req("/providers/rules").responseData { resp in
-            switch resp.result {
-            case let .success(res):
-                let json = JSON(res)
-                let provoders = json["providers"].dictionaryValue
-                    .filter { $0.value["vehicleType"] == "HTTP" }.map(\.key)
-                providers.rules = provoders
-            case let .failure(err):
-                Logger.log("request rule providers failed: \(err.localizedDescription)", level: .warning)
+        if let request = ApiRequest.req("/providers/rules") {
+            request.responseData { resp in
+                switch resp.result {
+                case let .success(res):
+                    let json = JSON(res)
+                    let provoders = json["providers"].dictionaryValue
+                        .filter { $0.value["vehicleType"] == "HTTP" }.map(\.key)
+                    providers.rules = provoders
+                case let .failure(err):
+                    Logger.log("request rule providers failed: \(err.localizedDescription)", level: .warning)
+                }
+                group.leave()
             }
+        } else {
             group.leave()
         }
         group.notify(queue: .main) {
@@ -594,91 +800,148 @@ extension ApiRequest {
     }
 
     static func updateProvider(name: String, type: ProviderType, completeHandler: @escaping (Bool) -> Void) {
-        let url: String
+        updateProviderResult(name: name, type: type) { result in
+            completeHandler({
+                if case .success = result { return true }
+                return false
+            }())
+        }
+    }
+
+    static func updateProviderResult(name: String, type: ProviderType, completeHandler: @escaping (ControllerEndpointResult) -> Void) {
+        let pathComponents: [String]
         switch type {
         case .proxy:
-            url = "/providers/proxies/\(name.encoded)"
+            pathComponents = ["providers", "proxies", name]
         case .rule:
-            url = "/providers/rules/\(name.encoded)"
+            pathComponents = ["providers", "rules", name]
         }
-        ApiRequest.req(url, method: .put).response { resp in
-            if resp.response?.statusCode == 204 {
-                completeHandler(true)
-            } else {
-                completeHandler(false)
-            }
+        guard let request = ApiRequest.req(pathComponents: pathComponents, method: .put) else {
+            completeHandler(unavailableEndpointResult())
+            return
+        }
+        request.responseData { resp in
+            completeHandler(endpointResult(from: resp, defaultMessage: NSLocalizedString("Failed to update the selected provider.", comment: "")))
         }
     }
 
-    static func resetFakeIpCache() {
-        ApiRequest.req("/cache/fakeip/flush", method: .post).response { resp in
+    static func resetFakeIpCache(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
+        guard let request = ApiRequest.req("/cache/fakeip/flush", method: .post) else {
+            completeHandler?(unavailableEndpointResult())
+            return
+        }
+        request.responseData { resp in
             Logger.log("flush fake ip: \(resp.response?.statusCode ?? -1)")
+            completeHandler?(endpointResult(from: resp, defaultMessage: NSLocalizedString("Failed to flush the fake-IP cache.", comment: "")))
         }
     }
 
-    static func requestSmartWeights(completeHandler: @escaping (SmartWeightsResponse?) -> Void) {
-        req("/group/weights").responseDecodable(of: SmartWeightsResponse.self) { resp in
-            switch resp.result {
-            case let .success(weights):
-                completeHandler(weights)
-            case let .failure(err):
-                Logger.log("request smart weights failed: \(err)", level: .warning)
-                completeHandler(nil)
+    static func requestSmartWeights(completeHandler: @escaping (ControllerDecodedResult<SmartWeightsResponse>) -> Void) {
+        guard let request = req("/group/weights") else {
+            completeHandler(unavailableDecodedResult())
+            return
+        }
+        request.responseData { resp in
+            let result: ControllerDecodedResult<SmartWeightsResponse> = decodedResult(from: resp,
+                                                                                      as: SmartWeightsResponse.self,
+                                                                                      defaultMessage: NSLocalizedString("Failed to load Smart weights.", comment: ""))
+            if case let .failed(message) = result {
+                Logger.log("request smart weights failed: \(message)", level: .warning)
             }
+            completeHandler(result)
         }
     }
 
-    static func requestSmartWeights(group: String, completeHandler: @escaping ([SmartNodeWeight]) -> Void) {
-        req("/group/\(group.encoded)/weights").responseData { resp in
-            guard let data = try? resp.result.get() else {
-                completeHandler([])
-                return
-            }
-            let json = JSON(data)
-            let weights = json["weights"].arrayValue.compactMap {
-                try? JSONDecoder().decode(SmartNodeWeight.self, from: $0.rawData())
-            }
-            completeHandler(weights)
+    static func requestSmartWeights(group: String, completeHandler: @escaping (ControllerDecodedResult<[SmartNodeWeight]>) -> Void) {
+        guard let request = req(pathComponents: ["group", group, "weights"]) else {
+            completeHandler(unavailableDecodedResult())
+            return
         }
-    }
-
-    static func flushSmartCache(configName: String? = nil, completeHandler: ((Bool) -> Void)? = nil) {
-        let path = configName.map { "/cache/smart/flush/\($0.encoded)" } ?? "/cache/smart/flush"
-        req(path, method: .post).response { resp in
-            completeHandler?(resp.response?.statusCode == 204)
-        }
-    }
-
-    static func blockSmartConnection(_ id: String, completeHandler: ((Bool) -> Void)? = nil) {
-        req("/connections/smart/\(id)", method: .delete).response { resp in
-            completeHandler?(resp.response?.statusCode == 204)
-        }
-    }
-
-    static func updateSmartLightGBMModel(completeHandler: @escaping (SmartEndpointResult) -> Void) {
-        req("/upgrade/lgbm", method: .post).response { resp in
-            switch resp.response?.statusCode {
-            case 200:
-                completeHandler(.success)
-            case 401, 403:
-                completeHandler(.unauthorized(resp.error?.localizedDescription ?? NSLocalizedString("The active controller rejected authentication for the LightGBM update endpoint.", comment: "")))
-            case 400, 404:
+        request.responseData { resp in
+            switch jsonResult(from: resp, defaultMessage: NSLocalizedString("Failed to load Smart group weights.", comment: "")) {
+            case let .success(json):
+                let weights = json["weights"].arrayValue.compactMap {
+                    try? JSONDecoder().decode(SmartNodeWeight.self, from: $0.rawData())
+                }
+                completeHandler(.success(weights))
+            case .unsupported:
                 completeHandler(.unsupported)
-            default:
-                completeHandler(.failed)
+            case let .unauthorized(message):
+                completeHandler(.unauthorized(message))
+            case let .failed(message):
+                completeHandler(.failed(message))
             }
+        }
+    }
+
+    static func flushSmartCache(configName: String? = nil, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
+        let request: DataRequest?
+        if let configName {
+            request = req(pathComponents: ["cache", "smart", "flush", configName], method: .post)
+        } else {
+            request = req("/cache/smart/flush", method: .post)
+        }
+        guard let request else {
+            completeHandler?(unavailableEndpointResult())
+            return
+        }
+        request.responseData { resp in
+            completeHandler?(endpointResult(from: resp, defaultMessage: NSLocalizedString("Failed to flush the Smart cache.", comment: "")))
+        }
+    }
+
+    static func blockSmartConnection(_ id: String, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
+        guard let request = req(pathComponents: ["connections", "smart", id], method: .delete) else {
+            completeHandler?(unavailableEndpointResult())
+            return
+        }
+        request.responseData { resp in
+            completeHandler?(endpointResult(from: resp, defaultMessage: NSLocalizedString("Failed to block the Smart connection.", comment: "")))
+        }
+    }
+
+    static func updateSmartLightGBMModel(completeHandler: @escaping (ControllerEndpointResult) -> Void) {
+        guard let request = req("/upgrade/lgbm", method: .post) else {
+            completeHandler(unavailableEndpointResult())
+            return
+        }
+        request.responseData { resp in
+            completeHandler(endpointResult(from: resp, defaultMessage: NSLocalizedString("LightGBM model update failed.", comment: "")))
         }
     }
 
     static func requestCoreVersion(completeHandler: @escaping (String?) -> Void) {
-        req("/version").responseDecodable(of: CoreVersionInfo.self) { response in
-            switch response.result {
+        requestCoreVersionResult { result in
+            switch result {
             case let .success(info):
                 completeHandler(info.version)
-            case let .failure(err):
-                Logger.log("request core version failed: \(err)", level: .warning)
+            case .unsupported:
+                Logger.log("request core version unsupported", level: .warning)
+                completeHandler(nil)
+            case let .unauthorized(message), let .failed(message):
+                Logger.log("request core version failed: \(message)", level: .warning)
                 completeHandler(nil)
             }
+        }
+    }
+
+    static func requestCoreVersionResult(completeHandler: @escaping (ControllerDecodedResult<CoreVersionInfo>) -> Void) {
+        guard let request = req("/version") else {
+            completeHandler(unavailableDecodedResult())
+            return
+        }
+        request.responseData { response in
+            completeHandler(decodedResult(from: response, as: CoreVersionInfo.self, defaultMessage: NSLocalizedString("Failed to load core version.", comment: "")))
+        }
+    }
+
+    static func requestControllerConfig(completeHandler: @escaping (ControllerDecodedResult<ClashConfig>) -> Void) {
+        guard let request = req("/configs") else {
+            completeHandler(unavailableDecodedResult())
+            return
+        }
+        request.responseData { response in
+            completeHandler(decodedResult(from: response, as: ClashConfig.self, defaultMessage: NSLocalizedString("Failed to load config state.", comment: "")))
         }
     }
 }
@@ -714,7 +977,11 @@ extension ApiRequest {
         trafficWebSocketRetryTimer = nil
         trafficWebSocket?.disconnect(forceTimeout: 0.5)
 
-        let socket = WebSocket(url: URL(string: ConfigManager.webSocketUrl.appending("/traffic"))!)
+        guard let url = try? ControllerEndpointBuilder.websocketURL(path: "/traffic") else {
+            Logger.log("traffic websocket unavailable: invalid controller URL", level: .warning)
+            return
+        }
+        let socket = WebSocket(url: url)
 
         for header in ApiRequest.authHeader() {
             socket.request.setValue(header.value, forHTTPHeaderField: header.name)
@@ -733,8 +1000,13 @@ extension ApiRequest {
         loggingWebSocketRetryTimer = nil
         loggingWebSocket?.disconnect(forceTimeout: 1)
 
-        let uriString = "/logs?level=".appending(ConfigManager.selectLoggingApiLevel.rawValue)
-        let socket = WebSocket(url: URL(string: ConfigManager.webSocketUrl.appending(uriString))!)
+        guard let url = try? ControllerEndpointBuilder.websocketURL(path: "/logs",
+                                                                    queryItems: [URLQueryItem(name: "level",
+                                                                                              value: ConfigManager.selectLoggingApiLevel.rawValue)]) else {
+            Logger.log("log websocket unavailable: invalid controller URL", level: .warning)
+            return
+        }
+        let socket = WebSocket(url: url)
         for header in ApiRequest.authHeader() {
             socket.request.setValue(header.value, forHTTPHeaderField: header.name)
         }

@@ -85,6 +85,8 @@ The Diagnostics view is [`ClashX/ViewControllers/Connections/DiagnosticsDashboar
 
 These diagnostics actions now also feed a shared capability cache, so unsupported or unauthorized controller endpoints can be disabled after first contact instead of failing repeatedly every time the user opens the panel.
 
+The controller URL paths used by the Diagnostics dashboard are also now routed through [`ControllerEndpointBuilder`](../../ClashX/General/Utils/ControllerEndpointBuilder.swift) for high-risk touched surfaces such as pprof helper URL generation and WebSocket diagnostics.
+
 ### Direct embedded callbacks vs external controller streams
 
 This distinction should remain explicit in future work:
@@ -199,6 +201,8 @@ SmartX now exposes `/debug/gc` as a diagnostic action and also has a lightweight
 - include a reminder that Authorization headers must still be added manually when needed
 
 This is still only a developer convenience helper, not a real profiling UI or capture workflow.
+
+The current pprof helper still only copies URLs and a reminder about Authorization headers. It does not add browser integration, capture workflows, or profiling analysis.
 
 ### route explanation
 

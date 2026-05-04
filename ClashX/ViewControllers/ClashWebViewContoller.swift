@@ -42,7 +42,7 @@ class ClashWebViewContoller: NSViewController {
         webview.uiDelegate = self
         webview.navigationDelegate = self
 
-        webview.customUserAgent = "ClashX Runtime"
+        webview.customUserAgent = "SmartX Runtime"
         if #available(macOS 13.3, *) {
             webview.isInspectable = true
         }
@@ -108,7 +108,7 @@ class ClashWebViewContoller: NSViewController {
         let activeSecret = ConfigManager.shared.overrideSecret ?? ConfigManager.shared.apiSecret
         var queryItems = [
             URLQueryItem(name: "hostname", value: activeApiBaseURL),
-            URLQueryItem(name: "title", value: "ClashX")
+            URLQueryItem(name: "title", value: "SmartX")
         ]
         if !activeSecret.isEmpty {
             queryItems.append(URLQueryItem(name: "secret", value: activeSecret))

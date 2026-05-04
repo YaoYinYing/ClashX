@@ -47,12 +47,12 @@ extension AppVersionUtil {
             WebCacheCleaner.clean()
             guard lastVersion.compare("1.30.0", options: .numeric) == .orderedAscending else { return }
             let alert = NSAlert()
-            alert.messageText = NSLocalizedString("This version of ClashX contains a break change due to clash core 1.0 released. Check if your config is not working properly.", comment: "")
+            alert.messageText = NSLocalizedString("Check whether your config still works correctly with this SmartX build.", comment: "")
             alert.alertStyle = .informational
             alert.addButton(withTitle: NSLocalizedString("OK", comment: ""))
             alert.addButton(withTitle: NSLocalizedString("Details", comment: ""))
             if alert.runModal() == .alertSecondButtonReturn {
-                NSWorkspace.shared.open(URL(string: "https://github.com/Dreamacro/clash/wiki/breaking-changes-in-1.0.0")!)
+                NSWorkspace.shared.open(URL(string: "https://github.com/YaoYinYing/SmartX")!)
             }
         }
     }

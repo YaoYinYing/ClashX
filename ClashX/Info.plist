@@ -29,6 +29,8 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleDisplayName</key>
+	<string>SmartX</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
@@ -43,7 +45,19 @@
 			<key>CFBundleURLIconFile</key>
 			<string>Icon</string>
 			<key>CFBundleURLName</key>
-			<string>com.west2online.ClashX</string>
+			<string>SmartX URL Scheme</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>smartx</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLIconFile</key>
+			<string>Icon</string>
+			<key>CFBundleURLName</key>
+			<string>SmartX legacy ClashX compatibility</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>clashx</string>
@@ -55,7 +69,7 @@
 			<key>CFBundleURLIconFile</key>
 			<string>Icon</string>
 			<key>CFBundleURLName</key>
-			<string>com.west2online.Clash</string>
+			<string>SmartX legacy Clash compatibility</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>clash</string>
@@ -80,11 +94,11 @@
 	<key>NSAppleScriptEnabled</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2021年 yichengchen. All rights reserved.</string>
+	<string>Copyright © 2026 SmartX contributors. Derived from ClashX community work.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>ClashX use location info to detect your current WiFi network SSID name and provide the auto suspend services.</string>
+	<string>SmartX uses location information to detect the current Wi-Fi SSID and provide auto-suspend behavior.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>ClashX use location info to detect your current WiFi network SSID name and provide the auto suspend services.</string>
+	<string>SmartX uses location information to detect the current Wi-Fi SSID and provide auto-suspend behavior.</string>
 	<key>NSMainStoryboardFile</key>
 	<string>Main</string>
 	<key>NSPrincipalClass</key>

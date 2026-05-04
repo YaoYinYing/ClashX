@@ -16,8 +16,10 @@ class ConnectionsReq: WebSocketDelegate {
     let decoder = JSONDecoder()
     var onSnapshotUpdate: ((ClashConnectionSnapShot) -> Void)?
     init() {
-        if let url = URL(string: ConfigManager.webSocketUrl.appending("/connections")) {
+        if let url = try? ControllerEndpointBuilder.websocketURL(path: "/connections") {
             socket = WebSocket(url: url)
+        } else {
+            Logger.log("connections websocket unavailable: invalid controller URL", level: .warning)
         }
         for header in ApiRequest.authHeader() {
             socket?.request.setValue(header.value, forHTTPHeaderField: header.name)

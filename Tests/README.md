@@ -32,6 +32,13 @@ Current temporary-vs-production split:
 - `security_harness.swift` remains a temporary compatibility smoke harness and still mirrors some semantics because there is no real XCTest target yet.
 - None of these harnesses replace a dedicated Xcode unit-test bundle; they are focused guardrails until the repo gains one.
 
+New smoke harness coverage added by the SmartX foundation hardening PR:
+
+- `config_validator_smoke.swift` compiles `ConfigValidationIssue.swift`, `TunConfigValidator.swift`, and `DNSConfigValidator.swift` to cover reusable TUN and DNS validation behavior.
+- `diagnostics_log_reader_smoke.swift` compiles `DiagnosticsLogReader.swift` to cover bounded log tailing and filtering behavior.
+- `profile_artifact_metadata_smoke.swift` compiles `ProfileArtifactManager.swift` to cover source-copy artifact metadata encoding.
+- `smartx_managed_override_smoke.swift` compiles `SmartXManagedOverrideManager.swift` with lightweight stubs for unrelated app infrastructure to cover managed-override persistence, normalization, and migration behavior.
+
 ## CI
 - PR CI runs on macOS GitHub Actions via `.github/workflows/pr-ci.yml`.
 - CI uses the same `bash install_dependency.sh` path as local setup so dashboard resources, `Country.mmdb.gz`, Pods, and the Go archive are installed the same way in both environments.
@@ -40,8 +47,7 @@ Current temporary-vs-production split:
 - Every PR now uploads unsigned Debug app artifacts for two lanes:
   - Legacy: macOS deployment-target compile check with Xcode 16.4 and `MACOSX_DEPLOYMENT_TARGET=10.14`
   - Modern: current unsigned build line with Xcode 26.x
-- CI also runs `Tests/SecurityHarness/security_harness.swift`, the endpoint-builder smoke harness, and the capability-identity smoke harness in PR validation.
-- CI does not yet automatically run the new managed-override, validator, log-reader, or profile-artifact smoke harnesses. They are currently local focused checks and should be promoted later if they prove stable.
+- CI also runs `Tests/SecurityHarness/security_harness.swift`, the endpoint-builder smoke harness, the capability-identity smoke harness, and the new config-validator, diagnostics-log-reader, profile-artifact-metadata, and SmartX-managed-override smoke harnesses.
 - CI does **not** validate notarization, privileged helper installation by SMJobBless, or production signing requirements.
 - Local release testing still requires real Apple Developer identities and a follow-up helper identity migration.
 - The Legacy artifact is only a deployment-target compile check for macOS 10.14. It does **not** prove runtime behavior on a real macOS 10.14 system.

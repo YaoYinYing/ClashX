@@ -53,11 +53,38 @@ func runCapabilityIdentitySmoke() {
     Settings.isUsingEmbeddedCore = false
 
     let identity = CapabilityCache.shared.currentControllerIdentityForTesting()
-    expect(identity.contains("secret-set"), "secret-set marker missing")
     expect(!identity.contains("super-secret"), "raw controller secret leaked into identity")
     expect(!identity.contains("user:password"), "userinfo leaked into identity")
     expect(!identity.contains("token=secret"), "query leaked into identity")
     expect(identity.contains("https://example.com:9443/base"), "sanitized controller base missing")
+    expect(identity.contains("secret-fnv1a64-"), "hashed secret marker missing")
+
+    ConfigManager.shared.overrideSecret = "alpha-secret"
+    CapabilityCache.shared.reset()
+    let overrideIdentityA = CapabilityCache.shared.currentControllerIdentityForTesting()
+    ConfigManager.shared.overrideSecret = "beta-secret"
+    CapabilityCache.shared.reset()
+    let overrideIdentityB = CapabilityCache.shared.currentControllerIdentityForTesting()
+    expect(overrideIdentityA != overrideIdentityB, "different override secrets should change identity")
+    expect(!overrideIdentityA.contains("alpha-secret"), "override alpha secret leaked into identity")
+    expect(!overrideIdentityB.contains("beta-secret"), "override beta secret leaked into identity")
+
+    ConfigManager.shared.overrideSecret = nil
+    ConfigManager.shared.apiSecret = "api-alpha"
+    CapabilityCache.shared.reset()
+    let apiIdentityA = CapabilityCache.shared.currentControllerIdentityForTesting()
+    ConfigManager.shared.apiSecret = "api-beta"
+    CapabilityCache.shared.reset()
+    let apiIdentityB = CapabilityCache.shared.currentControllerIdentityForTesting()
+    expect(apiIdentityA != apiIdentityB, "different api secrets should change identity")
+    expect(!apiIdentityA.contains("api-alpha"), "api alpha secret leaked into identity")
+    expect(!apiIdentityB.contains("api-beta"), "api beta secret leaked into identity")
+
+    ConfigManager.shared.overrideSecret = nil
+    ConfigManager.shared.apiSecret = ""
+    CapabilityCache.shared.reset()
+    let noSecretIdentity = CapabilityCache.shared.currentControllerIdentityForTesting()
+    expect(noSecretIdentity.contains("no-secret"), "empty secret should stay no-secret")
 }
 
 @main

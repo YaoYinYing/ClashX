@@ -50,7 +50,7 @@ enum ControllerEndpointBuilder {
             throw ControllerEndpointError.coreStopped
         }
         if let override = ConfigManager.shared.overrideApiURL {
-            return try normalizeExternalBaseURL(override)
+            return try normalizeExternalHTTPBaseURL(override)
         }
         guard let url = URL(string: "http://127.0.0.1:\(ConfigManager.shared.apiPort)") else {
             throw ControllerEndpointError.invalidBaseURL(ConfigManager.shared.apiPort)
@@ -59,29 +59,25 @@ enum ControllerEndpointBuilder {
     }
 
     static func baseWebSocketURL() throws -> URL {
-        let baseURL = try baseHTTPURL()
-        guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
-            throw ControllerEndpointError.invalidBaseURL(baseURL.absoluteString)
+        guard ConfigManager.shared.isRunning else {
+            throw ControllerEndpointError.coreStopped
         }
-        switch components.scheme?.lowercased() {
-        case "http":
-            components.scheme = "ws"
-        case "https":
-            components.scheme = "wss"
-        case "ws", "wss":
-            break
-        default:
-            throw ControllerEndpointError.invalidBaseURL(baseURL.absoluteString)
+        if let override = ConfigManager.shared.overrideApiURL {
+            return try normalizeExternalWebSocketBaseURL(override)
         }
+        guard var components = URLComponents(string: "http://127.0.0.1:\(ConfigManager.shared.apiPort)") else {
+            throw ControllerEndpointError.invalidBaseURL(ConfigManager.shared.apiPort)
+        }
+        components.scheme = "ws"
         guard let url = components.url else {
-            throw ControllerEndpointError.invalidBaseURL(baseURL.absoluteString)
+            throw ControllerEndpointError.invalidBaseURL(ConfigManager.shared.apiPort)
         }
         return url
     }
 
     static func sanitizedControllerIdentityBaseString() -> String {
         if let override = ConfigManager.shared.overrideApiURL,
-           let sanitized = try? normalizeExternalBaseURL(override) {
+           let sanitized = try? normalizeExternalHTTPBaseURL(override) {
             return sanitized.absoluteString
         }
         return "http://127.0.0.1:\(ConfigManager.shared.apiPort)"
@@ -126,15 +122,49 @@ enum ControllerEndpointBuilder {
         return set
     }()
 
-    private static func normalizeExternalBaseURL(_ baseURL: URL) throws -> URL {
+    // HTTP callers may receive a controller URL written in WebSocket form.
+    // We map ws->http and wss->https so one override can still serve both
+    // HTTP endpoint requests and WebSocket streams without leaking userinfo,
+    // queries, or fragments into the derived endpoint URLs.
+    private static func normalizeExternalHTTPBaseURL(_ baseURL: URL) throws -> URL {
+        try normalizeExternalBaseURL(baseURL) { scheme in
+            switch scheme {
+            case "http", "https":
+                return scheme
+            case "ws":
+                return "http"
+            case "wss":
+                return "https"
+            default:
+                return nil
+            }
+        }
+    }
+
+    private static func normalizeExternalWebSocketBaseURL(_ baseURL: URL) throws -> URL {
+        try normalizeExternalBaseURL(baseURL) { scheme in
+            switch scheme {
+            case "http":
+                return "ws"
+            case "https":
+                return "wss"
+            case "ws", "wss":
+                return scheme
+            default:
+                return nil
+            }
+        }
+    }
+
+    private static func normalizeExternalBaseURL(_ baseURL: URL, schemeTransform: (String) -> String?) throws -> URL {
         guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false),
               let scheme = components.scheme?.lowercased(),
-              ["http", "https", "ws", "wss"].contains(scheme),
+              let normalizedScheme = schemeTransform(scheme),
               components.host != nil else {
             throw ControllerEndpointError.invalidBaseURL(baseURL.absoluteString)
         }
 
-        components.scheme = scheme
+        components.scheme = normalizedScheme
         components.user = nil
         components.password = nil
         components.query = nil

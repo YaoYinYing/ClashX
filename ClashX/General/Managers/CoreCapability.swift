@@ -61,8 +61,21 @@ final class CapabilityCache {
         let mode = Settings.isUsingEmbeddedCore ? "embedded" : "external"
         let running = ConfigManager.shared.isRunning ? "running" : "stopped"
         let secret = ConfigManager.shared.overrideSecret ?? ConfigManager.shared.apiSecret
-        let secretState = secret.isEmpty ? "no-secret" : "secret-set"
+        let secretState = secretIdentityComponent(secret)
         return [mode, running, ControllerEndpointBuilder.sanitizedControllerIdentityBaseString(), secretState].joined(separator: "|")
+    }
+
+    // This is only a stable cache-identity discriminator. It is intentionally
+    // non-reversible, but it is not a security primitive.
+    private func secretIdentityComponent(_ secret: String) -> String {
+        guard !secret.isEmpty else { return "no-secret" }
+
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in secret.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 0x100000001b3
+        }
+        return String(format: "secret-fnv1a64-%016llx", hash)
     }
 
     private func synchronizeIdentity() {

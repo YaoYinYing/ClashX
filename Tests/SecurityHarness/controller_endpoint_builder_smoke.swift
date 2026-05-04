@@ -92,6 +92,22 @@ func runControllerEndpointBuilderSmoke() throws {
     expectURL(staticPathURL,
               equals: "https://example.com:9443/base/group/test",
               "static path API remains available for literal endpoints")
+
+    ConfigManager.shared.overrideApiURL = URL(string: "ws://example.com:9090/base")
+    try expectURL(ControllerEndpointBuilder.httpURL(path: "/configs"),
+                  equals: "http://example.com:9090/base/configs",
+                  "ws override maps back to http for HTTP requests")
+    try expectURL(ControllerEndpointBuilder.websocketURL(path: "/traffic"),
+                  equals: "ws://example.com:9090/base/traffic",
+                  "ws override stays ws for websocket requests")
+
+    ConfigManager.shared.overrideApiURL = URL(string: "wss://example.com:9443/base")
+    try expectURL(ControllerEndpointBuilder.httpURL(path: "/configs"),
+                  equals: "https://example.com:9443/base/configs",
+                  "wss override maps back to https for HTTP requests")
+    try expectURL(ControllerEndpointBuilder.websocketURL(path: "/logs"),
+                  equals: "wss://example.com:9443/base/logs",
+                  "wss override stays wss for websocket requests")
 }
 
 @main

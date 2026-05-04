@@ -35,6 +35,7 @@ For the controller API foundation and SmartX hardening work, SmartX now has seve
 - `config_validator_smoke.swift` exercises the reusable TUN and DNS validators without duplicating the production validation rules, including nil-input handling and invalid IPv6 CIDR prefixes.
 - `diagnostics_log_reader_smoke.swift` exercises the diagnostics log tail reader so large rolling log files do not require full synchronous reads every refresh cycle.
 - `profile_artifact_metadata_smoke.swift` exercises `ProfileArtifactMetadata` encoding so source-copy artifact semantics stay stable while the real generated effective config pipeline is still pending, including the false override/merge/runtime flags that keep the current artifacts honest.
+- `effective_config_generator_smoke.swift` exercises the current `EffectiveConfigGenerator` boundary so SmartX keeps an explicit unsupported result until a safe YAML emitter exists for base config plus managed LightGBM override generation.
 
 These harnesses compile the production files directly with lightweight stubs for app-global state. That keeps the tested logic real while avoiding a second copied implementation.
 High coverage has not been achieved in this branch, and XCTest migration remains follow-up work.
@@ -49,12 +50,13 @@ Local commands:
 - `swiftc ClashX/General/Utils/ConfigValidationIssue.swift ClashX/General/Utils/TunConfigValidator.swift ClashX/General/Utils/DNSConfigValidator.swift Tests/SecurityHarness/config_validator_smoke.swift -o /tmp/config-validator-smoke && /tmp/config-validator-smoke`
 - `swiftc ClashX/General/Utils/DiagnosticsLogReader.swift Tests/SecurityHarness/diagnostics_log_reader_smoke.swift -o /tmp/diagnostics-log-reader-smoke && /tmp/diagnostics-log-reader-smoke`
 - `swiftc ClashX/General/Managers/ProfileArtifactManager.swift Tests/SecurityHarness/profile_artifact_metadata_smoke.swift -o /tmp/profile-artifact-metadata-smoke && /tmp/profile-artifact-metadata-smoke`
+- `swiftc ClashX/General/Managers/EffectiveConfigGenerator.swift Tests/SecurityHarness/effective_config_generator_smoke.swift -o /tmp/effective-config-generator-smoke && /tmp/effective-config-generator-smoke`
 
 These are meant for utility-level verification when changing endpoint composition or capability identity handling.
 
 ## Remaining Gaps
 
-- There is still no real XCTest coverage for controller endpoint construction, capability probing, override persistence, diagnostics log tailing, or config-validation transitions.
+- There is still no real XCTest coverage for controller endpoint construction, capability probing, override persistence, diagnostics log tailing, config-validation transitions, or effective-config generation behavior.
 - The smoke harnesses do not exercise the full app target, Alamofire request execution, or AppKit controller wiring.
 - `CoreCapabilityProbe` currently depends on the app request layer and would benefit from later extraction into more directly testable probe helpers.
 

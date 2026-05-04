@@ -11,7 +11,6 @@ PODS_PROJECT_DIR="$ROOT_DIR/Pods/Pods.xcodeproj"
 repair_mode="${SMARTX_ENSURE_WORKSPACE_REPAIR:-0}"
 regenerate_mode="${SMARTX_REGENERATE_WORKSPACE:-0}"
 regenerate_lock="${SMARTX_REGENERATE_PODFILE_LOCK:-0}"
-attempted_repair=0
 
 print_missing_products_hint() {
   echo "CocoaPods workspace products are missing. Run:"
@@ -128,7 +127,6 @@ EOF
 }
 
 run_repair() {
-  attempted_repair=1
   echo "Attempting non-destructive workspace repair..."
   (
     cd "$ROOT_DIR" || exit 1
@@ -137,7 +135,6 @@ run_repair() {
 }
 
 run_regeneration() {
-  attempted_repair=1
   echo "Regenerating workspace and Pods because SMARTX_REGENERATE_WORKSPACE=1..."
   (
     cd "$ROOT_DIR" || exit 1

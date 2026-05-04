@@ -3,6 +3,8 @@ set -uo pipefail
 
 # Run a focused Xcode test command with minimal stdout.
 # Full output is stored in .codex-logs so Codex only receives a short summary.
+# Standalone SecurityHarness smoke checks are kept separate in PR CI; this
+# wrapper only drives the Xcode test target path when one exists.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$ROOT_DIR/.codex-logs"

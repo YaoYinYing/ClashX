@@ -5,10 +5,12 @@
 SmartX has improved its foundation work, but several surfaces are still explicitly transitional.
 
 - The LightGBM override now has a persisted SmartX-managed file, but it is still only groundwork for later effective-config generation.
+- The current branch now has a narrow `EffectiveConfigGenerator` boundary, but it still reports unsupported until a safe YAML emit path exists and must not be treated as proof of generated-config support.
 - Hidden SmartX override bootstrap side effects were reduced by removing migration writes from low-level Settings getters, but override migration is still a sensitive path because it bridges UserDefaults compatibility data and the managed JSON file.
 - Profile artifact terminology is now more honest in new code and UI, but the compatibility `generated-effective.*` paths still exist until a real profile pipeline lands.
 - TUN and DNS validation now live in reusable validators, and TUN toggling now has a named lifecycle coordinator, but embedded-core TUN remains unsupported and privileged TUN architecture is still missing.
-- Diagnostics log viewing is safer because it now tails large rolling files instead of re-reading them whole every refresh cycle, and artifact formatting moved into a small helper, but the Diagnostics dashboard remains structurally too large.
+- Diagnostics log viewing is safer because it now tails large rolling files instead of re-reading them whole every refresh cycle, and artifact/provider formatting moved into small helpers, but the Diagnostics dashboard remains structurally too large.
+- `ApiRequest` is now partially decomposed into `DiagnosticsAPI`, `ProviderAPI`, `SmartAPI`, and `ConfigAPI`, but the compatibility facade still remains broader than it should be.
 
 ## Patchwork Risks To Keep Visible
 

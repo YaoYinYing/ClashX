@@ -53,6 +53,16 @@ enum DiagnosticsReportBuilder {
             lines.append("Embedded Core Version: not applicable")
         }
 
+        if let snapshot = CapabilityCache.shared.snapshot() {
+            lines.append("Capability Snapshot Mode: \(snapshot.mode)")
+            lines.append("Capability Snapshot Running: \(snapshot.running ? "yes" : "no")")
+            lines.append("Capability Snapshot Identity: \(snapshot.controllerIdentity)")
+            lines.append("Capability Snapshot Probed At: \(DateFormatter.localizedString(from: snapshot.probedAt, dateStyle: .short, timeStyle: .medium))")
+            lines.append("Capability Snapshot Core Version: \(snapshot.coreVersion ?? "unknown")")
+        } else {
+            lines.append("Capability Snapshot: unavailable")
+        }
+
         return lines.joined(separator: "\n")
     }
 

@@ -214,6 +214,7 @@ Testing gate:
 Current note:
 
 - SmartX now has an initial guarded `TunLifecycleCoordinator`, but embedded-core TUN remains explicitly unsupported and privileged TUN architecture is still a later prerequisite
+- SmartX now also routes guarded config patching through narrower `ConfigAPI` helpers, but that is still external-controller lifecycle hardening rather than full TUN architecture
 
 ## Phase 8: DNS/TUN Validation Module
 

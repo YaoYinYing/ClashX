@@ -165,6 +165,15 @@ jobs:
             -o /tmp/smartx-managed-override-smoke
           /tmp/smartx-managed-override-smoke | tee .ci-logs/smartx-managed-override-smoke.log
 
+      - name: Effective config generator smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Managers/EffectiveConfigGenerator.swift \
+            Tests/SecurityHarness/effective_config_generator_smoke.swift \
+            -o /tmp/effective-config-generator-smoke
+          /tmp/effective-config-generator-smoke | tee .ci-logs/effective-config-generator-smoke.log
+
       - name: Upload validation logs on failure
         if: failure()
         uses: actions/upload-artifact@v5
@@ -332,6 +341,15 @@ jobs:
             Tests/SecurityHarness/smartx_managed_override_smoke.swift \
             -o /tmp/smartx-managed-override-smoke
           /tmp/smartx-managed-override-smoke | tee .ci-logs/smartx-managed-override-smoke.log
+
+      - name: Effective config generator smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Managers/EffectiveConfigGenerator.swift \
+            Tests/SecurityHarness/effective_config_generator_smoke.swift \
+            -o /tmp/effective-config-generator-smoke
+          /tmp/effective-config-generator-smoke | tee .ci-logs/effective-config-generator-smoke.log
 
       - name: Build unsigned Debug app
         run: |

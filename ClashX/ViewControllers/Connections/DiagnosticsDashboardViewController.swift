@@ -421,7 +421,11 @@ class DiagnosticsDashboardViewController: NSViewController {
             let message = NSLocalizedString("Core is stopped or controller is unavailable.", comment: "")
             latestProxyProviderResult = .failed(message)
             latestRuleProviderResult = .failed(message)
-            providerOutput = formatProviderDiagnostics(proxyResult: latestProxyProviderResult, ruleResult: latestRuleProviderResult)
+            let formatted = DiagnosticsProviderFormatter.format(proxyResult: latestProxyProviderResult,
+                                                                ruleResult: latestRuleProviderResult,
+                                                                existingHTTPProxyProviderNames: httpProxyProviderNames)
+            providerOutput = formatted.text
+            httpProxyProviderNames = formatted.httpProxyProviderNames
             CapabilityCache.shared.markUnavailable(.proxyProviders, message: message)
             CapabilityCache.shared.markUnavailable(.ruleProviders, message: message)
             setStatus(message)
@@ -453,7 +457,11 @@ class DiagnosticsDashboardViewController: NSViewController {
 
             self.latestProxyProviderResult = proxyResult
             self.latestRuleProviderResult = ruleResult
-            self.providerOutput = self.formatProviderDiagnostics(proxyResult: proxyResult, ruleResult: ruleResult)
+            let formatted = DiagnosticsProviderFormatter.format(proxyResult: proxyResult,
+                                                                ruleResult: ruleResult,
+                                                                existingHTTPProxyProviderNames: self.httpProxyProviderNames)
+            self.providerOutput = formatted.text
+            self.httpProxyProviderNames = formatted.httpProxyProviderNames
 
             switch (proxyResult, ruleResult) {
             case (.success(_), _), (_, .success(_)):
@@ -563,17 +571,10 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionCopyPprofURLs() {
-        guard let baseURL = try? ControllerEndpointBuilder.baseHTTPURL() else {
+        guard let urls = DiagnosticsAPI.pprofURLs() else {
             setStatus(NSLocalizedString("The active controller URL is invalid, so pprof URLs could not be prepared.", comment: ""))
             return
         }
-
-        let urls = [
-            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof"),
-            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof/goroutine"),
-            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof/heap"),
-            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof/profile")
-        ].compactMap { $0 }
 
         let text = [
             "SmartX pprof helpers",
@@ -739,7 +740,11 @@ class DiagnosticsDashboardViewController: NSViewController {
             guard let self else { return }
             ProviderHealthHistoryManager.append(succeeded: succeeded, failed: failed)
             let summary = self.providerHealthCheckSummary(timestamp: timestamp, succeeded: succeeded.sorted(), failed: failed.sorted())
-            self.providerOutput = "\(self.formatProviderDiagnostics(proxyResult: self.latestProxyProviderResult, ruleResult: self.latestRuleProviderResult))\n\n\(summary)"
+            let formatted = DiagnosticsProviderFormatter.format(proxyResult: self.latestProxyProviderResult,
+                                                                ruleResult: self.latestRuleProviderResult,
+                                                                existingHTTPProxyProviderNames: self.httpProxyProviderNames)
+            self.providerOutput = "\(formatted.text)\n\n\(summary)"
+            self.httpProxyProviderNames = formatted.httpProxyProviderNames
             self.setStatus(String(format: NSLocalizedString("Finished provider health checks. Success: %d, Failed: %d.", comment: ""), succeeded.count, failed.count))
             self.renderOutput()
         }
@@ -825,59 +830,6 @@ class DiagnosticsDashboardViewController: NSViewController {
         } else {
             renderOutput()
         }
-    }
-
-    private func formatProviderDiagnostics(proxyResult: ControllerJSONResult?, ruleResult: ControllerJSONResult?) -> String {
-        let proxySection = providerSection(title: "Proxy Providers", result: proxyResult, capability: .proxyProviders)
-        let ruleSection = providerSection(title: "Rule Providers", result: ruleResult, capability: .ruleProviders)
-        let historySection = ProviderHealthHistoryManager.summary(limit: 5)
-        return [proxySection, ruleSection, historySection].joined(separator: "\n\n")
-    }
-
-    private func providerSection(title: String, result: ControllerJSONResult?, capability: CoreCapability) -> String {
-        var lines = [title]
-        let result = result ?? .failed(NSLocalizedString("No response.", comment: ""))
-
-        switch result {
-        case let .success(json):
-            let providers = json["providers"].dictionaryValue
-            let providerNames = providers.keys.sorted()
-            if capability == .proxyProviders {
-                httpProxyProviderNames = providerNames.filter {
-                    providers[$0]?["vehicleType"].stringValue.caseInsensitiveCompare("http") == .orderedSame
-                }
-            }
-
-            lines.append("Count: \(providerNames.count)")
-            if providerNames.isEmpty {
-                lines.append("None reported.")
-            } else {
-                for name in providerNames {
-                    let provider = providers[name]
-                    let vehicleType = provider?["vehicleType"].stringValue ?? "unknown"
-                    let providerType = provider?["type"].stringValue ?? "unknown"
-                    let proxyCount = provider?["proxies"].arrayValue.count ?? 0
-                    lines.append("- \(name) [\(providerType)/\(vehicleType)] proxies=\(proxyCount)")
-                }
-            }
-        case .unsupported:
-            if capability == .proxyProviders {
-                httpProxyProviderNames = []
-            }
-            lines.append("Unsupported by the active controller.")
-        case let .unauthorized(message):
-            if capability == .proxyProviders {
-                httpProxyProviderNames = []
-            }
-            lines.append("Unauthorized: \(message)")
-        case let .failed(message):
-            if capability == .proxyProviders {
-                httpProxyProviderNames = []
-            }
-            lines.append("Failed: \(message)")
-        }
-
-        return lines.joined(separator: "\n")
     }
 
     private func providerHealthCheckSummary(timestamp: String, succeeded: [String], failed: [String]) -> String {

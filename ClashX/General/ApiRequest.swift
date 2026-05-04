@@ -95,7 +95,7 @@ class ApiRequest {
         return (!secret.isEmpty) ? ["Authorization": "Bearer \(secret)"] : [:]
     }
 
-    private static func req(
+    static func req(
         _ path: String,
         method: HTTPMethod = .get,
         parameters: Parameters? = nil,
@@ -117,7 +117,7 @@ class ApiRequest {
         }
     }
 
-    private static func req(
+    static func req(
         pathComponents: [String],
         method: HTTPMethod = .get,
         parameters: Parameters? = nil,
@@ -138,23 +138,23 @@ class ApiRequest {
         }
     }
 
-    private static func controllerUnavailableMessage() -> String {
+    static func controllerUnavailableMessage() -> String {
         NSLocalizedString("Core is stopped or controller is unavailable.", comment: "")
     }
 
-    private static func unavailableEndpointResult() -> ControllerEndpointResult {
+    static func unavailableEndpointResult() -> ControllerEndpointResult {
         .failed(controllerUnavailableMessage())
     }
 
-    private static func unavailableJSONResult() -> ControllerJSONResult {
+    static func unavailableJSONResult() -> ControllerJSONResult {
         .failed(controllerUnavailableMessage())
     }
 
-    private static func unavailableDecodedResult<T>() -> ControllerDecodedResult<T> {
+    static func unavailableDecodedResult<T>() -> ControllerDecodedResult<T> {
         .failed(controllerUnavailableMessage())
     }
 
-    private static func endpointResult(from response: AFDataResponse<Data>, defaultMessage: String, unsupportedStatusCodes: Set<Int> = [400, 404, 405, 501]) -> ControllerEndpointResult {
+    static func endpointResult(from response: AFDataResponse<Data>, defaultMessage: String, unsupportedStatusCodes: Set<Int> = [400, 404, 405, 501]) -> ControllerEndpointResult {
         let statusCode = response.response?.statusCode
         if let statusCode, (200 ..< 300).contains(statusCode) {
             return .success
@@ -182,7 +182,7 @@ class ApiRequest {
         return .failed(message)
     }
 
-    private static func jsonResult(from response: AFDataResponse<Data>, defaultMessage: String, unsupportedStatusCodes: Set<Int> = [400, 404, 405, 501]) -> ControllerJSONResult {
+    static func jsonResult(from response: AFDataResponse<Data>, defaultMessage: String, unsupportedStatusCodes: Set<Int> = [400, 404, 405, 501]) -> ControllerJSONResult {
         switch endpointResult(from: response, defaultMessage: defaultMessage, unsupportedStatusCodes: unsupportedStatusCodes) {
         case .success:
             guard let data = try? response.result.get() else {
@@ -198,11 +198,11 @@ class ApiRequest {
         }
     }
 
-    private static func decodedResult<T: Decodable>(from response: AFDataResponse<Data>,
-                                                    as type: T.Type,
-                                                    defaultMessage: String,
-                                                    unsupportedStatusCodes: Set<Int> = [400, 404, 405, 501],
-                                                    decoder: JSONDecoder = JSONDecoder()) -> ControllerDecodedResult<T> {
+    static func decodedResult<T: Decodable>(from response: AFDataResponse<Data>,
+                                            as type: T.Type,
+                                            defaultMessage: String,
+                                            unsupportedStatusCodes: Set<Int> = [400, 404, 405, 501],
+                                            decoder: JSONDecoder = JSONDecoder()) -> ControllerDecodedResult<T> {
         switch endpointResult(from: response, defaultMessage: defaultMessage, unsupportedStatusCodes: unsupportedStatusCodes) {
         case .success:
             guard let data = try? response.result.get() else {
@@ -319,34 +319,23 @@ class ApiRequest {
     }
 
     static func updateOutBoundMode(mode: ClashProxyMode, callback: ((Bool) -> Void)? = nil) {
-        guard let request = req("/configs", method: .patch, parameters: ["mode": mode.rawValue], encoding: JSONEncoding.default) else {
-            callback?(false)
-            return
+        ConfigAPI.patchConfig(parameters: ["mode": mode.rawValue],
+                              defaultMessage: NSLocalizedString("Failed to update the current outbound mode.", comment: "")) { result in
+            callback?({
+                if case .success = result { return true }
+                return false
+            }())
         }
-        request
-            .responseData { response in
-                switch response.result {
-                case .success:
-                    callback?(true)
-                case .failure:
-                    callback?(false)
-                }
-            }
     }
 
     static func updateLogLevel(level: ClashLogLevel, callback: ((Bool) -> Void)? = nil) {
-        guard let request = req("/configs", method: .patch, parameters: ["log-level": level.rawValue], encoding: JSONEncoding.default) else {
-            callback?(false)
-            return
+        ConfigAPI.patchConfig(parameters: ["log-level": level.rawValue],
+                              defaultMessage: NSLocalizedString("Failed to update the current log level.", comment: "")) { result in
+            callback?({
+                if case .success = result { return true }
+                return false
+            }())
         }
-        request.responseData(completionHandler: { response in
-            switch response.result {
-            case .success:
-                callback?(true)
-            case .failure:
-                callback?(false)
-            }
-        })
     }
 
     static func requestProxyGroupList(completeHandler: ((ClashProxyResp) -> Void)? = nil) {
@@ -381,15 +370,8 @@ class ApiRequest {
 
     static func updateAllowLan(allow: Bool, completeHandler: (() -> Void)? = nil) {
         Logger.log("update allow lan:\(allow)", level: .debug)
-        guard let request = req("/configs",
-                                method: .patch,
-                                parameters: ["allow-lan": allow],
-                                encoding: JSONEncoding.default) else {
-            completeHandler?()
-            return
-        }
-        request.response {
-            _ in
+        ConfigAPI.patchConfig(parameters: ["allow-lan": allow],
+                              defaultMessage: NSLocalizedString("Failed to update allow-lan.", comment: "")) { _ in
             completeHandler?()
         }
     }
@@ -408,44 +390,7 @@ class ApiRequest {
     }
 
     static func updateTunResult(enable: Bool, completeHandler: @escaping (ControllerEndpointResult) -> Void) {
-        let controllerMode = Settings.isUsingEmbeddedCore ? "embedded core" : "external controller"
-        guard let request = req("/configs",
-                                method: .patch,
-                                parameters: ["tun": ["enable": enable]],
-                                encoding: JSONEncoding.default) else {
-            completeHandler(unavailableEndpointResult())
-            return
-        }
-        request.responseData { response in
-            if response.response?.statusCode == 204 {
-                completeHandler(.success)
-                return
-            }
-
-            let data = try? response.result.get()
-            let controllerMessage = data.flatMap { JSON($0)["message"].string?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            let statusCode = response.response?.statusCode
-            let fallback = response.error?.localizedDescription ?? NSLocalizedString("Failed to update TUN settings.", comment: "")
-
-            var messageParts = [String(format: NSLocalizedString("TUN update failed while using %@.", comment: ""), controllerMode)]
-            if let statusCode {
-                messageParts.append("HTTP \(statusCode).")
-            }
-            if let controllerMessage, !controllerMessage.isEmpty {
-                messageParts.append(controllerMessage)
-            } else {
-                messageParts.append(fallback)
-            }
-
-            Logger.log("[ApiRequest] updateTun failed enable=\(enable) mode=\(controllerMode) status=\(statusCode.map(String.init) ?? "none") controllerMessage=\(controllerMessage ?? "none")", level: .warning)
-            if let statusCode, [401, 403].contains(statusCode) {
-                completeHandler(.unauthorized(messageParts.joined(separator: " ")))
-            } else if let statusCode, [400, 404, 405, 501].contains(statusCode) {
-                completeHandler(.unsupported)
-            } else {
-                completeHandler(.failed(messageParts.joined(separator: " ")))
-            }
-        }
+        ConfigAPI.updateTunResult(enable: enable, completeHandler: completeHandler)
     }
 
     static func updateProxyGroup(group: String, selectProxy: String, callback: @escaping ((Bool) -> Void)) {
@@ -565,107 +510,43 @@ class ApiRequest {
     }
 
     static func requestMemorySnapshot(completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        guard let request = req("/memory") else {
-            completeHandler(unavailableJSONResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load memory diagnostics.", comment: "")))
-        }
+        DiagnosticsAPI.requestMemorySnapshot(completeHandler: completeHandler)
     }
 
     static func requestProxyProvidersDiagnostics(completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        guard let request = req("/providers/proxies") else {
-            completeHandler(unavailableJSONResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load proxy provider diagnostics.", comment: "")))
-        }
+        ProviderAPI.requestProxyProvidersDiagnostics(completeHandler: completeHandler)
     }
 
     static func requestRuleProvidersDiagnostics(completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        guard let request = req("/providers/rules") else {
-            completeHandler(unavailableJSONResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load rule provider diagnostics.", comment: "")))
-        }
+        ProviderAPI.requestRuleProvidersDiagnostics(completeHandler: completeHandler)
     }
 
     static func requestDNSQuery(name: String, type: String? = nil, completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        var queryItems = [URLQueryItem(name: "name", value: name)]
-        if let type, !type.isEmpty {
-            queryItems.append(URLQueryItem(name: "type", value: type))
-        }
-        guard let request = req("/dns/query", queryItems: queryItems) else {
-            completeHandler(unavailableJSONResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to query DNS diagnostics.", comment: "")))
-        }
+        DiagnosticsAPI.requestDNSQuery(name: name, type: type, completeHandler: completeHandler)
     }
 
     static func resetDNSCache(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = req("/cache/dns/flush", method: .post) else {
-            completeHandler?(unavailableEndpointResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to flush DNS cache.", comment: "")))
-        }
+        DiagnosticsAPI.resetDNSCache(completeHandler: completeHandler)
     }
 
     static func reloadGeoDatabase(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = req("/configs/geo", method: .post) else {
-            completeHandler?(unavailableEndpointResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to reload GEO data.", comment: "")))
-        }
+        DiagnosticsAPI.reloadGeoDatabase(completeHandler: completeHandler)
     }
 
     static func restartCore(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = req("/restart", method: .post) else {
-            completeHandler?(unavailableEndpointResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to restart the active core.", comment: "")))
-        }
+        DiagnosticsAPI.restartCore(completeHandler: completeHandler)
     }
 
     static func updateDashboardAssets(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = req("/upgrade/ui", method: .post) else {
-            completeHandler?(unavailableEndpointResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to update dashboard assets.", comment: "")))
-        }
+        DiagnosticsAPI.updateDashboardAssets(completeHandler: completeHandler)
     }
 
     static func updateGeoAssets(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = req("/upgrade/geo", method: .post) else {
-            completeHandler?(unavailableEndpointResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to update GEO assets.", comment: "")))
-        }
+        DiagnosticsAPI.updateGeoAssets(completeHandler: completeHandler)
     }
 
     static func runDebugGC(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = req("/debug/gc", method: .put) else {
-            completeHandler?(unavailableEndpointResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to trigger controller garbage collection.", comment: "")))
-        }
+        DiagnosticsAPI.runDebugGC(completeHandler: completeHandler)
     }
 
     static func requestPolicyGroups(completeHandler: @escaping (ControllerJSONResult) -> Void) {
@@ -809,105 +690,31 @@ extension ApiRequest {
     }
 
     static func updateProviderResult(name: String, type: ProviderType, completeHandler: @escaping (ControllerEndpointResult) -> Void) {
-        let pathComponents: [String]
-        switch type {
-        case .proxy:
-            pathComponents = ["providers", "proxies", name]
-        case .rule:
-            pathComponents = ["providers", "rules", name]
-        }
-        guard let request = ApiRequest.req(pathComponents: pathComponents, method: .put) else {
-            completeHandler(unavailableEndpointResult())
-            return
-        }
-        request.responseData { resp in
-            completeHandler(endpointResult(from: resp, defaultMessage: NSLocalizedString("Failed to update the selected provider.", comment: "")))
-        }
+        ProviderAPI.updateProviderResult(name: name, type: type, completeHandler: completeHandler)
     }
 
     static func resetFakeIpCache(completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = ApiRequest.req("/cache/fakeip/flush", method: .post) else {
-            completeHandler?(unavailableEndpointResult())
-            return
-        }
-        request.responseData { resp in
-            Logger.log("flush fake ip: \(resp.response?.statusCode ?? -1)")
-            completeHandler?(endpointResult(from: resp, defaultMessage: NSLocalizedString("Failed to flush the fake-IP cache.", comment: "")))
-        }
+        DiagnosticsAPI.resetFakeIPCache(completeHandler: completeHandler)
     }
 
     static func requestSmartWeights(completeHandler: @escaping (ControllerDecodedResult<SmartWeightsResponse>) -> Void) {
-        guard let request = req("/group/weights") else {
-            completeHandler(unavailableDecodedResult())
-            return
-        }
-        request.responseData { resp in
-            let result: ControllerDecodedResult<SmartWeightsResponse> = decodedResult(from: resp,
-                                                                                      as: SmartWeightsResponse.self,
-                                                                                      defaultMessage: NSLocalizedString("Failed to load Smart weights.", comment: ""))
-            if case let .failed(message) = result {
-                Logger.log("request smart weights failed: \(message)", level: .warning)
-            }
-            completeHandler(result)
-        }
+        SmartAPI.requestSmartWeights(completeHandler: completeHandler)
     }
 
     static func requestSmartWeights(group: String, completeHandler: @escaping (ControllerDecodedResult<[SmartNodeWeight]>) -> Void) {
-        guard let request = req(pathComponents: ["group", group, "weights"]) else {
-            completeHandler(unavailableDecodedResult())
-            return
-        }
-        request.responseData { resp in
-            switch jsonResult(from: resp, defaultMessage: NSLocalizedString("Failed to load Smart group weights.", comment: "")) {
-            case let .success(json):
-                let weights = json["weights"].arrayValue.compactMap {
-                    try? JSONDecoder().decode(SmartNodeWeight.self, from: $0.rawData())
-                }
-                completeHandler(.success(weights))
-            case .unsupported:
-                completeHandler(.unsupported)
-            case let .unauthorized(message):
-                completeHandler(.unauthorized(message))
-            case let .failed(message):
-                completeHandler(.failed(message))
-            }
-        }
+        SmartAPI.requestSmartWeights(group: group, completeHandler: completeHandler)
     }
 
     static func flushSmartCache(configName: String? = nil, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        let request: DataRequest?
-        if let configName {
-            request = req(pathComponents: ["cache", "smart", "flush", configName], method: .post)
-        } else {
-            request = req("/cache/smart/flush", method: .post)
-        }
-        guard let request else {
-            completeHandler?(unavailableEndpointResult())
-            return
-        }
-        request.responseData { resp in
-            completeHandler?(endpointResult(from: resp, defaultMessage: NSLocalizedString("Failed to flush the Smart cache.", comment: "")))
-        }
+        SmartAPI.flushSmartCache(configName: configName, completeHandler: completeHandler)
     }
 
     static func blockSmartConnection(_ id: String, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = req(pathComponents: ["connections", "smart", id], method: .delete) else {
-            completeHandler?(unavailableEndpointResult())
-            return
-        }
-        request.responseData { resp in
-            completeHandler?(endpointResult(from: resp, defaultMessage: NSLocalizedString("Failed to block the Smart connection.", comment: "")))
-        }
+        SmartAPI.blockSmartConnection(id, completeHandler: completeHandler)
     }
 
     static func updateSmartLightGBMModel(completeHandler: @escaping (ControllerEndpointResult) -> Void) {
-        guard let request = req("/upgrade/lgbm", method: .post) else {
-            completeHandler(unavailableEndpointResult())
-            return
-        }
-        request.responseData { resp in
-            completeHandler(endpointResult(from: resp, defaultMessage: NSLocalizedString("LightGBM model update failed.", comment: "")))
-        }
+        SmartAPI.updateSmartLightGBMModel(completeHandler: completeHandler)
     }
 
     static func requestCoreVersion(completeHandler: @escaping (String?) -> Void) {
@@ -936,13 +743,7 @@ extension ApiRequest {
     }
 
     static func requestControllerConfig(completeHandler: @escaping (ControllerDecodedResult<ClashConfig>) -> Void) {
-        guard let request = req("/configs") else {
-            completeHandler(unavailableDecodedResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler(decodedResult(from: response, as: ClashConfig.self, defaultMessage: NSLocalizedString("Failed to load config state.", comment: "")))
-        }
+        ConfigAPI.requestControllerConfig(completeHandler: completeHandler)
     }
 }
 

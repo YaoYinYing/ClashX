@@ -36,6 +36,8 @@ The current update path in [`ClashX/General/ApiRequest.swift`](../../ClashX/Gene
 
 - `updateTun(enable:)` only sends `PATCH /configs` with `{"tun":{"enable":...}}`
 
+The current branch now routes that guarded patch through a narrower `ConfigAPI` helper plus `TunLifecycleCoordinator`, but it is still the same external-controller-only config-patch model rather than embedded-core TUN support.
+
 That means the current branch now has an initial guarded TUN lifecycle coordinator around the limited config toggle, but it still does not provide a complete mihomo TUN editor, embedded-core TUN enablement, or a privileged macOS TUN startup architecture.
 
 The current UI is also explicit that:

@@ -282,8 +282,8 @@ on run argv
     set text size of viewOptions to 14
     set background picture of viewOptions to backgroundAlias
 
-    set position of item appBundleName of containerWindow to {180, 230}
-    set position of item "Applications" of containerWindow to {460, 230}
+    set position of item appBundleName of containerWindow to {180, 215}
+    set position of item "Applications" of containerWindow to {460, 215}
 
     update without registering applications
     delay 2

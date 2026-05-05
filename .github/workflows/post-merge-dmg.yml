@@ -135,7 +135,10 @@ jobs:
           fi
 
           if [[ -z "$app_path" || ! -d "$app_path" ]]; then
-            mapfile -t app_candidates < <(find "${DERIVED_DATA_PATH}/Build/Products/${BUILD_CONFIGURATION}" -maxdepth 1 -name "*.app" -type d | sort)
+            app_candidates=()
+            while IFS= read -r candidate; do
+              app_candidates+=("$candidate")
+            done < <(find "${DERIVED_DATA_PATH}/Build/Products/${BUILD_CONFIGURATION}" -maxdepth 1 -name "*.app" -type d | sort)
             printf 'Fallback app candidates (%s):\n' "${#app_candidates[@]}" | tee -a "$DISCOVERY_LOG"
             printf '%s\n' "${app_candidates[@]}" | tee -a "$DISCOVERY_LOG"
 
@@ -172,7 +175,10 @@ jobs:
             exit 1
           fi
 
-          mapfile -t executables < <(find "$macos_dir" -maxdepth 1 -type f -perm -111 | sort)
+          executables=()
+          while IFS= read -r executable; do
+            executables+=("$executable")
+          done < <(find "$macos_dir" -maxdepth 1 -type f -perm -111 | sort)
           if [[ "${#executables[@]}" -lt 1 ]]; then
             echo "No executable found under $macos_dir" | tee "$INSPECTION_LOG"
             exit 1

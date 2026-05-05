@@ -46,6 +46,7 @@ Current note:
 Testing gate:
 
 - every fix PR in this phase should run the relevant build and lightweight harness checks
+- unsigned CI artifacts in this phase remain manual-testing artifacts only, and the lightweight harness checks are still transitional smoke coverage rather than a high-coverage test strategy
 
 ## Phase 1: Endpoint Builder and API Result Unification
 

@@ -1,4 +1,4 @@
-name: PR Artifact Validation
+name: PR Unsigned Artifact Validation
 
 on:
   pull_request:
@@ -29,6 +29,11 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: ClashX/goClash/go.sum
+
+      - name: Show available Xcodes
+        run: |
+          ls -1 /Applications | grep -E '^Xcode' || true
+          xcodebuild -version || true
 
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -68,7 +73,11 @@ jobs:
       - name: Install dependencies and resources
         run: |
           set -o pipefail
-          bash install_dependency.sh | tee .ci-logs/install-dependency.log
+          {
+            echo "::group::install_dependency.sh"
+            bash install_dependency.sh
+            echo "::endgroup::"
+          } | tee .ci-logs/install-dependency.log
 
       - name: Resolve Swift package dependencies
         run: |
@@ -95,7 +104,9 @@ jobs:
       - name: Security harness checks
         run: |
           set -o pipefail
-          swift Tests/SecurityHarness/security_harness.swift | tee .ci-logs/security-harness.log
+          swift -module-cache-path /private/tmp/swift-module-cache \
+            Tests/SecurityHarness/security_harness.swift \
+            | tee .ci-logs/security-harness.log
 
       - name: Endpoint builder smoke harness
         run: |
@@ -174,6 +185,24 @@ jobs:
             -o /tmp/effective-config-generator-smoke
           /tmp/effective-config-generator-smoke | tee .ci-logs/effective-config-generator-smoke.log
 
+      - name: Redactor smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/SmartXRedactor.swift \
+            Tests/SecurityHarness/redactor_smoke.swift \
+            -o /tmp/redactor-smoke
+          /tmp/redactor-smoke | tee .ci-logs/redactor-smoke.log
+
+      - name: Remote config decode smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/Models/RemoteConfigModel.swift \
+            Tests/SecurityHarness/remote_config_decode_smoke.swift \
+            -o /tmp/remote-config-decode-smoke
+          /tmp/remote-config-decode-smoke | tee .ci-logs/remote-config-decode-smoke.log
+
       - name: Upload validation logs on failure
         if: failure()
         uses: actions/upload-artifact@v5
@@ -194,7 +223,7 @@ jobs:
           # The modern lane depends on GitHub-hosted macos-26 and an available Xcode 26.x image.
           # If 26.3 disappears, move to the nearest supported 26.x runner/Xcode pair instead of deleting this lane.
           - flavor: modern
-            display_name: Modern
+            display_name: Modern Unsigned Debug Artifact
             runner: macos-26
             xcode: "26.3"
             deployment_target: "11.0"
@@ -220,6 +249,11 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: ClashX/goClash/go.sum
+
+      - name: Show available Xcodes
+        run: |
+          ls -1 /Applications | grep -E '^Xcode' || true
+          xcodebuild -version || true
 
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -259,7 +293,11 @@ jobs:
       - name: Install dependencies and resources
         run: |
           set -o pipefail
-          bash install_dependency.sh | tee .ci-logs/install-dependency.log
+          {
+            echo "::group::install_dependency.sh"
+            bash install_dependency.sh
+            echo "::endgroup::"
+          } | tee .ci-logs/install-dependency.log
 
       - name: Resolve Swift package dependencies
         run: |
@@ -380,7 +418,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" ".ci-artifacts/SmartX-${ARTIFACT_SUFFIX}-${GITHUB_SHA}.app.zip"
           cp -R .ci-logs .ci-artifacts/logs
 
-      - name: Upload PR artifacts
+      - name: Upload unsigned PR artifacts for manual testing
         if: always()
         uses: actions/upload-artifact@v5
         with:

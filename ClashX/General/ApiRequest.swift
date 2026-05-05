@@ -598,32 +598,20 @@ class ApiRequest {
 
 extension ApiRequest {
     static func getConnections(completeHandler: @escaping ([ClashConnectionBaseSnapShot.Connection]) -> Void) {
-        guard let request = req("/connections") else {
-            completeHandler([])
-            return
-        }
-        request.responseDecodable(of: ClashConnectionBaseSnapShot.self) { resp in
-            switch resp.result {
-            case let .success(snapshot):
-                completeHandler(snapshot.connections)
-            case .failure:
-                assertionFailure()
-                completeHandler([])
-            }
-        }
+        ConnectionAPI.requestConnections(completeHandler: completeHandler)
     }
 
     static func closeConnection(_ id: String) {
-        req(pathComponents: ["connections", id], method: .delete)?.response { _ in }
+        ConnectionAPI.closeConnection(id)
     }
 
     static func closeAllConnection() {
-        if useDirectApi() {
-            clash_closeAllConnections()
-        } else {
-            req("/connections", method: .delete)?.response { _ in }
-        }
+        ConnectionAPI.closeAllConnections()
     }
+
+    // TODO: Move the remaining traffic/log stream lifecycle wiring into
+    // dedicated API/domain types after the shared WebSocket ownership model is
+    // untangled from ApiRequest retry timers and delegate callbacks.
 
     // MARK: - Providers
 

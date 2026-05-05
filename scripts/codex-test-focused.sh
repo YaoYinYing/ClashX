@@ -3,8 +3,9 @@ set -uo pipefail
 
 # Run a focused Xcode test command with minimal stdout.
 # Full output is stored in .codex-logs so Codex only receives a short summary.
-# Standalone SecurityHarness smoke checks are kept separate in PR CI; this
-# wrapper only drives the Xcode test target path when one exists.
+# Standalone SecurityHarness smoke checks are mostly kept separate in PR CI.
+# This wrapper pre-runs the effective-config-generator smoke harness, then
+# drives the Xcode test target path when one exists.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$ROOT_DIR/.codex-logs"
@@ -12,6 +13,7 @@ LOG_FILE="$LOG_DIR/xcode-test-focused.log"
 RESULT_BUNDLE="$LOG_DIR/xcode-test-focused.xcresult"
 WORKSPACE_HELPER="$ROOT_DIR/scripts/ensure-xcworkspace.sh"
 SECURITY_HARNESSES=(
+    "Tests/SecurityHarness/effective_config_generator_smoke.swift"
     "Tests/SecurityHarness/security_harness.swift"
     "Tests/SecurityHarness/redactor_smoke.swift"
     "Tests/SecurityHarness/remote_config_decode_smoke.swift"
@@ -22,7 +24,6 @@ SECURITY_HARNESSES=(
     "Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift"
     "Tests/SecurityHarness/profile_artifact_metadata_smoke.swift"
     "Tests/SecurityHarness/smartx_managed_override_smoke.swift"
-    "Tests/SecurityHarness/effective_config_generator_smoke.swift"
 )
 
 WORKSPACE="${SMARTX_WORKSPACE:-ClashX.xcworkspace}"
@@ -39,6 +40,26 @@ rm -rf "$RESULT_BUNDLE"
 : > "$LOG_FILE"
 
 cd "$ROOT_DIR" || exit 2
+
+run_effective_config_generator_smoke() {
+    local binary="/tmp/effective-config-generator-smoke"
+    if swiftc -module-cache-path /private/tmp/swift-module-cache \
+        ClashX/General/Managers/EffectiveConfigGenerator.swift \
+        Tests/SecurityHarness/effective_config_generator_smoke.swift \
+        -o "$binary" >> "$LOG_FILE" 2>&1; then
+        "$binary" >> "$LOG_FILE" 2>&1
+    else
+        return 1
+    fi
+}
+
+if ! run_effective_config_generator_smoke; then
+    echo "TEST FAILED"
+    echo "Log: $LOG_FILE"
+    echo "Result bundle: $RESULT_BUNDLE"
+    echo "Reason: effective_config_generator_smoke.swift failed before Xcode test execution."
+    exit 1
+fi
 
 project_args=()
 if [[ -n "$PROJECT" ]]; then

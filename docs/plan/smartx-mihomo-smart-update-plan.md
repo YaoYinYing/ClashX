@@ -41,6 +41,7 @@ In current code, the beginnings of that boundary already exist:
 - `ClashX/General/Utils/ControllerEndpointBuilder.swift` centralizes controller URL construction.
 - `ClashX/General/Managers/CoreCapability.swift` and `ClashX/General/Managers/CoreCapabilityProbe.swift` define capability state instead of hard-coding support assumptions into every screen.
 - `ClashX/General/ApiRequest.swift` already distinguishes `success`, `unsupported`, `unauthorized`, and `failed`, but it is still too large and still mixes baseline mihomo endpoints with Smart-only wrappers.
+- The current branch now also has a first-pass `ConnectionAPI` split for connection reads/deletes and stream URL construction, but `ApiRequest` still owns the shared traffic/log WebSocket lifecycle.
 
 The codebase should keep moving toward architecture-layer core migration support while preserving a product-layer single core.
 
@@ -254,7 +255,7 @@ The current branch already has several foundations that align with this plan:
 
 The same inspection also shows why these foundations should be hardened rather than expanded as another feature blob:
 
-- `ApiRequest.swift` is still a dumping ground for both baseline and Smart-only endpoints.
+- `ApiRequest.swift` is still a dumping ground for many baseline and Smart-only endpoints even after the first `ConnectionAPI` extraction.
 - `CoreCapabilityProbe` is already present as first-pass groundwork, but it is still a minimal read-only probe layer and does not yet cover the full capability matrix.
 - `CoreSettingViewController.swift`, `SmartDashboardViewController.swift`, and `DiagnosticsDashboardViewController.swift` still carry large controller responsibilities even after some helper extraction.
 - `DiagnosticsDashboardViewController` is explicitly transitional and should be decomposed before more panels are added.
@@ -399,6 +400,7 @@ SmartX should be considered aligned with this plan when:
 Current branch note:
 
 - SmartX already has first-pass groundwork in `ControllerEndpointBuilder`, `CoreCapabilityProbe`, `SmartXRedactor`, `SmartXManagedOverrideManager`, `LightGBMSettingsViewModel`, `TunLifecycleCoordinator`, `TunConfigValidator`, `DNSConfigValidator`, `DiagnosticsLogReader`, `DiagnosticsArtifactFormatter`, `DiagnosticsProviderFormatter`, `ProfileArtifactManager`, and the smoke harnesses under `Tests/SecurityHarness`.
+- SmartX has also started moving dangerous diagnostics maintenance actions out of `DiagnosticsDashboardViewController` through `DiagnosticsMaintenanceCoordinator`, but the dashboard is still transitional and not fully decomposed.
 - SmartX does not yet have a generated effective config pipeline, a decomposed diagnostics dashboard, embedded-core TUN support, or a fully expanded capability-probe architecture.
 
 ## Implementation Guidance for Future PRs

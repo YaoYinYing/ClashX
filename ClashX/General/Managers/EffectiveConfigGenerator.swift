@@ -11,20 +11,63 @@
 
 import Foundation
 
+struct EffectiveConfigGenerationRequest {
+    let baseConfigURL: URL
+    let managedOverride: SmartXManagedOverride?
+}
+
+struct EffectiveConfigGenerationProvenance {
+    let baseConfigPath: String
+    let hasManagedOverride: Bool
+    let includesSmartXOverrides: Bool
+    let reason: String
+}
+
 enum EffectiveConfigGenerationResult {
-    case unsupported(reason: String)
+    case generated(url: URL, provenance: EffectiveConfigGenerationProvenance)
+    case unsupported(reason: String, provenance: EffectiveConfigGenerationProvenance)
+    case failed(reason: String, provenance: EffectiveConfigGenerationProvenance)
 
     var isGenerated: Bool {
-        false
+        if case .generated = self {
+            return true
+        }
+        return false
+    }
+
+    var provenance: EffectiveConfigGenerationProvenance {
+        switch self {
+        case let .generated(_, provenance),
+             let .unsupported(_, provenance),
+             let .failed(_, provenance):
+            return provenance
+        }
+    }
+
+    var reason: String {
+        switch self {
+        case let .generated(_, provenance):
+            return provenance.reason
+        case let .unsupported(reason, _), let .failed(reason, _):
+            return reason
+        }
     }
 }
 
 enum EffectiveConfigGenerator {
+    static func generate(_ request: EffectiveConfigGenerationRequest) -> EffectiveConfigGenerationResult {
+        let reason = NSLocalizedString("Generated effective config is still unsupported because SmartX does not yet have a safe YAML emitter for base config plus managed LightGBM override.", comment: "")
+        let provenance = EffectiveConfigGenerationProvenance(baseConfigPath: request.baseConfigURL.path,
+                                                             hasManagedOverride: request.managedOverride != nil,
+                                                             includesSmartXOverrides: request.managedOverride?.lightGBM != nil,
+                                                             reason: reason)
+        Logger.log("Effective config generation remains unsupported for \(request.baseConfigURL.lastPathComponent); safe YAML emit path is still missing.", level: .info)
+        return .unsupported(reason: reason, provenance: provenance)
+    }
+
     static func generateLightGBMManagedOverrideEffectiveConfig(baseConfigURL: URL,
                                                                managedOverride: SmartXManagedOverride?) -> EffectiveConfigGenerationResult {
-        let reason = NSLocalizedString("Generated effective config is still unsupported because SmartX does not yet have a safe YAML emitter for base config plus managed LightGBM override.", comment: "")
-        Logger.log("Effective config generation remains unsupported for \(baseConfigURL.lastPathComponent); safe YAML emit path is still missing.", level: .info)
-        _ = managedOverride
-        return .unsupported(reason: reason)
+        generate(EffectiveConfigGenerationRequest(baseConfigURL: baseConfigURL,
+                                                  managedOverride: managedOverride))
     }
 }

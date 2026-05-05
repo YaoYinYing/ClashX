@@ -76,6 +76,7 @@ class DiagnosticsDashboardViewController: NSViewController {
     private let statusLabel = DiagnosticsDashboardViewController.makeWrapLabel()
     private let outputTextView = NSTextView()
     private let outputScrollView = NSScrollView()
+    private let maintenanceCoordinator = DiagnosticsMaintenanceCoordinator()
 
     private var memoryOutput = NSLocalizedString("Memory diagnostics have not been loaded yet.", comment: "")
     private var dnsOutput = NSLocalizedString("DNS diagnostics have not been queried yet.", comment: "")
@@ -500,6 +501,31 @@ class DiagnosticsDashboardViewController: NSViewController {
         }
     }
 
+    private func performMaintenanceAction(_ action: DiagnosticsMaintenanceAction) {
+        maintenanceCoordinator.perform(action,
+                                       confirm: { [weak self] title, message, confirmTitle in
+                                           self?.confirmMaintenanceAction(title: title, message: message, confirmTitle: confirmTitle) ?? false
+                                       },
+                                       setStatus: { [weak self] text in
+                                           self?.setStatus(text)
+                                       }) { [weak self] action, result in
+            guard let self else { return }
+            let descriptor = action.descriptor
+            CapabilityCache.shared.mark(descriptor.capability, endpointResult: result)
+            switch result {
+            case .success:
+                self.setStatus(descriptor.successText)
+            case .unsupported:
+                self.setStatus(descriptor.unsupportedText)
+            case .unauthorized:
+                self.setStatus(descriptor.unauthorizedText)
+            case let .failed(message):
+                self.setStatus(message)
+            }
+            self.updateCapabilityDrivenState()
+        }
+    }
+
     @objc private func actionRefreshMemory() {
         refreshMemory()
     }
@@ -539,35 +565,11 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionRestartCore() {
-        guard confirmMaintenanceAction(title: NSLocalizedString("Restart core?", comment: ""),
-                                       message: NSLocalizedString("This will ask the active controller to restart immediately. Existing controller activity may be interrupted.", comment: ""),
-                                       confirmTitle: NSLocalizedString("Restart", comment: ""))
-        else { return }
-        performAction(
-            .restart,
-            startText: NSLocalizedString("Requesting controller restart.", comment: ""),
-            successText: NSLocalizedString("Controller restart requested successfully.", comment: ""),
-            unsupportedText: NSLocalizedString("Controller restart is unsupported by the active controller.", comment: ""),
-            unauthorizedText: NSLocalizedString("Controller restart was rejected by the active controller credentials.", comment: "")
-        ) { completion in
-            ApiRequest.restartCore(completeHandler: completion)
-        }
+        performMaintenanceAction(.restartCore)
     }
 
     @objc private func actionRunGC() {
-        guard confirmMaintenanceAction(title: NSLocalizedString("Run debug GC?", comment: ""),
-                                       message: NSLocalizedString("This sends a debug garbage-collection request to the active controller. Use it only for diagnostics.", comment: ""),
-                                       confirmTitle: NSLocalizedString("Run GC", comment: ""))
-        else { return }
-        performAction(
-            .debugGC,
-            startText: NSLocalizedString("Requesting controller garbage collection.", comment: ""),
-            successText: NSLocalizedString("Controller garbage collection requested successfully.", comment: ""),
-            unsupportedText: NSLocalizedString("Debug GC is unsupported by the active controller.", comment: ""),
-            unauthorizedText: NSLocalizedString("Debug GC was rejected by the active controller credentials.", comment: "")
-        ) { completion in
-            ApiRequest.runDebugGC(completeHandler: completion)
-        }
+        performMaintenanceAction(.runDebugGC)
     }
 
     @objc private func actionCopyPprofURLs() {
@@ -602,35 +604,11 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionUpdateGeoAssets() {
-        guard confirmMaintenanceAction(title: NSLocalizedString("Update GEO assets?", comment: ""),
-                                       message: NSLocalizedString("This asks the active controller to refresh GEO databases and related assets. It is a maintenance action, not a read-only diagnostic.", comment: ""),
-                                       confirmTitle: NSLocalizedString("Update GEO", comment: ""))
-        else { return }
-        performAction(
-            .geoUpdate,
-            startText: NSLocalizedString("Updating GEO assets.", comment: ""),
-            successText: NSLocalizedString("GEO asset update requested successfully.", comment: ""),
-            unsupportedText: NSLocalizedString("GEO asset update is unsupported by the active controller.", comment: ""),
-            unauthorizedText: NSLocalizedString("GEO asset update was rejected by the active controller credentials.", comment: "")
-        ) { completion in
-            ApiRequest.updateGeoAssets(completeHandler: completion)
-        }
+        performMaintenanceAction(.updateGeoAssets)
     }
 
     @objc private func actionUpdateDashboardAssets() {
-        guard confirmMaintenanceAction(title: NSLocalizedString("Update dashboard assets?", comment: ""),
-                                       message: NSLocalizedString("This requests a dashboard asset update from the active controller. Use it only when you intend to modify installed assets.", comment: ""),
-                                       confirmTitle: NSLocalizedString("Update Dashboard", comment: ""))
-        else { return }
-        performAction(
-            .uiUpgrade,
-            startText: NSLocalizedString("Updating dashboard assets.", comment: ""),
-            successText: NSLocalizedString("Dashboard asset update requested successfully.", comment: ""),
-            unsupportedText: NSLocalizedString("Dashboard asset update is unsupported by the active controller.", comment: ""),
-            unauthorizedText: NSLocalizedString("Dashboard asset update was rejected by the active controller credentials.", comment: "")
-        ) { completion in
-            ApiRequest.updateDashboardAssets(completeHandler: completion)
-        }
+        performMaintenanceAction(.updateDashboardAssets)
     }
 
     @objc private func actionCopyDiagnosticsReport() {

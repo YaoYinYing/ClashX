@@ -5,12 +5,12 @@
 SmartX has improved its foundation work, but several surfaces are still explicitly transitional.
 
 - The LightGBM override now has a persisted SmartX-managed file, but it is still only groundwork for later effective-config generation.
-- The current branch now has a narrow `EffectiveConfigGenerator` boundary, but it still reports unsupported until a safe YAML emit path exists and must not be treated as proof of generated-config support.
+- The current branch now has a narrow `EffectiveConfigGenerator` boundary with structured provenance, but it still reports unsupported until a safe YAML emit path exists and must not be treated as proof of generated-config support.
 - Hidden SmartX override bootstrap side effects were reduced by removing migration writes from low-level Settings getters, but override migration is still a sensitive path because it bridges UserDefaults compatibility data and the managed JSON file.
 - Profile artifact terminology is now more honest in new code and UI, but the compatibility `generated-effective.*` paths still exist until a real profile pipeline lands.
 - TUN and DNS validation now live in reusable validators, and TUN toggling now has a named lifecycle coordinator, but embedded-core TUN remains unsupported and privileged TUN architecture is still missing.
-- Diagnostics log viewing is safer because `DiagnosticsLogReader` now tails large rolling files instead of re-reading them whole every refresh cycle, and `DiagnosticsArtifactFormatter` plus `DiagnosticsProviderFormatter` moved formatting into small helpers, but the Diagnostics dashboard remains structurally too large.
-- `ApiRequest` is now partially decomposed into `DiagnosticsAPI`, `ProviderAPI`, `SmartAPI`, and `ConfigAPI`, but the compatibility facade still remains broader than it should be.
+- Diagnostics log viewing is safer because `DiagnosticsLogReader` now tails large rolling files instead of re-reading them whole every refresh cycle, `DiagnosticsArtifactFormatter` plus `DiagnosticsProviderFormatter` moved formatting into small helpers, and dangerous maintenance actions have started moving through `DiagnosticsMaintenanceCoordinator`, but the Diagnostics dashboard remains structurally too large.
+- `ApiRequest` is now partially decomposed into `DiagnosticsAPI`, `ProviderAPI`, `SmartAPI`, `ConfigAPI`, and the new `ConnectionAPI`, but the compatibility facade still remains broader than it should be.
 - `ProfileArtifactManager` and the smoke harnesses under `Tests/SecurityHarness` are already first-pass groundwork, but neither should be mistaken for a full generated-config pipeline or high test coverage.
 
 ## Patchwork Risks To Keep Visible

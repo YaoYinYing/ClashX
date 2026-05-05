@@ -68,10 +68,26 @@ MOUNT_DEVICE=""
 MOUNT_POINT=""
 
 cleanup() {
-  if [[ -n "$MOUNT_DEVICE" ]]; then
+  set +e
+
+  if [[ -n "${MOUNT_DEVICE:-}" ]]; then
     hdiutil detach "$MOUNT_DEVICE" -force >/dev/null 2>&1 || true
   fi
-  rm -rf "$TMP_ROOT"
+
+  if [[ -n "${MOUNT_POINT:-}" && -d "$MOUNT_POINT" ]]; then
+    hdiutil detach "$MOUNT_POINT" -force >/dev/null 2>&1 || true
+    diskutil unmount force "$MOUNT_POINT" >/dev/null 2>&1 || true
+  fi
+
+  if [[ -n "${MOUNT_ROOT:-}" && -d "$MOUNT_ROOT" ]]; then
+    while IFS= read -r mounted_dir; do
+      [[ -z "$mounted_dir" ]] && continue
+      hdiutil detach "$mounted_dir" -force >/dev/null 2>&1 || true
+      diskutil unmount force "$mounted_dir" >/dev/null 2>&1 || true
+    done < <(find "$MOUNT_ROOT" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+  fi
+
+  rm -rf "$TMP_ROOT" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -82,7 +98,6 @@ ln -s /Applications "$STAGING_DIR/Applications"
 cat >"$README_PATH" <<EOF
 SmartX-${VERSION_TAG}.unsigned.dmg is an unsigned, non-notarized CI artifact. Drag ${APP_BUNDLE_NAME} to Applications for manual testing. Privileged helper behavior may not work in unsigned builds. This is not a release build.
 EOF
-cp "$README_PATH" "$STAGING_DIR/README.txt"
 
 BACKGROUND_SWIFT="$TMP_ROOT/generate_dmg_background.swift"
 SWIFT_MODULE_CACHE="$TMP_ROOT/swift-module-cache"
@@ -135,20 +150,10 @@ let arrowAttributes: [NSAttributedString.Key: Any] = [
 ("Drag SmartX to Applications" as NSString).draw(in: NSRect(x: 70, y: 335, width: 500, height: 40), withAttributes: titleAttributes)
 ("Unsigned CI artifact for manual testing" as NSString).draw(in: NSRect(x: 90, y: 302, width: 460, height: 24), withAttributes: subtitleAttributes)
 
-let workspace = NSWorkspace.shared
-let appIcon = workspace.icon(forFile: appPath)
-let applicationsIcon = workspace.icon(forFile: "/Applications")
-appIcon.size = NSSize(width: 96, height: 96)
-applicationsIcon.size = NSSize(width: 96, height: 96)
-
-let appIconRect = NSRect(x: 120, y: 145, width: 96, height: 96)
-let appsIconRect = NSRect(x: 424, y: 145, width: 96, height: 96)
-appIcon.draw(in: appIconRect)
-applicationsIcon.draw(in: appsIconRect)
-("→" as NSString).draw(in: NSRect(x: 290, y: 158, width: 60, height: 60), withAttributes: arrowAttributes)
-
-(bundleName as NSString).draw(in: NSRect(x: 70, y: 110, width: 200, height: 24), withAttributes: subtitleAttributes)
-("Applications" as NSString).draw(in: NSRect(x: 390, y: 110, width: 160, height: 24), withAttributes: subtitleAttributes)
+("→" as NSString).draw(
+    in: NSRect(x: 290, y: 165, width: 60, height: 60),
+    withAttributes: arrowAttributes
+)
 
 let footerAttributes: [NSAttributedString.Key: Any] = [
     .font: NSFont.systemFont(ofSize: 12),
@@ -184,47 +189,132 @@ hdiutil create \
   -format UDRW \
   "$RW_DMG_PATH"
 
-ATTACH_OUTPUT="$TMP_ROOT/attach.log"
-hdiutil attach \
-  -quiet \
+chflags hidden "$MOUNT_POINT/.background" || true
+
+ATTACH_PLIST="$TMP_ROOT/attach.plist"
+ATTACH_LOG="$TMP_ROOT/attach.log"
+
+if ! hdiutil attach \
+  -plist \
   -readwrite \
   -noverify \
   -noautoopen \
   -mountroot "$MOUNT_ROOT" \
-  "$RW_DMG_PATH" >"$ATTACH_OUTPUT"
-
-MOUNT_DEVICE="$(awk '/^\/dev\// {print $1; exit}' "$ATTACH_OUTPUT")"
-MOUNT_POINT="$(awk '/^\/dev\// {print substr($0, index($0,$3)); exit}' "$ATTACH_OUTPUT")"
-if [[ -z "$MOUNT_DEVICE" || -z "$MOUNT_POINT" ]]; then
-  echo "Failed to discover mounted DMG device or mount point." >&2
+  "$RW_DMG_PATH" >"$ATTACH_PLIST" 2>"$ATTACH_LOG"; then
+  echo "hdiutil attach failed." >&2
+  cat "$ATTACH_LOG" >&2 || true
   exit 1
 fi
 
-osascript <<EOF >/dev/null 2>&1 || true
-tell application "Finder"
-  tell disk "SmartX ${VERSION_TAG}"
-    open
-    set current view of container window to icon view
-    set toolbar visible of container window to false
-    set statusbar visible of container window to false
-    set bounds of container window to {100, 100, 740, 520}
-    set opts to the icon view options of container window
-    set arrangement of opts to not arranged
-    set icon size of opts to 96
-    set text size of opts to 14
-    set background picture of opts to file ".background:background.png"
-    set position of item "${APP_BUNDLE_NAME}" of container window to {160, 180}
-    set position of item "Applications" of container window to {440, 180}
-    set position of item "README.txt" of container window to {300, 310}
+read -r MOUNT_DEVICE MOUNT_POINT < <(
+  python3 - "$ATTACH_PLIST" <<'PY'
+import plistlib
+import sys
+
+plist_path = sys.argv[1]
+
+with open(plist_path, "rb") as handle:
+    data = plistlib.load(handle)
+
+device = ""
+mount_point = ""
+
+for entity in data.get("system-entities", []):
+    candidate_device = entity.get("dev-entry", "")
+    candidate_mount = entity.get("mount-point", "")
+
+    if candidate_device and not device:
+        device = candidate_device
+
+    if candidate_mount:
+        mount_point = candidate_mount
+        if candidate_device:
+            device = candidate_device
+        break
+
+print(device, mount_point)
+PY
+)
+
+if [[ -z "$MOUNT_DEVICE" || -z "$MOUNT_POINT" || ! -d "$MOUNT_POINT" ]]; then
+  echo "Failed to discover mounted DMG device or mount point." >&2
+  echo "Attach stderr:" >&2
+  cat "$ATTACH_LOG" >&2 || true
+  echo "Attach plist:" >&2
+  cat "$ATTACH_PLIST" >&2 || true
+  echo "Mount root contents:" >&2
+  find "$MOUNT_ROOT" -mindepth 1 -maxdepth 2 -print >&2 || true
+  exit 1
+fi
+
+echo "Mounted DMG device: $MOUNT_DEVICE"
+echo "Mounted DMG path: $MOUNT_POINT"
+
+chflags hidden "$MOUNT_POINT/.background" || true
+rm -rf "$MOUNT_POINT/.fseventsd" "$MOUNT_POINT/.Trashes" "$MOUNT_POINT/.Spotlight-V100" 2>/dev/null || true
+
+APPLESCRIPT_PATH="$TMP_ROOT/layout_dmg.applescript"
+APPLESCRIPT_LOG="$TMP_ROOT/applescript.log"
+
+cat >"$APPLESCRIPT_PATH" <<'APPLESCRIPT'
+on run argv
+  set mountPoint to item 1 of argv
+  set appBundleName to item 2 of argv
+  set backgroundPath to item 3 of argv
+
+  set mountAlias to POSIX file mountPoint as alias
+  set backgroundAlias to POSIX file backgroundPath as alias
+
+  tell application "Finder"
+    activate
+    open mountAlias
+    delay 1
+
+    set containerWindow to window 1
+    set current view of containerWindow to icon view
+    set toolbar visible of containerWindow to false
+    set statusbar visible of containerWindow to false
+    set bounds of containerWindow to {100, 100, 740, 520}
+
+    set viewOptions to the icon view options of containerWindow
+    set arrangement of viewOptions to not arranged
+    set icon size of viewOptions to 96
+    set text size of viewOptions to 14
+    set background picture of viewOptions to backgroundAlias
+
+    set position of item appBundleName of containerWindow to {180, 230}
+    set position of item "Applications" of containerWindow to {460, 230}
+
     update without registering applications
     delay 2
-    close
+    close containerWindow
   end tell
-end tell
-EOF
+end run
+APPLESCRIPT
+
+if osascript "$APPLESCRIPT_PATH" \
+  "$MOUNT_POINT" \
+  "$APP_BUNDLE_NAME" \
+  "$MOUNT_POINT/.background/background.png" \
+  >"$APPLESCRIPT_LOG" 2>&1; then
+  echo "Finder DMG layout applied."
+else
+  echo "Warning: Finder DMG layout AppleScript failed; continuing with clean fallback DMG." >&2
+  cat "$APPLESCRIPT_LOG" >&2 || true
+fi
+rm -rf "$MOUNT_POINT/.fseventsd" "$MOUNT_POINT/.Trashes" "$MOUNT_POINT/.Spotlight-V100" 2>/dev/null || true
+
+if [[ ! -f "$MOUNT_POINT/.DS_Store" ]]; then
+  echo "Finder did not create .DS_Store; DMG layout cannot be guaranteed." >&2
+  echo "AppleScript output:" >&2
+  cat "$APPLESCRIPT_LOG" >&2 || true
+  exit 1
+fi
 
 sync
-hdiutil detach -quiet "$MOUNT_DEVICE"
+sleep 1
+
+hdiutil detach "$MOUNT_DEVICE" >/dev/null
 MOUNT_DEVICE=""
 MOUNT_POINT=""
 

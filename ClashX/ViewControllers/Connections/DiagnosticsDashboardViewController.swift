@@ -76,6 +76,7 @@ class DiagnosticsDashboardViewController: NSViewController {
     private let statusLabel = DiagnosticsDashboardViewController.makeWrapLabel()
     private let outputTextView = NSTextView()
     private let outputScrollView = NSScrollView()
+    private let maintenanceCoordinator = DiagnosticsMaintenanceCoordinator()
 
     private var memoryOutput = NSLocalizedString("Memory diagnostics have not been loaded yet.", comment: "")
     private var dnsOutput = NSLocalizedString("DNS diagnostics have not been queried yet.", comment: "")
@@ -421,7 +422,11 @@ class DiagnosticsDashboardViewController: NSViewController {
             let message = NSLocalizedString("Core is stopped or controller is unavailable.", comment: "")
             latestProxyProviderResult = .failed(message)
             latestRuleProviderResult = .failed(message)
-            providerOutput = formatProviderDiagnostics(proxyResult: latestProxyProviderResult, ruleResult: latestRuleProviderResult)
+            let formatted = DiagnosticsProviderFormatter.format(proxyResult: latestProxyProviderResult,
+                                                                ruleResult: latestRuleProviderResult,
+                                                                existingHTTPProxyProviderNames: httpProxyProviderNames)
+            providerOutput = formatted.text
+            httpProxyProviderNames = formatted.httpProxyProviderNames
             CapabilityCache.shared.markUnavailable(.proxyProviders, message: message)
             CapabilityCache.shared.markUnavailable(.ruleProviders, message: message)
             setStatus(message)
@@ -453,7 +458,11 @@ class DiagnosticsDashboardViewController: NSViewController {
 
             self.latestProxyProviderResult = proxyResult
             self.latestRuleProviderResult = ruleResult
-            self.providerOutput = self.formatProviderDiagnostics(proxyResult: proxyResult, ruleResult: ruleResult)
+            let formatted = DiagnosticsProviderFormatter.format(proxyResult: proxyResult,
+                                                                ruleResult: ruleResult,
+                                                                existingHTTPProxyProviderNames: self.httpProxyProviderNames)
+            self.providerOutput = formatted.text
+            self.httpProxyProviderNames = formatted.httpProxyProviderNames
 
             switch (proxyResult, ruleResult) {
             case (.success(_), _), (_, .success(_)):
@@ -485,6 +494,31 @@ class DiagnosticsDashboardViewController: NSViewController {
                 self.setStatus(unsupportedText)
             case .unauthorized:
                 self.setStatus(unauthorizedText)
+            case let .failed(message):
+                self.setStatus(message)
+            }
+            self.updateCapabilityDrivenState()
+        }
+    }
+
+    private func performMaintenanceAction(_ action: DiagnosticsMaintenanceAction) {
+        maintenanceCoordinator.perform(action,
+                                       confirm: { [weak self] title, message, confirmTitle in
+                                           self?.confirmMaintenanceAction(title: title, message: message, confirmTitle: confirmTitle) ?? false
+                                       },
+                                       setStatus: { [weak self] text in
+                                           self?.setStatus(text)
+                                       }) { [weak self] action, result in
+            guard let self else { return }
+            let descriptor = action.descriptor
+            CapabilityCache.shared.mark(descriptor.capability, endpointResult: result)
+            switch result {
+            case .success:
+                self.setStatus(descriptor.successText)
+            case .unsupported:
+                self.setStatus(descriptor.unsupportedText)
+            case .unauthorized:
+                self.setStatus(descriptor.unauthorizedText)
             case let .failed(message):
                 self.setStatus(message)
             }
@@ -531,49 +565,18 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionRestartCore() {
-        guard confirmMaintenanceAction(title: NSLocalizedString("Restart core?", comment: ""),
-                                       message: NSLocalizedString("This will ask the active controller to restart immediately. Existing controller activity may be interrupted.", comment: ""),
-                                       confirmTitle: NSLocalizedString("Restart", comment: ""))
-        else { return }
-        performAction(
-            .restart,
-            startText: NSLocalizedString("Requesting controller restart.", comment: ""),
-            successText: NSLocalizedString("Controller restart requested successfully.", comment: ""),
-            unsupportedText: NSLocalizedString("Controller restart is unsupported by the active controller.", comment: ""),
-            unauthorizedText: NSLocalizedString("Controller restart was rejected by the active controller credentials.", comment: "")
-        ) { completion in
-            ApiRequest.restartCore(completeHandler: completion)
-        }
+        performMaintenanceAction(.restartCore)
     }
 
     @objc private func actionRunGC() {
-        guard confirmMaintenanceAction(title: NSLocalizedString("Run debug GC?", comment: ""),
-                                       message: NSLocalizedString("This sends a debug garbage-collection request to the active controller. Use it only for diagnostics.", comment: ""),
-                                       confirmTitle: NSLocalizedString("Run GC", comment: ""))
-        else { return }
-        performAction(
-            .debugGC,
-            startText: NSLocalizedString("Requesting controller garbage collection.", comment: ""),
-            successText: NSLocalizedString("Controller garbage collection requested successfully.", comment: ""),
-            unsupportedText: NSLocalizedString("Debug GC is unsupported by the active controller.", comment: ""),
-            unauthorizedText: NSLocalizedString("Debug GC was rejected by the active controller credentials.", comment: "")
-        ) { completion in
-            ApiRequest.runDebugGC(completeHandler: completion)
-        }
+        performMaintenanceAction(.runDebugGC)
     }
 
     @objc private func actionCopyPprofURLs() {
-        guard let baseURL = try? ControllerEndpointBuilder.baseHTTPURL() else {
+        guard let urls = DiagnosticsAPI.pprofURLs() else {
             setStatus(NSLocalizedString("The active controller URL is invalid, so pprof URLs could not be prepared.", comment: ""))
             return
         }
-
-        let urls = [
-            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof"),
-            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof/goroutine"),
-            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof/heap"),
-            try? ControllerEndpointBuilder.composeURL(baseURL: baseURL, path: "/debug/pprof/profile")
-        ].compactMap { $0 }
 
         let text = [
             "SmartX pprof helpers",
@@ -601,35 +604,11 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionUpdateGeoAssets() {
-        guard confirmMaintenanceAction(title: NSLocalizedString("Update GEO assets?", comment: ""),
-                                       message: NSLocalizedString("This asks the active controller to refresh GEO databases and related assets. It is a maintenance action, not a read-only diagnostic.", comment: ""),
-                                       confirmTitle: NSLocalizedString("Update GEO", comment: ""))
-        else { return }
-        performAction(
-            .geoUpdate,
-            startText: NSLocalizedString("Updating GEO assets.", comment: ""),
-            successText: NSLocalizedString("GEO asset update requested successfully.", comment: ""),
-            unsupportedText: NSLocalizedString("GEO asset update is unsupported by the active controller.", comment: ""),
-            unauthorizedText: NSLocalizedString("GEO asset update was rejected by the active controller credentials.", comment: "")
-        ) { completion in
-            ApiRequest.updateGeoAssets(completeHandler: completion)
-        }
+        performMaintenanceAction(.updateGeoAssets)
     }
 
     @objc private func actionUpdateDashboardAssets() {
-        guard confirmMaintenanceAction(title: NSLocalizedString("Update dashboard assets?", comment: ""),
-                                       message: NSLocalizedString("This requests a dashboard asset update from the active controller. Use it only when you intend to modify installed assets.", comment: ""),
-                                       confirmTitle: NSLocalizedString("Update Dashboard", comment: ""))
-        else { return }
-        performAction(
-            .uiUpgrade,
-            startText: NSLocalizedString("Updating dashboard assets.", comment: ""),
-            successText: NSLocalizedString("Dashboard asset update requested successfully.", comment: ""),
-            unsupportedText: NSLocalizedString("Dashboard asset update is unsupported by the active controller.", comment: ""),
-            unauthorizedText: NSLocalizedString("Dashboard asset update was rejected by the active controller credentials.", comment: "")
-        ) { completion in
-            ApiRequest.updateDashboardAssets(completeHandler: completion)
-        }
+        performMaintenanceAction(.updateDashboardAssets)
     }
 
     @objc private func actionCopyDiagnosticsReport() {
@@ -739,7 +718,11 @@ class DiagnosticsDashboardViewController: NSViewController {
             guard let self else { return }
             ProviderHealthHistoryManager.append(succeeded: succeeded, failed: failed)
             let summary = self.providerHealthCheckSummary(timestamp: timestamp, succeeded: succeeded.sorted(), failed: failed.sorted())
-            self.providerOutput = "\(self.formatProviderDiagnostics(proxyResult: self.latestProxyProviderResult, ruleResult: self.latestRuleProviderResult))\n\n\(summary)"
+            let formatted = DiagnosticsProviderFormatter.format(proxyResult: self.latestProxyProviderResult,
+                                                                ruleResult: self.latestRuleProviderResult,
+                                                                existingHTTPProxyProviderNames: self.httpProxyProviderNames)
+            self.providerOutput = "\(formatted.text)\n\n\(summary)"
+            self.httpProxyProviderNames = formatted.httpProxyProviderNames
             self.setStatus(String(format: NSLocalizedString("Finished provider health checks. Success: %d, Failed: %d.", comment: ""), succeeded.count, failed.count))
             self.renderOutput()
         }
@@ -825,59 +808,6 @@ class DiagnosticsDashboardViewController: NSViewController {
         } else {
             renderOutput()
         }
-    }
-
-    private func formatProviderDiagnostics(proxyResult: ControllerJSONResult?, ruleResult: ControllerJSONResult?) -> String {
-        let proxySection = providerSection(title: "Proxy Providers", result: proxyResult, capability: .proxyProviders)
-        let ruleSection = providerSection(title: "Rule Providers", result: ruleResult, capability: .ruleProviders)
-        let historySection = ProviderHealthHistoryManager.summary(limit: 5)
-        return [proxySection, ruleSection, historySection].joined(separator: "\n\n")
-    }
-
-    private func providerSection(title: String, result: ControllerJSONResult?, capability: CoreCapability) -> String {
-        var lines = [title]
-        let result = result ?? .failed(NSLocalizedString("No response.", comment: ""))
-
-        switch result {
-        case let .success(json):
-            let providers = json["providers"].dictionaryValue
-            let providerNames = providers.keys.sorted()
-            if capability == .proxyProviders {
-                httpProxyProviderNames = providerNames.filter {
-                    providers[$0]?["vehicleType"].stringValue.caseInsensitiveCompare("http") == .orderedSame
-                }
-            }
-
-            lines.append("Count: \(providerNames.count)")
-            if providerNames.isEmpty {
-                lines.append("None reported.")
-            } else {
-                for name in providerNames {
-                    let provider = providers[name]
-                    let vehicleType = provider?["vehicleType"].stringValue ?? "unknown"
-                    let providerType = provider?["type"].stringValue ?? "unknown"
-                    let proxyCount = provider?["proxies"].arrayValue.count ?? 0
-                    lines.append("- \(name) [\(providerType)/\(vehicleType)] proxies=\(proxyCount)")
-                }
-            }
-        case .unsupported:
-            if capability == .proxyProviders {
-                httpProxyProviderNames = []
-            }
-            lines.append("Unsupported by the active controller.")
-        case let .unauthorized(message):
-            if capability == .proxyProviders {
-                httpProxyProviderNames = []
-            }
-            lines.append("Unauthorized: \(message)")
-        case let .failed(message):
-            if capability == .proxyProviders {
-                httpProxyProviderNames = []
-            }
-            lines.append("Failed: \(message)")
-        }
-
-        return lines.joined(separator: "\n")
     }
 
     private func providerHealthCheckSummary(timestamp: String, succeeded: [String], failed: [String]) -> String {

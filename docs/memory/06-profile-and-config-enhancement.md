@@ -191,6 +191,8 @@ This is the rollback anchor when:
 
 The branch now has a first-pass version of this idea for the legacy filename-based flow. On successful reload, the loaded config file is copied to a last-known-good artifact path with metadata. The Diagnostics dashboard can now explicitly restore that artifact into the running core. This is still not automatic rollback, and it is still not driven by a layered effective-profile pipeline, but it does provide a concrete rollback anchor plus a manual restore path.
 
+The current branch also has a tiny `EffectiveConfigGenerator` boundary, but it still returns an explicit unsupported result because SmartX does not yet have a safe YAML parse-emit path for generating base config plus managed LightGBM override. Source-copy artifact semantics therefore remain the honest current behavior.
+
 ## Merge Profile Design
 
 Merge profiles should support constrained, explicit operations rather than raw arbitrary patching.

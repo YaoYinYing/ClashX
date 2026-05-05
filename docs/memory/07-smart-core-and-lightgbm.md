@@ -98,6 +98,8 @@ The current app uses or assumes the following Smart-related controller endpoints
 - `/connections/smart/:id`
 - `/upgrade/lgbm`
 
+The current branch now isolates those Smart-only wrappers behind a partial `SmartAPI` client while keeping `ApiRequest` as a compatibility facade. This is only a first decomposition step; the facade is still broader than it should be.
+
 ### Current usage
 
 Current call sites include:
@@ -111,6 +113,8 @@ Current call sites include:
 ### Capability probing needs
 
 These endpoints should not be assumed to exist on every controller. The current branch already treats some of them as optional in practice, but the capability model is still incomplete.
+
+`CoreCapabilityProbe` now safely probes `/group/weights` as a read-only Smart capability signal and keeps mutating Smart endpoints such as cache flush, connection block, and LightGBM upgrade in an explicit not-auto-probed state unless user-triggered behavior later updates the cache.
 
 The endpoints that most clearly need explicit capability probing are:
 

@@ -42,7 +42,11 @@ final class CoreCapabilityProbe {
                 .geoUpdate: .unavailable,
                 .uiUpgrade: .unavailable,
                 .restart: .unavailable,
-                .debugGC: .unavailable
+                .debugGC: .unavailable,
+                .smartWeights: .unavailable,
+                .smartCacheFlush: .unavailable,
+                .smartConnectionBlock: .unavailable,
+                .lightGBMUpgrade: .unavailable
             ], message: message)
             let snapshot = CoreCapabilitySnapshot(controllerIdentity: identity,
                                                   mode: mode,
@@ -93,24 +97,35 @@ final class CoreCapabilityProbe {
                 switch result {
                 case let .success(config):
                     assign(.configRead, .available, message: NSLocalizedString("Loaded config state from /configs.", comment: ""))
-                    assign(.configPatch, .available)
+                    assign(.configPatch, .unknown, message: NSLocalizedString("PATCH /configs is intentionally not auto-probed because it mutates controller state.", comment: ""))
+                    assign(.configReload, .unknown, message: NSLocalizedString("Config reload is intentionally not auto-probed because it mutates controller state.", comment: ""))
                     if config.tun == nil {
                         assign(.tunConfigRead, .unsupported)
                         assign(.tunGuardedUpdate, .unsupported)
                     } else {
                         assign(.tunConfigRead, .available)
-                        assign(.tunGuardedUpdate, Settings.isUsingEmbeddedCore ? .unsupported : .available)
+                        if Settings.isUsingEmbeddedCore {
+                            assign(.tunGuardedUpdate, .unsupported, message: NSLocalizedString("Embedded-core TUN is still unsupported in SmartX.", comment: ""))
+                        } else {
+                            assign(.tunGuardedUpdate, .unknown, message: NSLocalizedString("Guarded TUN update is available only after an explicit user-triggered config patch; SmartX does not auto-probe it.", comment: ""))
+                        }
                     }
                 case .unsupported:
                     assign(.configRead, .unsupported)
+                    assign(.configPatch, .unsupported)
+                    assign(.configReload, .unsupported)
                     assign(.tunConfigRead, .unsupported)
                     assign(.tunGuardedUpdate, .unsupported)
                 case let .unauthorized(message):
                     assign(.configRead, .unauthorized, message: message)
+                    assign(.configPatch, .unauthorized, message: message)
+                    assign(.configReload, .unauthorized, message: message)
                     assign(.tunConfigRead, .unauthorized, message: message)
                     assign(.tunGuardedUpdate, .unauthorized, message: message)
                 case let .failed(message):
                     assign(.configRead, .degraded, message: message)
+                    assign(.configPatch, .degraded, message: message)
+                    assign(.configReload, .degraded, message: message)
                     assign(.tunConfigRead, .degraded, message: message)
                     assign(.tunGuardedUpdate, .degraded, message: message)
                 }
@@ -138,6 +153,42 @@ final class CoreCapabilityProbe {
         queue.async {
             ApiRequest.requestMemorySnapshot { [self] result in
                 assignCapability(.memorySnapshot, from: result, assign: assign)
+                group.leave()
+            }
+        }
+
+        group.enter()
+        queue.async {
+            SmartAPI.requestSmartWeights { [self] result in
+                switch result {
+                case let .success(response):
+                    let weightCount = response.weights.values.reduce(0) { $0 + $1.count }
+                    let message: String
+                    if response.weights.isEmpty {
+                        message = NSLocalizedString("Smart weight endpoint responded successfully, but no Smart weight entries were reported.", comment: "")
+                    } else {
+                        message = String(format: NSLocalizedString("Smart weight endpoint responded successfully with %d weight entries.", comment: ""), weightCount)
+                    }
+                    assign(.smartWeights, .available, message: message)
+                    assign(.smartCacheFlush, .unknown, message: NSLocalizedString("Smart cache flush is intentionally not auto-probed because it mutates controller state.", comment: ""))
+                    assign(.smartConnectionBlock, .unknown, message: NSLocalizedString("Smart connection block is intentionally not auto-probed because it mutates controller state.", comment: ""))
+                    assign(.lightGBMUpgrade, .unknown, message: NSLocalizedString("LightGBM model upgrade is intentionally not auto-probed because it mutates controller state.", comment: ""))
+                case .unsupported:
+                    assign(.smartWeights, .unsupported, message: NSLocalizedString("Smart endpoints are unsupported by the active controller.", comment: ""))
+                    assign(.smartCacheFlush, .unsupported, message: NSLocalizedString("Smart endpoints are unsupported by the active controller.", comment: ""))
+                    assign(.smartConnectionBlock, .unsupported, message: NSLocalizedString("Smart endpoints are unsupported by the active controller.", comment: ""))
+                    assign(.lightGBMUpgrade, .unsupported, message: NSLocalizedString("Smart endpoints are unsupported by the active controller.", comment: ""))
+                case let .unauthorized(message):
+                    assign(.smartWeights, .unauthorized, message: message)
+                    assign(.smartCacheFlush, .unauthorized, message: message)
+                    assign(.smartConnectionBlock, .unauthorized, message: message)
+                    assign(.lightGBMUpgrade, .unauthorized, message: message)
+                case let .failed(message):
+                    assign(.smartWeights, .degraded, message: message)
+                    assign(.smartCacheFlush, .unknown, message: NSLocalizedString("Smart cache flush was not auto-probed after Smart weight probing degraded.", comment: ""))
+                    assign(.smartConnectionBlock, .unknown, message: NSLocalizedString("Smart connection block was not auto-probed after Smart weight probing degraded.", comment: ""))
+                    assign(.lightGBMUpgrade, .unknown, message: NSLocalizedString("LightGBM upgrade was not auto-probed after Smart weight probing degraded.", comment: ""))
+                }
                 group.leave()
             }
         }

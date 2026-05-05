@@ -16,7 +16,7 @@ class ConnectionsReq: WebSocketDelegate {
     let decoder = JSONDecoder()
     var onSnapshotUpdate: ((ClashConnectionSnapShot) -> Void)?
     init() {
-        if let url = try? ControllerEndpointBuilder.websocketURL(path: "/connections") {
+        if let url = try? ConnectionAPI.connectionWebSocketURL() {
             socket = WebSocket(url: url)
         } else {
             Logger.log("connections websocket unavailable: invalid controller URL", level: .warning)

@@ -8,6 +8,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$ROOT_DIR/.codex-logs"
 LOG_FILE="$LOG_DIR/project-diagnose.log"
 WORKSPACE_FILE="$ROOT_DIR/ClashX.xcworkspace/contents.xcworkspacedata"
+WORKFLOW_DIR="$ROOT_DIR/.github/workflows"
+HARNESS_DIR="$ROOT_DIR/Tests/SecurityHarness"
 
 mkdir -p "$LOG_DIR"
 : > "$LOG_FILE"
@@ -42,6 +44,9 @@ run_optional xcode-select -p
 run_optional xcrun --find xcodebuild
 run_optional xcodebuild -version
 
+log_section "Available Xcodes"
+run_optional sh -c "ls -1 /Applications | grep -E '^Xcode' || true"
+
 log_section "Xcode containers"
 find . \
     -maxdepth 4 \
@@ -70,6 +75,20 @@ log_section "xcodebuild list"
 run_optional xcodebuild -list -workspace "$ROOT_DIR/ClashX.xcworkspace"
 run_optional xcodebuild -list -project "$ROOT_DIR/ClashX.xcodeproj"
 
+log_section "Workflow files"
+if [[ -d "$WORKFLOW_DIR" ]]; then
+    find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) | sort >> "$LOG_FILE" 2>&1
+else
+    echo "Missing workflow directory: $WORKFLOW_DIR" >> "$LOG_FILE"
+fi
+
+log_section "Smoke harness inventory"
+if [[ -d "$HARNESS_DIR" ]]; then
+    find Tests/SecurityHarness -maxdepth 1 -type f -name '*.swift' | sort >> "$LOG_FILE" 2>&1
+else
+    echo "Missing harness directory: $HARNESS_DIR" >> "$LOG_FILE"
+fi
+
 log_section "Ruby and CocoaPods environment"
 run_optional ruby -v
 run_optional which ruby
@@ -85,6 +104,20 @@ bundler_pod_version="$(bundle exec pod --version 2>/dev/null || true)"
 if [[ -n "$global_pod_version" && -n "$bundler_pod_version" && "$global_pod_version" != "$bundler_pod_version" ]]; then
     log_section "Bundler note"
     echo "Global CocoaPods differs from Bundler CocoaPods. Prefer bundle exec pod install for this repository." >> "$LOG_FILE"
+fi
+
+log_section "GitHub PR alignment"
+if command -v gh >/dev/null 2>&1; then
+    {
+        echo
+        echo "\$ gh auth status"
+        gh auth status
+        echo
+        echo "\$ gh pr view 11 --json number,title,headRefName,baseRefName,isDraft"
+        gh pr view 11 --json number,title,headRefName,baseRefName,isDraft
+    } >> "$LOG_FILE" 2>&1 || true
+else
+    echo "gh is unavailable; PR head alignment not checked." >> "$LOG_FILE"
 fi
 
 log_section "Top-level directories"
@@ -136,6 +169,8 @@ find . \
 echo "PROJECT DIAGNOSIS SUCCEEDED"
 echo "Root: $ROOT_DIR"
 echo "Selected Xcode: $(xcode-select -p 2>/dev/null || echo unknown)"
+echo "Available Xcodes:"
+find /Applications -maxdepth 1 -mindepth 1 -type d -name 'Xcode*' -exec basename {} \; 2>/dev/null | sort | sed 's#^#- #' || echo "- unavailable"
 echo "Detected Xcode containers:"
 find . \
     -maxdepth 3 \
@@ -146,4 +181,8 @@ find . \
     -not -path './.git/*' \
     | sort \
     | sed 's#^\./#- #'
+echo "Workflow files:"
+find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null | sort | sed 's#^\./#- #' || true
+echo "Smoke harnesses:"
+find Tests/SecurityHarness -maxdepth 1 -type f -name '*.swift' 2>/dev/null | sort | sed 's#^\./#- #' || true
 echo "Log: $LOG_FILE"

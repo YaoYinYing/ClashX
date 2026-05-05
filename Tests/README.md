@@ -25,13 +25,20 @@ Notes:
 - A minimal local diagnostics-log-reader smoke check is available at `Tests/SecurityHarness/diagnostics_log_reader_smoke.swift` and should be run with `swiftc ClashX/General/Utils/SmartXRedactor.swift ClashX/General/Utils/DiagnosticsLogReader.swift Tests/SecurityHarness/diagnostics_log_reader_smoke.swift -o /tmp/diagnostics-log-reader-smoke && /tmp/diagnostics-log-reader-smoke` when changing log tailing, filtering, or display limits for diagnostics.
 - A minimal local diagnostics-artifact-formatter smoke check is available at `Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift` and should be run with `swiftc ClashX/General/Utils/SmartXRedactor.swift ClashX/General/Utils/DiagnosticsArtifactFormatter.swift Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift -o /tmp/diagnostics-artifact-formatter-smoke && /tmp/diagnostics-artifact-formatter-smoke` when changing artifact preview redaction behavior in diagnostics.
 - A minimal local profile-artifact metadata smoke check is available at `Tests/SecurityHarness/profile_artifact_metadata_smoke.swift` and should be run with `swiftc ClashX/General/Managers/ProfileArtifactManager.swift Tests/SecurityHarness/profile_artifact_metadata_smoke.swift -o /tmp/profile-artifact-metadata-smoke && /tmp/profile-artifact-metadata-smoke` when changing artifact metadata shape or source-copy semantics.
+- A minimal local effective-config-generator smoke check is available at `Tests/SecurityHarness/effective_config_generator_smoke.swift` and should be run with `swiftc ClashX/General/Managers/EffectiveConfigGenerator.swift Tests/SecurityHarness/effective_config_generator_smoke.swift -o /tmp/effective-config-generator-smoke && /tmp/effective-config-generator-smoke` when changing the generated-effective-config boundary or the explicit unsupported-until-safe-YAML-emit behavior.
+- `bash scripts/codex-test-focused.sh` now runs the same smoke harness inventory as `.github/workflows/pr-ci.yml`, then records any Xcode test execution as a separate pass, fail, or skip outcome.
+- If local `xcodebuild` is blocked by simulator-service or cache-permission issues, `scripts/codex-test-focused.sh` records the Xcode step as skipped instead of misreporting a bad workspace.
+- PR CI runs `security_harness.swift`, `controller_endpoint_builder_smoke.swift`, `capability_cache_identity_smoke.swift`, `config_validator_smoke.swift`, `diagnostics_log_reader_smoke.swift`, `diagnostics_artifact_formatter_smoke.swift`, `profile_artifact_metadata_smoke.swift`, `smartx_managed_override_smoke.swift`, `effective_config_generator_smoke.swift`, `redactor_smoke.swift`, and `remote_config_decode_smoke.swift`.
+- There is not yet a direct standalone smoke harness for `ConnectionAPI` or `DiagnosticsMaintenanceCoordinator`. `ConnectionAPI.swift` currently depends on app models plus Alamofire, and `DiagnosticsMaintenanceCoordinator.swift` depends on app endpoint/result types, so the current lightweight smoke coverage stays focused on the pure `EffectiveConfigGenerator` boundary instead of cloning production logic into test-only shims.
 - These harnesses intentionally either compile production files directly, compile production files with small stubs, or keep narrow mirrored legacy coverage. They are still temporary coverage, not a substitute for a real XCTest bundle.
 
 Current temporary-vs-production split:
 
 - `controller_endpoint_builder_smoke.swift`, `redactor_smoke.swift`, `config_validator_smoke.swift`, `diagnostics_log_reader_smoke.swift`, `diagnostics_artifact_formatter_smoke.swift`, and `profile_artifact_metadata_smoke.swift` call production code directly or with minimal compile-only stubs for unrelated app types.
 - `smartx_managed_override_smoke.swift` calls production code with small stubs for unrelated app infrastructure.
+- `effective_config_generator_smoke.swift` compiles `EffectiveConfigGenerator.swift` with tiny stubs for unrelated app infrastructure so the branch keeps an honest unsupported result plus provenance boundary until a safe YAML emitter exists.
 - `security_harness.swift` remains a temporary mirrored compatibility smoke harness because there is no real XCTest target yet.
+- No current smoke harness is intentionally skipped in PR CI. Any future omission should be documented here with the exact reason.
 - None of these harnesses replace a dedicated Xcode unit-test bundle; they are focused guardrails until the repo gains one.
 
 New smoke harness coverage added by the SmartX foundation hardening PR:
@@ -41,6 +48,7 @@ New smoke harness coverage added by the SmartX foundation hardening PR:
 - `diagnostics_artifact_formatter_smoke.swift` compiles `SmartXRedactor.swift` and `DiagnosticsArtifactFormatter.swift` with tiny metadata/path stubs to cover redacted artifact-preview output in the Diagnostics dashboard.
 - `profile_artifact_metadata_smoke.swift` compiles `ProfileArtifactManager.swift` to cover source-copy artifact metadata encoding.
 - `smartx_managed_override_smoke.swift` compiles `SmartXManagedOverrideManager.swift` with lightweight stubs for unrelated app infrastructure to cover explicit bootstrap, no-hidden-write behavior, future-schema persistence skips, normalization, and migration behavior.
+- `effective_config_generator_smoke.swift` compiles `EffectiveConfigGenerator.swift` with lightweight stubs to cover the current explicit unsupported result for generated effective config until a safe YAML emitter exists.
 
 ## CI
 - PR CI runs on macOS GitHub Actions via `.github/workflows/pr-ci.yml`.
@@ -49,6 +57,7 @@ New smoke harness coverage added by the SmartX foundation hardening PR:
 - PR CI verifies the Release helper client requirement remains fail-closed in a dedicated validation gate before artifact jobs run.
 - Every PR now uploads an unsigned Debug app artifact for the current modern build line with Xcode 26.x.
 - CI also runs `Tests/SecurityHarness/security_harness.swift`, the endpoint-builder smoke harness, the capability-identity smoke harness, and the config-validator, diagnostics-log-reader, diagnostics-artifact-formatter, profile-artifact-metadata, and SmartX-managed-override smoke harnesses.
+- CI also runs the effective-config-generator smoke harness so the branch cannot silently start overclaiming generated effective config support.
 - CI does **not** validate notarization, privileged helper installation by SMJobBless, or production signing requirements.
 - Local release testing still requires real Apple Developer identities and a follow-up helper identity migration.
 - SmartX no longer maintains a dedicated macOS 10.14 CI lane in this branch.

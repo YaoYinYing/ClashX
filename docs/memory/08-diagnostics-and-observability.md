@@ -91,7 +91,7 @@ These diagnostics actions now also feed a shared capability cache, so unsupporte
 
 Important limitation:
 
-- `DiagnosticsDashboardViewController` is still a transitional controller. `DiagnosticsLogReader` and `DiagnosticsArtifactFormatter` are extracted, and dangerous actions remain confirmed, but the dashboard is not fully decomposed yet.
+- `DiagnosticsDashboardViewController` is still a transitional controller. `DiagnosticsLogReader`, `DiagnosticsArtifactFormatter`, and `DiagnosticsProviderFormatter` are extracted, dangerous actions remain confirmed, and pprof URL preparation now routes through the diagnostics API/helper layer, but the dashboard is not fully decomposed yet.
 
 The controller URL paths used by the Diagnostics dashboard are also now routed through [`ControllerEndpointBuilder`](../../ClashX/General/Utils/ControllerEndpointBuilder.swift) for high-risk touched surfaces such as pprof helper URL generation and WebSocket diagnostics.
 

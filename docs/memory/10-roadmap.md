@@ -46,6 +46,7 @@ Current note:
 Testing gate:
 
 - every fix PR in this phase should run the relevant build and lightweight harness checks
+- unsigned CI artifacts in this phase remain manual-testing artifacts only, and the lightweight harness checks are still transitional smoke coverage rather than a high-coverage test strategy
 
 ## Phase 1: Endpoint Builder and API Result Unification
 
@@ -72,6 +73,7 @@ Testing gate:
 Current note:
 
 - the first pass of `ControllerEndpointBuilder`, stopped-core result cleanup, and Smart endpoint result unification is now implemented, but `ApiRequest` is still only partially decomposed
+- the next small API-domain split has started with `ConnectionAPI`, but stream lifecycle still remains in `ApiRequest` while traffic/log retry ownership is shared with WebSocket delegate state
 
 ## Phase 2: Capability Probing System
 
@@ -97,6 +99,7 @@ Testing gate:
 Current note:
 
 - SmartX now has a baseline `CoreCapabilityProbe` snapshot flow, but it is still a minimal read-only probe layer rather than the final capability architecture
+- `ControllerEndpointBuilder`, `CoreCapabilityProbe`, `SmartXRedactor`, `SmartXManagedOverrideManager`, `LightGBMSettingsViewModel`, `TunLifecycleCoordinator`, `TunConfigValidator`, `DNSConfigValidator`, `DiagnosticsLogReader`, `DiagnosticsArtifactFormatter`, `DiagnosticsProviderFormatter`, `ProfileArtifactManager`, and the smoke harnesses in `Tests/SecurityHarness` are already first-pass groundwork in the current branch, not future introductions
 
 ## Phase 3: Redaction and Diagnostics Safety
 
@@ -189,6 +192,7 @@ Testing gate:
 Current note:
 
 - SmartX now has an initial persisted managed-override file for LightGBM settings under `.smartx/overrides`, but it is groundwork only and not a full effective-config generator
+- `EffectiveConfigGenerator` currently remains an explicit unsupported boundary, and current profile artifacts remain source-copy or successful-reload artifacts until a real generator writes a transformed config
 
 ## Phase 7: TUN-First Lifecycle
 
@@ -214,6 +218,7 @@ Testing gate:
 Current note:
 
 - SmartX now has an initial guarded `TunLifecycleCoordinator`, but embedded-core TUN remains explicitly unsupported and privileged TUN architecture is still a later prerequisite
+- SmartX now also routes guarded config patching through narrower `ConfigAPI` helpers, but that is still external-controller lifecycle hardening rather than full TUN architecture
 
 ## Phase 8: DNS/TUN Validation Module
 

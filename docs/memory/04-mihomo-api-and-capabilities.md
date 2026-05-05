@@ -254,6 +254,15 @@ Callers should pass proxy names, provider names, group names, config names, and 
 
 This resolves the most visible string-concatenated endpoint debt, but it does not yet split `ApiRequest` into dedicated domain clients.
 
+The current branch now has a first partial split:
+
+- `DiagnosticsAPI` owns baseline diagnostics and maintenance endpoint wrappers
+- `ProviderAPI` owns provider diagnostics and maintenance wrappers
+- `SmartAPI` owns Smart-only endpoint wrappers
+- `ConfigAPI` owns guarded config reads and config patch helpers
+
+`ApiRequest` remains the compatibility facade and is still too broad, but new touched logic should continue moving toward these domain clients instead of adding more endpoint-specific code to the facade.
+
 ### CoreEndpointAvailability
 
 `CoreEndpointAvailability` is now implemented and currently uses these states:
@@ -275,7 +284,9 @@ SmartX now has a minimal probe layer in [`ClashX/General/Managers/CoreCapability
 - `/providers/rules`
 - `/memory`
 
-This is only a baseline. It does not yet implement a fully extracted probe architecture, separate domain clients, or exhaustive capability coverage.
+This is only a baseline. It does not yet implement a fully extracted probe architecture or exhaustive capability coverage.
+- Smart weight probing now uses the read-only `/group/weights` path when available.
+- Mutating endpoints such as Smart cache flush, restart, GEO/UI upgrade, debug GC, LightGBM upgrade, and guarded TUN patching are intentionally left `unknown`, `unsupported`, or `degraded` unless user-triggered behavior later proves them.
 - unsupported
 - unknown
 - degraded

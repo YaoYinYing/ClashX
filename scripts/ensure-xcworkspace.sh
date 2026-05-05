@@ -11,7 +11,6 @@ PODS_PROJECT_DIR="$ROOT_DIR/Pods/Pods.xcodeproj"
 repair_mode="${SMARTX_ENSURE_WORKSPACE_REPAIR:-0}"
 regenerate_mode="${SMARTX_REGENERATE_WORKSPACE:-0}"
 regenerate_lock="${SMARTX_REGENERATE_PODFILE_LOCK:-0}"
-attempted_repair=0
 
 print_missing_products_hint() {
   echo "CocoaPods workspace products are missing. Run:"
@@ -39,6 +38,13 @@ run_pod_install() {
   else
     pod install
   fi
+}
+
+xcodebuild_workspace_env_blocked() {
+  local log_file="$1"
+  grep -Eq \
+    "CoreSimulatorService connection became invalid|simdiskimaged|Operation not permitted|unable to load standard library|ModuleCache|ManifestLoading/.*\\.dia" \
+    "$log_file"
 }
 
 validate_workspace() {
@@ -114,8 +120,15 @@ EOF
     return 1
   fi
 
-  if ! xcodebuild -list -workspace "$WORKSPACE_DIR" >/tmp/smartx-workspace-xcodebuild.$$ 2>&1; then
-    echo "Workspace XML is valid, but xcodebuild could not resolve ClashX.xcworkspace."
+  mkdir -p /private/tmp/swift-module-cache /private/tmp/swiftpm-module-cache
+  if ! CLANG_MODULE_CACHE_PATH=/private/tmp/swift-module-cache \
+       SWIFTPM_MODULECACHE_OVERRIDE=/private/tmp/swiftpm-module-cache \
+       xcodebuild -list -workspace "$WORKSPACE_DIR" >/tmp/smartx-workspace-xcodebuild.$$ 2>&1; then
+    if xcodebuild_workspace_env_blocked /tmp/smartx-workspace-xcodebuild.$$; then
+      echo "Workspace XML is valid, but local xcodebuild resolution was blocked by simulator or cache environment issues."
+    else
+      echo "Workspace XML is valid, but xcodebuild could not resolve ClashX.xcworkspace."
+    fi
     cat /tmp/smartx-workspace-xcodebuild.$$ 2>/dev/null
     rm -f /tmp/smartx-workspace-xcodebuild.$$
     return 1
@@ -128,7 +141,6 @@ EOF
 }
 
 run_repair() {
-  attempted_repair=1
   echo "Attempting non-destructive workspace repair..."
   (
     cd "$ROOT_DIR" || exit 1
@@ -137,7 +149,6 @@ run_repair() {
 }
 
 run_regeneration() {
-  attempted_repair=1
   echo "Regenerating workspace and Pods because SMARTX_REGENERATE_WORKSPACE=1..."
   (
     cd "$ROOT_DIR" || exit 1

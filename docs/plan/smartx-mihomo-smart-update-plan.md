@@ -239,6 +239,9 @@ The current branch already has several foundations that align with this plan:
 - `LightGBMSettingsViewModel`
 - `TunLifecycleCoordinator`
 - `TunConfigValidator` / `DNSConfigValidator`
+- `DiagnosticsLogReader`
+- `DiagnosticsArtifactFormatter`
+- `DiagnosticsProviderFormatter`
 - Smart LightGBM override path through app settings, managed-override persistence, and Go-side raw-config mutation
 - Smart Dashboard
 - Core Settings page
@@ -395,7 +398,7 @@ SmartX should be considered aligned with this plan when:
 
 Current branch note:
 
-- SmartX already has first-pass groundwork in `ControllerEndpointBuilder`, `CoreCapabilityProbe`, `SmartXRedactor`, `SmartXManagedOverrideManager`, `LightGBMSettingsViewModel`, `TunLifecycleCoordinator`, `TunConfigValidator`, `DNSConfigValidator`, and source-copy profile artifacts.
+- SmartX already has first-pass groundwork in `ControllerEndpointBuilder`, `CoreCapabilityProbe`, `SmartXRedactor`, `SmartXManagedOverrideManager`, `LightGBMSettingsViewModel`, `TunLifecycleCoordinator`, `TunConfigValidator`, `DNSConfigValidator`, `DiagnosticsLogReader`, `DiagnosticsArtifactFormatter`, `DiagnosticsProviderFormatter`, `ProfileArtifactManager`, and the smoke harnesses under `Tests/SecurityHarness`.
 - SmartX does not yet have a generated effective config pipeline, a decomposed diagnostics dashboard, embedded-core TUN support, or a fully expanded capability-probe architecture.
 
 ## Implementation Guidance for Future PRs

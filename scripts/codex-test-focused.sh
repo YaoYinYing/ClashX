@@ -11,6 +11,19 @@ LOG_DIR="$ROOT_DIR/.codex-logs"
 LOG_FILE="$LOG_DIR/xcode-test-focused.log"
 RESULT_BUNDLE="$LOG_DIR/xcode-test-focused.xcresult"
 WORKSPACE_HELPER="$ROOT_DIR/scripts/ensure-xcworkspace.sh"
+SECURITY_HARNESSES=(
+    "Tests/SecurityHarness/security_harness.swift"
+    "Tests/SecurityHarness/redactor_smoke.swift"
+    "Tests/SecurityHarness/remote_config_decode_smoke.swift"
+    "Tests/SecurityHarness/controller_endpoint_builder_smoke.swift"
+    "Tests/SecurityHarness/capability_cache_identity_smoke.swift"
+    "Tests/SecurityHarness/config_validator_smoke.swift"
+    "Tests/SecurityHarness/diagnostics_log_reader_smoke.swift"
+    "Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift"
+    "Tests/SecurityHarness/profile_artifact_metadata_smoke.swift"
+    "Tests/SecurityHarness/smartx_managed_override_smoke.swift"
+    "Tests/SecurityHarness/effective_config_generator_smoke.swift"
+)
 
 WORKSPACE="${SMARTX_WORKSPACE:-ClashX.xcworkspace}"
 PROJECT="${SMARTX_PROJECT:-}"
@@ -56,6 +69,8 @@ elif [[ -d "$WORKSPACE" ]]; then
         echo "If the workspace is still broken, run:"
         echo "  SMARTX_REGENERATE_WORKSPACE=1 bash scripts/ensure-xcworkspace.sh"
         echo "Project fallback is diagnostic only and requires SMARTX_USE_PROJECT_FALLBACK=1."
+        echo "Standalone SecurityHarness inventory:"
+        printf '  %s\n' "${SECURITY_HARNESSES[@]}"
         exit 2
     fi
 else
@@ -96,6 +111,9 @@ fi
     echo "Command:"
     printf '  %q' "${cmd[@]}"
     echo
+    echo
+    echo "Standalone SecurityHarness inventory:"
+    printf '  %s\n' "${SECURITY_HARNESSES[@]}"
     echo
 } >> "$LOG_FILE"
 

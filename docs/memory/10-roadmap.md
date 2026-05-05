@@ -97,6 +97,7 @@ Testing gate:
 Current note:
 
 - SmartX now has a baseline `CoreCapabilityProbe` snapshot flow, but it is still a minimal read-only probe layer rather than the final capability architecture
+- `ControllerEndpointBuilder`, `CoreCapabilityProbe`, `SmartXRedactor`, `SmartXManagedOverrideManager`, `LightGBMSettingsViewModel`, `TunLifecycleCoordinator`, `TunConfigValidator`, `DNSConfigValidator`, `DiagnosticsLogReader`, `DiagnosticsArtifactFormatter`, `DiagnosticsProviderFormatter`, `ProfileArtifactManager`, and the smoke harnesses in `Tests/SecurityHarness` are already first-pass groundwork in the current branch, not future introductions
 
 ## Phase 3: Redaction and Diagnostics Safety
 
@@ -189,6 +190,7 @@ Testing gate:
 Current note:
 
 - SmartX now has an initial persisted managed-override file for LightGBM settings under `.smartx/overrides`, but it is groundwork only and not a full effective-config generator
+- `EffectiveConfigGenerator` currently remains an explicit unsupported boundary, and current profile artifacts remain source-copy or successful-reload artifacts until a real generator writes a transformed config
 
 ## Phase 7: TUN-First Lifecycle
 

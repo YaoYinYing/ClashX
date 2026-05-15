@@ -202,7 +202,9 @@ if ! hdiutil attach \
   exit 1
 fi
 
-read -r MOUNT_DEVICE MOUNT_POINT < <(
+# The mount point contains the volume name and may include spaces, so the
+# plist parser emits tab-separated fields and the shell reads with tab IFS.
+IFS=$'\t' read -r MOUNT_DEVICE MOUNT_POINT < <(
   python3 - "$ATTACH_PLIST" <<'PY'
 import plistlib
 import sys
@@ -228,7 +230,7 @@ for entity in data.get("system-entities", []):
             device = candidate_device
         break
 
-print(device, mount_point)
+print(f"{device}\t{mount_point}")
 PY
 )
 

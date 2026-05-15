@@ -171,6 +171,7 @@ jobs:
         run: |
           set -o pipefail
           swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/Models/SmartXManagedOverrideModel.swift \
             ClashX/General/Managers/SmartXManagedOverrideManager.swift \
             Tests/SecurityHarness/smartx_managed_override_smoke.swift \
             -o /tmp/smartx-managed-override-smoke
@@ -180,6 +181,7 @@ jobs:
         run: |
           set -o pipefail
           swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/Models/SmartXManagedOverrideModel.swift \
             ClashX/General/Managers/EffectiveConfigGenerator.swift \
             Tests/SecurityHarness/effective_config_generator_smoke.swift \
             -o /tmp/effective-config-generator-smoke
@@ -375,6 +377,7 @@ jobs:
         run: |
           set -o pipefail
           swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/Models/SmartXManagedOverrideModel.swift \
             ClashX/General/Managers/SmartXManagedOverrideManager.swift \
             Tests/SecurityHarness/smartx_managed_override_smoke.swift \
             -o /tmp/smartx-managed-override-smoke
@@ -384,6 +387,7 @@ jobs:
         run: |
           set -o pipefail
           swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/Models/SmartXManagedOverrideModel.swift \
             ClashX/General/Managers/EffectiveConfigGenerator.swift \
             Tests/SecurityHarness/effective_config_generator_smoke.swift \
             -o /tmp/effective-config-generator-smoke

@@ -106,14 +106,12 @@ import AppKit
 import Foundation
 
 let args = CommandLine.arguments
-guard args.count == 4 else {
-    fputs("usage: swift generate_dmg_background.swift <output-path> <app-path> <bundle-name>\n", stderr)
+guard args.count == 2 else {
+    fputs("usage: swift generate_dmg_background.swift <output-path>\n", stderr)
     exit(1)
 }
 
 let outputPath = args[1]
-let appPath = args[2]
-let bundleName = args[3]
 let size = NSSize(width: 640, height: 420)
 let image = NSImage(size: size)
 
@@ -179,7 +177,7 @@ do {
 }
 EOF
 mkdir -p "$SWIFT_MODULE_CACHE"
-swift -module-cache-path "$SWIFT_MODULE_CACHE" "$BACKGROUND_SWIFT" "$BACKGROUND_PATH" "$APP_PATH" "$APP_BUNDLE_NAME"
+swift -module-cache-path "$SWIFT_MODULE_CACHE" "$BACKGROUND_SWIFT" "$BACKGROUND_PATH"
 
 hdiutil create \
   -quiet \

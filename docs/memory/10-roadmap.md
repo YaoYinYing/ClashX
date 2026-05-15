@@ -167,6 +167,7 @@ Testing gate:
 Current note:
 
 - SmartX now keeps honest `Successful Reload Artifact` and `Last Known Good Config` aliases, but the artifact is still a loaded source copy rather than a true generated effective config
+- Artifact metadata now distinguishes requested SmartX overrides from emitted SmartX overrides so source-copy artifacts do not overclaim transformed output
 
 ## Phase 6: SmartX Managed Override Layer
 
@@ -192,7 +193,7 @@ Testing gate:
 Current note:
 
 - SmartX now has an initial persisted managed-override file for LightGBM settings under `.smartx/overrides`, but it is groundwork only and not a full effective-config generator
-- `EffectiveConfigGenerator` currently remains an explicit unsupported boundary, and current profile artifacts remain source-copy or successful-reload artifacts until a real generator writes a transformed config
+- `EffectiveConfigGenerator` currently remains an explicit unsupported boundary, records requested-versus-emitted override provenance separately, and current profile artifacts remain source-copy or successful-reload artifacts until a real generator writes a transformed config
 
 ## Phase 7: TUN-First Lifecycle
 

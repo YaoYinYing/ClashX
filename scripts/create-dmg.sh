@@ -189,8 +189,6 @@ hdiutil create \
   -format UDRW \
   "$RW_DMG_PATH"
 
-chflags hidden "$MOUNT_POINT/.background" || true
-
 ATTACH_PLIST="$TMP_ROOT/attach.plist"
 ATTACH_LOG="$TMP_ROOT/attach.log"
 
@@ -250,6 +248,8 @@ fi
 echo "Mounted DMG device: $MOUNT_DEVICE"
 echo "Mounted DMG path: $MOUNT_POINT"
 
+# Finder layout is best-effort on CI. A clean fallback DMG remains acceptable
+# for unsigned manual-testing artifacts even when Finder metadata is missing.
 chflags hidden "$MOUNT_POINT/.background" || true
 rm -rf "$MOUNT_POINT/.fseventsd" "$MOUNT_POINT/.Trashes" "$MOUNT_POINT/.Spotlight-V100" 2>/dev/null || true
 
@@ -297,7 +297,11 @@ if osascript "$APPLESCRIPT_PATH" \
   "$APP_BUNDLE_NAME" \
   "$MOUNT_POINT/.background/background.png" \
   >"$APPLESCRIPT_LOG" 2>&1; then
-  echo "Finder DMG layout applied."
+  if [[ -f "$MOUNT_POINT/.DS_Store" ]]; then
+    echo "Finder DMG layout applied and .DS_Store was created."
+  else
+    echo "Warning: Finder DMG layout script succeeded but .DS_Store was not created; continuing with clean fallback DMG." >&2
+  fi
 else
   echo "Warning: Finder DMG layout AppleScript failed; continuing with clean fallback DMG." >&2
   cat "$APPLESCRIPT_LOG" >&2 || true
@@ -305,10 +309,9 @@ fi
 rm -rf "$MOUNT_POINT/.fseventsd" "$MOUNT_POINT/.Trashes" "$MOUNT_POINT/.Spotlight-V100" 2>/dev/null || true
 
 if [[ ! -f "$MOUNT_POINT/.DS_Store" ]]; then
-  echo "Finder did not create .DS_Store; DMG layout cannot be guaranteed." >&2
-  echo "AppleScript output:" >&2
-  cat "$APPLESCRIPT_LOG" >&2 || true
-  exit 1
+  # Missing .DS_Store is not a packaging failure. The fallback DMG still keeps
+  # the root clean for unsigned manual-testing builds.
+  echo "Warning: Finder did not create .DS_Store; continuing with clean fallback DMG." >&2
 fi
 
 sync

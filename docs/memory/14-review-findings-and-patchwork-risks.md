@@ -5,7 +5,7 @@
 SmartX has improved its foundation work, but several surfaces are still explicitly transitional.
 
 - The LightGBM override now has a persisted SmartX-managed file, but it is still only groundwork for later effective-config generation.
-- The current branch now has a narrow `EffectiveConfigGenerator` boundary with structured provenance, but it still reports unsupported until a safe YAML emit path exists and must not be treated as proof of generated-config support.
+- The current branch now has a narrow `EffectiveConfigGenerator` boundary with structured provenance, but it still reports unsupported until a safe YAML emit path exists and must not be treated as proof of generated-config support; requested overrides and emitted overrides are now separate facts.
 - The current branch now keeps redactor and remote-profile decode smoke coverage in the same validation inventory as the other PR smoke harnesses, but those checks are still transitional smoke coverage rather than a substitute for a real XCTest target.
 - Hidden SmartX override bootstrap side effects were reduced by removing migration writes from low-level Settings getters, but override migration is still a sensitive path because it bridges UserDefaults compatibility data and the managed JSON file.
 - Profile artifact terminology is now more honest in new code and UI, but the compatibility `generated-effective.*` paths still exist until a real profile pipeline lands.
@@ -17,12 +17,14 @@ SmartX has improved its foundation work, but several surfaces are still explicit
 ## Patchwork Risks To Keep Visible
 
 - Do not let the managed override file be described as a full generated effective config pipeline.
+- Do not let requested SmartX overrides be described as emitted/generated overrides when the generator still returns an unsupported result.
 - Do not let preserved future-schema override files be mistaken for a successful persisted save when SmartX only applied settings in memory.
 - Do not let the initial `TunLifecycleCoordinator` be described as full TUN support.
 - Do not treat the modern-only CI policy as proof of signed or notarized release readiness.
 - Do not treat a locally skipped Xcode build or test step as evidence of a broken workspace when the actual blocker is simulator-service or cache-permission access in the host environment.
 - Do not add new Smart dashboard or diagnostics logic by copying LightGBM save code or controller-specific validation checks back into view controllers.
 - Do not grow `DiagnosticsDashboardViewController` further without extracting another helper or view-model seam to offset the added behavior.
+- Do not treat unsigned DMG Finder layout metadata as a release-readiness gate; best-effort layout and clean fallback packaging are separate concerns.
 
 ## Follow-up Direction
 

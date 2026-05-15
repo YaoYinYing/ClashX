@@ -90,12 +90,12 @@ enum DiagnosticsMaintenanceAction {
 final class DiagnosticsMaintenanceCoordinator {
     typealias ConfirmationHandler = (_ title: String, _ message: String, _ confirmTitle: String) -> Bool
     typealias StatusHandler = (_ text: String) -> Void
-    typealias ResultHandler = (_ action: DiagnosticsMaintenanceAction, _ result: ControllerEndpointResult) -> Void
+    typealias CompletionHandler = () -> Void
 
     func perform(_ action: DiagnosticsMaintenanceAction,
                  confirm: ConfirmationHandler,
-                 setStatus: StatusHandler,
-                 handleResult: @escaping ResultHandler) {
+                 setStatus: @escaping StatusHandler,
+                 onComplete: @escaping CompletionHandler) {
         let descriptor = action.descriptor
         guard confirm(descriptor.confirmationTitle,
                       descriptor.confirmationMessage,
@@ -104,8 +104,24 @@ final class DiagnosticsMaintenanceCoordinator {
         }
 
         setStatus(descriptor.startText)
-        action.performRequest { result in
-            handleResult(action, result)
+        action.performRequest { [self] result in
+            CapabilityCache.shared.mark(descriptor.capability, endpointResult: result)
+            setStatus(statusText(for: result, descriptor: descriptor))
+            onComplete()
+        }
+    }
+
+    private func statusText(for result: ControllerEndpointResult,
+                            descriptor: DiagnosticsMaintenanceDescriptor) -> String {
+        switch result {
+        case .success:
+            return descriptor.successText
+        case .unsupported:
+            return descriptor.unsupportedText
+        case .unauthorized:
+            return descriptor.unauthorizedText
+        case let .failed(message):
+            return message
         }
     }
 }

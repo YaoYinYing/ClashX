@@ -121,9 +121,11 @@ run_swiftc_harness "profile-artifact-metadata-smoke" "/tmp/profile-artifact-meta
     ClashX/General/Managers/ProfileArtifactManager.swift \
     Tests/SecurityHarness/profile_artifact_metadata_smoke.swift
 run_swiftc_harness "smartx-managed-override-smoke" "/tmp/smartx-managed-override-smoke" \
+    ClashX/Models/SmartXManagedOverrideModel.swift \
     ClashX/General/Managers/SmartXManagedOverrideManager.swift \
     Tests/SecurityHarness/smartx_managed_override_smoke.swift
 run_swiftc_harness "effective-config-generator-smoke" "/tmp/effective-config-generator-smoke" \
+    ClashX/Models/SmartXManagedOverrideModel.swift \
     ClashX/General/Managers/EffectiveConfigGenerator.swift \
     Tests/SecurityHarness/effective_config_generator_smoke.swift
 run_swiftc_harness "redactor-smoke" "/tmp/redactor-smoke" \

@@ -41,6 +41,7 @@ In current code, the beginnings of that boundary already exist:
 - `ClashX/General/Utils/ControllerEndpointBuilder.swift` centralizes controller URL construction.
 - `ClashX/General/Managers/CoreCapability.swift` and `ClashX/General/Managers/CoreCapabilityProbe.swift` define capability state instead of hard-coding support assumptions into every screen.
 - `ClashX/General/ApiRequest.swift` already distinguishes `success`, `unsupported`, `unauthorized`, and `failed`, but it is still too large and still mixes baseline mihomo endpoints with Smart-only wrappers.
+- `ClashX/General/ApiRequest.swift` already distinguishes `success`, `unsupported`, `unauthorized`, and `failed`, but it is still too large and still mixes baseline mihomo endpoints with Smart-only wrappers; policy-group extraction is now another small step rather than the end state.
 - The current branch now also has a first-pass `ConnectionAPI` split for connection reads/deletes and stream URL construction, but `ApiRequest` still owns the shared traffic/log WebSocket lifecycle.
 
 The codebase should keep moving toward architecture-layer core migration support while preserving a product-layer single core.
@@ -215,6 +216,7 @@ Smart model, weights, override, and profile-artifact paths should remain easy to
 - `SmartXRedactor`
 
 Diagnostics should describe runtime and capability state honestly while preserving redaction guarantees.
+They should also keep requested override provenance distinct from emitted/generated output until a real config generator lands.
 
 ### 10. Release manifest and corresponding-source discipline
 

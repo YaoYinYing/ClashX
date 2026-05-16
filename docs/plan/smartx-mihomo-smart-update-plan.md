@@ -132,6 +132,7 @@ The current branch already points in this direction:
 - `CoreSettingViewController` explicitly separates helper support from TUN support and now treats unverified TUN updates as unverified rather than as success.
 - `HelperStatus` plus `HelperDiagnosticsProbe` now give diagnostics a read-only helper trust boundary, but they do not add helper-backed TUN or a verified helper install flow.
 - `HelperCommandContract` plus `HelperCommandRegistry` now define the typed helper command inventory for diagnostics and future planning, but the reserved TUN commands remain non-executable.
+- `TunLifecycleDiagnostics` plus `TunPreflightPlanner` now define the typed preflight and controller-config verification boundary for the current external-controller TUN path, but system-level verification remains future work.
 - `DiagnosticsDashboardViewController` already hides or disables actions based on capability state instead of assuming support.
 - `ConnectionDetailViewModel` only adds Smart explanation sections when Smart metadata is present.
 

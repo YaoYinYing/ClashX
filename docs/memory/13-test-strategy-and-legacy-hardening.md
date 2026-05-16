@@ -39,6 +39,7 @@ For the controller API foundation and SmartX hardening work, SmartX now has seve
 - `effective_config_generator_smoke.swift`: production compile of `SmartXManagedOverrideModel.swift` plus `EffectiveConfigGenerator.swift` with lightweight stubs for unrelated app infrastructure, and the result must remain explicitly unsupported until a safe YAML emitter exists.
 - `helper_status_smoke.swift`: direct production compile of `HelperStatus.swift`.
 - `helper_command_contract_smoke.swift`: direct production compile of `HelperCommandContract.swift` plus `HelperCommandRegistry.swift`.
+- `tun_lifecycle_diagnostics_smoke.swift`: production compile of `TunLifecycleDiagnostics.swift` plus `TunPreflightPlanner.swift` with lightweight stubs for unrelated app/runtime types.
 - `redactor_smoke.swift`: direct production compile of `SmartXRedactor.swift`.
 - `remote_config_decode_smoke.swift`: direct production compile of `RemoteConfigModel.swift`.
 - `security_harness.swift`: mirrored compatibility smoke only, not a direct production compile.
@@ -60,6 +61,7 @@ Local commands:
 - `swiftc ClashX/Models/SmartXManagedOverrideModel.swift ClashX/General/Managers/EffectiveConfigGenerator.swift Tests/SecurityHarness/effective_config_generator_smoke.swift -o /tmp/effective-config-generator-smoke && /tmp/effective-config-generator-smoke`
 - `swiftc ClashX/Models/HelperStatus.swift Tests/SecurityHarness/helper_status_smoke.swift -o /tmp/helper-status-smoke && /tmp/helper-status-smoke`
 - `swiftc ClashX/Models/HelperCommandContract.swift ClashX/General/Utils/HelperCommandRegistry.swift Tests/SecurityHarness/helper_command_contract_smoke.swift -o /tmp/helper-command-contract-smoke && /tmp/helper-command-contract-smoke`
+- `swiftc ClashX/General/Utils/ConfigValidationIssue.swift ClashX/General/Utils/TunConfigValidator.swift ClashX/General/Utils/DNSConfigValidator.swift ClashX/Models/HelperStatus.swift ClashX/Models/HelperCommandContract.swift ClashX/General/Utils/HelperCommandRegistry.swift ClashX/Models/TunLifecycleDiagnostics.swift ClashX/General/Managers/TunPreflightPlanner.swift Tests/SecurityHarness/tun_lifecycle_diagnostics_smoke.swift -o /tmp/tun-lifecycle-diagnostics-smoke && /tmp/tun-lifecycle-diagnostics-smoke`
 - `swiftc ClashX/General/Utils/SmartXRedactor.swift Tests/SecurityHarness/redactor_smoke.swift -o /tmp/redactor-smoke && /tmp/redactor-smoke`
 - `swiftc ClashX/Models/RemoteConfigModel.swift Tests/SecurityHarness/remote_config_decode_smoke.swift -o /tmp/remote-config-decode-smoke && /tmp/remote-config-decode-smoke`
 - `swift -module-cache-path /private/tmp/swift-module-cache Tests/SecurityHarness/security_harness.swift`
@@ -73,6 +75,7 @@ These are meant for utility-level verification when changing endpoint compositio
 - The effective-config smoke now verifies shared production model wiring, but it still does not prove a generated effective-config pipeline because the generator remains explicitly unsupported.
 - The helper-status smoke does not prove `SMJobBless`, launchd registration, XPC trust, or privileged-helper installation. It only protects the diagnostic model boundary.
 - The helper-command-contract smoke does not prove helper XPC execution, system proxy mutation, helper blessing, or any TUN lifecycle. It only protects the typed contract and reserved-command boundary.
+- The TUN lifecycle diagnostics smoke does not prove route verification, utun creation, packet flow, DNS runtime verification, or helper-backed TUN execution. It only protects the typed diagnostics boundary and controller-config-only verification model.
 - `CoreCapabilityProbe` currently depends on the app request layer and would benefit from later extraction into more directly testable probe helpers.
 
 ## Why The Harnesses Are Temporary

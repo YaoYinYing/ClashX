@@ -556,14 +556,17 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func tunCapabilityNoteText(config: ClashConfig?) -> String {
-        let capabilityReason: String
-        switch tunCapability {
-        case let .unsupported(reason), let .guardedUpdateAvailable(reason):
-            capabilityReason = reason
-        }
-        let warnings = TunConfigValidator.validate(config?.tun).issues.map(\.message)
-        let warningText = warnings.isEmpty ? NSLocalizedString("No additional TUN validation warnings were detected.", comment: "") : warnings.joined(separator: "\n")
-        return "\(capabilityReason)\n\(helperCapabilityNote)\n\(warningText)"
+        let configPatchAvailability = CapabilityCache.shared.status(for: .configPatch)?.availability ?? .unknown
+        let report = TunPreflightPlanner.buildReport(config: config,
+                                                     isControllerRunning: ConfigManager.shared.isRunning,
+                                                     isUsingEmbeddedCore: Settings.isUsingEmbeddedCore,
+                                                     configPatchAvailability: configPatchAvailability,
+                                                     helperStatus: HelperDiagnosticsProbe.currentStatus(),
+                                                     helperTunDescriptors: HelperCommandRegistry.reservedTunDescriptors())
+        let warningText = report.warnings.isEmpty
+            ? NSLocalizedString("No additional TUN validation warnings were detected.", comment: "")
+            : report.warnings.joined(separator: "\n")
+        return "\(report.userMessage)\n\(report.recoverySuggestion)\n\(helperCapabilityNote)\n\(warningText)"
     }
 
     private func dnsCapabilityNoteText(config: ClashConfig?) -> String {

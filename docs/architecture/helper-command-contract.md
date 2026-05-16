@@ -94,3 +94,5 @@ The typed command contract introduced in this PR is a pure Swift model and diagn
 - it does not start mihomo through the helper
 
 The legacy AppleScript shell install fallback remains legacy risk and must not grow into the future helper-backed TUN design.
+
+Future helper-backed TUN work should compose with the typed TUN lifecycle diagnostics boundary rather than bypassing it with shell commands, route helpers, or generic root execution.

@@ -32,51 +32,15 @@ enum HelperDiagnosticsProbe {
 
         let bundleIdentifier = helperInfo["CFBundleIdentifier"] as? String
         let requirement = normalizeRequirement(helperInfo[requirementInfoKey] as? String)
-        let requirementSummary = summarizeRequirement(requirement)
         let helperInstalled = fileManager.fileExists(atPath: installedHelperPath)
 
-        if requirementIsPlaceholderLike(requirement) {
-            return HelperStatus(trustState: .requirementMismatch,
-                                isPrivilegedHelperAvailable: false,
-                                bundleIdentifier: bundleIdentifier,
-                                launchdLabel: machServiceName,
-                                requirementSummary: requirementSummary,
-                                lastCheckedAt: lastCheckedAt)
-        }
-
-        if let requirement, requirement.isEmpty {
-            #if DEBUG
-                return HelperStatus(trustState: .unsignedDebugBuild,
-                                    isPrivilegedHelperAvailable: helperInstalled,
-                                    bundleIdentifier: bundleIdentifier,
-                                    launchdLabel: machServiceName,
-                                    requirementSummary: requirementSummary,
-                                    lastCheckedAt: lastCheckedAt)
-            #else
-                return HelperStatus(trustState: .requirementMismatch,
-                                    isPrivilegedHelperAvailable: false,
-                                    bundleIdentifier: bundleIdentifier,
-                                    launchdLabel: machServiceName,
-                                    requirementSummary: requirementSummary,
-                                    lastCheckedAt: lastCheckedAt)
-            #endif
-        }
-
-        guard helperInstalled else {
-            return HelperStatus(trustState: .notInstalled,
-                                isPrivilegedHelperAvailable: false,
-                                bundleIdentifier: bundleIdentifier,
-                                launchdLabel: machServiceName,
-                                requirementSummary: requirementSummary,
-                                lastCheckedAt: lastCheckedAt)
-        }
-
-        return HelperStatus(trustState: .installedButUnverified,
-                            isPrivilegedHelperAvailable: true,
-                            bundleIdentifier: bundleIdentifier,
-                            launchdLabel: machServiceName,
-                            requirementSummary: requirementSummary,
-                            lastCheckedAt: lastCheckedAt)
+        return HelperStatus.classifyRequirement(requirement,
+                                                helperInstalled: helperInstalled,
+                                                isDebugBuild: isDebugBuild,
+                                                bundleIdentifier: bundleIdentifier,
+                                                launchdLabel: machServiceName,
+                                                lastCheckedAt: lastCheckedAt,
+                                                invalidPlaceholderPatterns: invalidPlaceholderPatterns)
     }
 
     private static func normalizeRequirement(_ requirement: String?) -> String? {
@@ -91,23 +55,11 @@ enum HelperDiagnosticsProbe {
         return normalized.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func summarizeRequirement(_ requirement: String?) -> String {
-        guard let requirement else {
-            return "missing"
-        }
-        if requirement.isEmpty {
-            return "empty"
-        }
-        if requirementIsPlaceholderLike(requirement) {
-            return "placeholder-like"
-        }
-        return "present (\(requirement.count) chars)"
-    }
-
-    private static func requirementIsPlaceholderLike(_ requirement: String?) -> Bool {
-        guard let requirement, !requirement.isEmpty else {
-            return false
-        }
-        return invalidPlaceholderPatterns.contains(where: { requirement.localizedCaseInsensitiveContains($0) })
+    private static var isDebugBuild: Bool {
+        #if DEBUG
+            true
+        #else
+            false
+        #endif
     }
 }

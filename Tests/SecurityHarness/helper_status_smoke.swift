@@ -46,6 +46,68 @@ enum HelperStatusSmokeMain {
         let mismatch = HelperStatus(trustState: .requirementMismatch, isPrivilegedHelperAvailable: false)
         require(mismatch.diagnosticMessage.contains("missing, empty, or unresolved"), "requirementMismatch message should stay fail-closed")
 
+        let placeholders = ["$(", "TODO", "REPLACE_ME", "CHANGE_ME", "placeholder"]
+        let checkedAt = Date(timeIntervalSince1970: 456)
+
+        let missing = HelperStatus.classifyRequirement(nil,
+                                                       helperInstalled: false,
+                                                       isDebugBuild: false,
+                                                       bundleIdentifier: "com.example.Helper",
+                                                       launchdLabel: "com.example.Helper",
+                                                       lastCheckedAt: checkedAt,
+                                                       invalidPlaceholderPatterns: placeholders)
+        require(missing.trustState == .requirementMismatch, "missing requirement should be requirementMismatch")
+        require(missing.requirementSummary == "missing", "missing requirement summary drifted")
+
+        let placeholder = HelperStatus.classifyRequirement("TODO helper requirement",
+                                                           helperInstalled: true,
+                                                           isDebugBuild: false,
+                                                           bundleIdentifier: "com.example.Helper",
+                                                           launchdLabel: "com.example.Helper",
+                                                           lastCheckedAt: checkedAt,
+                                                           invalidPlaceholderPatterns: placeholders)
+        require(placeholder.trustState == .requirementMismatch, "placeholder-like requirement should be requirementMismatch")
+        require(placeholder.requirementSummary == "placeholder-like", "placeholder summary drifted")
+
+        let debugEmpty = HelperStatus.classifyRequirement("",
+                                                          helperInstalled: false,
+                                                          isDebugBuild: true,
+                                                          bundleIdentifier: "com.example.Helper",
+                                                          launchdLabel: "com.example.Helper",
+                                                          lastCheckedAt: checkedAt,
+                                                          invalidPlaceholderPatterns: placeholders)
+        require(debugEmpty.trustState == .unsignedDebugBuild, "empty requirement in Debug should be unsignedDebugBuild")
+        require(debugEmpty.requirementSummary == "empty", "empty requirement summary drifted")
+
+        let releaseEmpty = HelperStatus.classifyRequirement("",
+                                                            helperInstalled: true,
+                                                            isDebugBuild: false,
+                                                            bundleIdentifier: "com.example.Helper",
+                                                            launchdLabel: "com.example.Helper",
+                                                            lastCheckedAt: checkedAt,
+                                                            invalidPlaceholderPatterns: placeholders)
+        require(releaseEmpty.trustState == .requirementMismatch, "empty requirement outside Debug should be requirementMismatch")
+
+        let validMissingHelper = HelperStatus.classifyRequirement("anchor apple generic",
+                                                                  helperInstalled: false,
+                                                                  isDebugBuild: false,
+                                                                  bundleIdentifier: "com.example.Helper",
+                                                                  launchdLabel: "com.example.Helper",
+                                                                  lastCheckedAt: checkedAt,
+                                                                  invalidPlaceholderPatterns: placeholders)
+        require(validMissingHelper.trustState == .notInstalled, "valid requirement with no helper should be notInstalled")
+        require(!validMissingHelper.isPrivilegedHelperAvailable, "notInstalled should not report helper available")
+
+        let validInstalled = HelperStatus.classifyRequirement("anchor apple generic",
+                                                              helperInstalled: true,
+                                                              isDebugBuild: false,
+                                                              bundleIdentifier: "com.example.Helper",
+                                                              launchdLabel: "com.example.Helper",
+                                                              lastCheckedAt: checkedAt,
+                                                              invalidPlaceholderPatterns: placeholders)
+        require(validInstalled.trustState == .installedButUnverified, "valid requirement with helper installed should be installedButUnverified")
+        require(validInstalled.isPrivilegedHelperAvailable, "installedButUnverified should report helper available")
+
         print("helper_status_smoke passed")
     }
 }

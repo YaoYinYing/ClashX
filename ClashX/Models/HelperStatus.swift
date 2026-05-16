@@ -50,6 +50,62 @@ struct HelperStatus: Codable {
         isPrivilegedHelperAvailable ? "available" : "unavailable"
     }
 
+    // Missing requirement metadata is a helper trust failure, not a helper
+    // installation-state signal. Install/update flows should fail closed before
+    // proceeding when the requirement is missing, placeholder-like, or invalid.
+    static func classifyRequirement(_ requirement: String?,
+                                    helperInstalled: Bool,
+                                    isDebugBuild: Bool,
+                                    bundleIdentifier: String?,
+                                    launchdLabel: String?,
+                                    lastCheckedAt: Date?,
+                                    invalidPlaceholderPatterns: [String]) -> HelperStatus
+    {
+        let summary = summarizeRequirement(requirement, invalidPlaceholderPatterns: invalidPlaceholderPatterns)
+
+        if requirement == nil || summary == "placeholder-like" {
+            return HelperStatus(trustState: .requirementMismatch,
+                                isPrivilegedHelperAvailable: false,
+                                bundleIdentifier: bundleIdentifier,
+                                launchdLabel: launchdLabel,
+                                requirementSummary: summary,
+                                lastCheckedAt: lastCheckedAt)
+        }
+
+        if let requirement, requirement.isEmpty {
+            if isDebugBuild {
+                return HelperStatus(trustState: .unsignedDebugBuild,
+                                    isPrivilegedHelperAvailable: helperInstalled,
+                                    bundleIdentifier: bundleIdentifier,
+                                    launchdLabel: launchdLabel,
+                                    requirementSummary: summary,
+                                    lastCheckedAt: lastCheckedAt)
+            }
+            return HelperStatus(trustState: .requirementMismatch,
+                                isPrivilegedHelperAvailable: false,
+                                bundleIdentifier: bundleIdentifier,
+                                launchdLabel: launchdLabel,
+                                requirementSummary: summary,
+                                lastCheckedAt: lastCheckedAt)
+        }
+
+        if helperInstalled {
+            return HelperStatus(trustState: .installedButUnverified,
+                                isPrivilegedHelperAvailable: true,
+                                bundleIdentifier: bundleIdentifier,
+                                launchdLabel: launchdLabel,
+                                requirementSummary: summary,
+                                lastCheckedAt: lastCheckedAt)
+        }
+
+        return HelperStatus(trustState: .notInstalled,
+                            isPrivilegedHelperAvailable: false,
+                            bundleIdentifier: bundleIdentifier,
+                            launchdLabel: launchdLabel,
+                            requirementSummary: summary,
+                            lastCheckedAt: lastCheckedAt)
+    }
+
     func renderedSection(title: String) -> String {
         [
             title,
@@ -103,6 +159,20 @@ struct HelperStatus: Codable {
         case .verified:
             return "Verified helper trust does not imply TUN support. Future helper-backed TUN still requires a separate command contract."
         }
+    }
+
+    private static func summarizeRequirement(_ requirement: String?,
+                                             invalidPlaceholderPatterns: [String]) -> String {
+        guard let requirement else {
+            return "missing"
+        }
+        if requirement.isEmpty {
+            return "empty"
+        }
+        if invalidPlaceholderPatterns.contains(where: { requirement.localizedCaseInsensitiveContains($0) }) {
+            return "placeholder-like"
+        }
+        return "present (\(requirement.count) chars)"
     }
 
     private func formatted(_ date: Date?) -> String {

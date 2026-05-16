@@ -145,6 +145,17 @@ run_swiftc_harness "tun-lifecycle-diagnostics-smoke" "/tmp/tun-lifecycle-diagnos
     ClashX/Models/TunLifecycleDiagnostics.swift \
     ClashX/General/Managers/TunPreflightPlanner.swift \
     Tests/SecurityHarness/tun_lifecycle_diagnostics_smoke.swift
+run_swiftc_harness "tun-runtime-diagnostics-smoke" "/tmp/tun-runtime-diagnostics-smoke" \
+    ClashX/General/Utils/ConfigValidationIssue.swift \
+    ClashX/General/Utils/TunConfigValidator.swift \
+    ClashX/General/Utils/DNSConfigValidator.swift \
+    ClashX/Models/HelperStatus.swift \
+    ClashX/Models/HelperCommandContract.swift \
+    ClashX/General/Utils/HelperCommandRegistry.swift \
+    ClashX/Models/TunLifecycleDiagnostics.swift \
+    ClashX/General/Utils/TunRuntimeInterfaceProbe.swift \
+    ClashX/General/Managers/TunPreflightPlanner.swift \
+    Tests/SecurityHarness/tun_runtime_diagnostics_smoke.swift
 run_swiftc_harness "redactor-smoke" "/tmp/redactor-smoke" \
     ClashX/General/Utils/SmartXRedactor.swift \
     Tests/SecurityHarness/redactor_smoke.swift

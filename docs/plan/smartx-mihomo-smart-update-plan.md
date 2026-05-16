@@ -104,6 +104,7 @@ These are especially sensitive because they depend on macOS privileges, helper b
 | Capability | Current evidence | Expected treatment |
 | --- | --- | --- |
 | TUN lifecycle | `TunLifecycleCoordinator`, `CoreSettingViewController`, `TunConfigValidator` | guarded and still partial |
+| read-only TUN runtime evidence | `TunRuntimeInterfaceProbe`, `TunLifecycleDiagnostics`, `DiagnosticsReportBuilder` | evidence only, not route/DNS/packet proof |
 | DNS hijack behavior | `ClashConfig.DNS`, `DNSConfigValidator`, diagnostics DNS tools | guarded and platform-sensitive |
 | macOS helper integration | `ProxyConfigHelper/`, helper trust metadata, `README.md` helper notes | guarded platform integration |
 | system proxy modification | `ProxyConfigHelper` and app helper wiring | supported boundary, separate from TUN |

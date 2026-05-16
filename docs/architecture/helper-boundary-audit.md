@@ -230,4 +230,4 @@ What remains true:
 
 Future helper-backed TUN requires a separate command contract and should not reuse system-proxy helper assumptions.
 
-SmartX now also has a typed TUN lifecycle diagnostics boundary for the current external-controller path, but that boundary still only models controller-config preflight and controller-config verification. It does not add system-level route, DNS, interface, or utun verification.
+SmartX now also has a typed TUN lifecycle diagnostics boundary plus a read-only runtime interface-evidence layer for the current external-controller path. That boundary can compare controller-config `tun.enable` with visible tun-like interfaces, but interface presence is still only evidence, interface absence is not proof of failure, and route, DNS runtime, packet-flow, helper-backed TUN, and embedded-core TUN verification remain unimplemented.

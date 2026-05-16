@@ -37,6 +37,39 @@ enum TunVerificationOutcome: String, Codable {
     case failed
 }
 
+enum TunRuntimeEvidenceState: String, Codable {
+    case notChecked
+    case unavailable
+    case noTunLikeInterface
+    case tunLikeInterfacePresent
+    case inconclusive
+}
+
+enum TunRuntimeVerificationLevel: String, Codable {
+    case controllerConfigOnly
+    case interfacePresenceOnly
+    case routeVerificationNotImplemented
+    case dnsRuntimeVerificationNotImplemented
+    case packetFlowVerificationNotImplemented
+}
+
+struct TunRuntimeInterfaceEvidence: Codable {
+    var interfaceNames: [String]
+    var tunLikeInterfaceNames: [String]
+    var evidenceState: TunRuntimeEvidenceState
+    var message: String
+}
+
+struct TunRuntimeVerificationReport: Codable {
+    var expectedEnabled: Bool
+    var controllerReportedEnabled: Bool?
+    var interfaceEvidence: TunRuntimeInterfaceEvidence
+    var verificationLevels: [TunRuntimeVerificationLevel]
+    var isRuntimeConsistentWithController: Bool?
+    var message: String
+    var recoverySuggestion: String
+}
+
 struct TunPreflightReport: Codable {
     var runtimeMode: TunRuntimeMode
     var canAttemptControllerPatch: Bool
@@ -54,6 +87,7 @@ struct TunLifecycleVerificationReport: Codable {
     var outcome: TunVerificationOutcome
     var verificationScope: TunVerificationScope
     var controllerReportedEnabled: Bool?
+    var runtimeVerification: TunRuntimeVerificationReport?
     var message: String
     var recoverySuggestion: String
 }

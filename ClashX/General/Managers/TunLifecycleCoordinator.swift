@@ -163,18 +163,22 @@ final class TunLifecycleCoordinator {
         loadCurrentConfig { result in
             switch result {
             case .failure:
+                let interfaceEvidence = TunRuntimeInterfaceProbe.currentEvidence()
                 let report = TunPreflightPlanner.verificationReport(expectedEnabled: expected,
                                                                     controllerReportedEnabled: nil,
                                                                     didFailToReload: true,
-                                                                    preflightReport: preflightReport)
+                                                                    preflightReport: preflightReport,
+                                                                    interfaceEvidence: interfaceEvidence)
                 completion(.requestedButUnverified(message: report.message,
                                                    previousState: previousState))
             case let .success(config):
                 ConfigManager.shared.currentConfig = config
+                let interfaceEvidence = TunRuntimeInterfaceProbe.currentEvidence()
                 let report = TunPreflightPlanner.verificationReport(expectedEnabled: expected,
                                                                     controllerReportedEnabled: config.tun?.enable,
                                                                     didFailToReload: false,
-                                                                    preflightReport: preflightReport)
+                                                                    preflightReport: preflightReport,
+                                                                    interfaceEvidence: interfaceEvidence)
                 switch report.outcome {
                 case .controllerStateMatches:
                     completion(.success(message: report.message, previousState: previousState))

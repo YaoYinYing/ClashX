@@ -101,6 +101,7 @@ Current note:
 - SmartX now has a baseline `CoreCapabilityProbe` snapshot flow, but it is still a minimal read-only probe layer rather than the final capability architecture
 - `ControllerEndpointBuilder`, `CoreCapabilityProbe`, `SmartXRedactor`, `SmartXManagedOverrideManager`, `LightGBMSettingsViewModel`, `TunLifecycleCoordinator`, `TunConfigValidator`, `DNSConfigValidator`, `DiagnosticsLogReader`, `DiagnosticsArtifactFormatter`, `DiagnosticsProviderFormatter`, `ProfileArtifactManager`, and the smoke harnesses in `Tests/SecurityHarness` are already first-pass groundwork in the current branch, not future introductions
 - the helper boundary audit now adds `HelperStatus` plus `HelperDiagnosticsProbe`, but helper status remains diagnostic only and is not a helper-backed TUN capability
+- the typed helper command contract model and registry now make future helper-backed TUN planning more explicit, but every TUN helper command remains reserved and non-executable in the current branch
 
 ## Phase 3: Redaction and Diagnostics Safety
 
@@ -221,6 +222,7 @@ Current note:
 
 - SmartX now has an initial guarded `TunLifecycleCoordinator`, but embedded-core TUN remains explicitly unsupported and privileged TUN architecture is still a later prerequisite
 - helper-aware TUN messaging is now in place, but external-controller TUN still stays on the controller API path and future helper-backed TUN still needs a separate command contract
+- the helper command contract now exists as a typed diagnostic boundary, but it still does not add helper-backed TUN execution, helper-owned route changes, or generic root command execution
 - SmartX now also routes guarded config patching through narrower `ConfigAPI` helpers, but that is still external-controller lifecycle hardening rather than full TUN architecture
 
 ## Phase 8: DNS/TUN Validation Module

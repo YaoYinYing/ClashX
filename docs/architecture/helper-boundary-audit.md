@@ -21,6 +21,9 @@ Relevant files:
 - `ProxyConfigHelper/ProxyConfigHelper.m`
 - `ProxyConfigHelper/ProxyConfigRemoteProcessProtocol.h`
 - `ProxyConfigHelper/Helper-Info.plist`
+- `docs/architecture/helper-command-contract.md`
+- `ClashX/Models/HelperCommandContract.swift`
+- `ClashX/General/Utils/HelperCommandRegistry.swift`
 - `ClashX/General/Managers/PrivilegedHelperManager.swift`
 - `ClashX/General/Managers/PrivilegedHelperManager+Legacy.swift`
 - `scripts/check_helper_requirement.py`
@@ -67,6 +70,8 @@ The live XPC contract remains bounded to proxy-setting operations:
 - `getCurrentProxySetting`
 
 The helper does not expose a TUN command contract. It does not create `utun` devices, elevate mihomo startup for TUN, or manage privileged route ownership for embedded-core TUN.
+
+The app now also carries a typed helper command contract model and registry for diagnostics and future planning, but that model is descriptive only. It does not add new XPC methods and does not make helper-backed TUN executable.
 
 ## Privilege classification
 
@@ -203,6 +208,7 @@ Future helper-backed TUN work should proceed only through a separate, explicit h
 - code-signed
 - fail-closed
 - testable without arbitrary shell execution
+- typed at the command, input, output, and error-code level
 
 ## Future PR boundary
 

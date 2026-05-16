@@ -60,10 +60,44 @@ struct TunRuntimeInterfaceEvidence: Codable {
     var message: String
 }
 
+enum TunRouteEvidenceState: String, Codable {
+    case notChecked
+    case unavailable
+    case noTunLikeRouteEvidence
+    case tunLikeRouteEvidencePresent
+    case inconclusive
+}
+
+struct TunRouteRuntimeEvidence: Codable {
+    var evidenceState: TunRouteEvidenceState
+    var defaultRouteInterface: String?
+    var tunLikeRouteInterfaces: [String]
+    var observedRouteInterfaces: [String]
+    var message: String
+}
+
+enum TunDNSRuntimeEvidenceState: String, Codable {
+    case notChecked
+    case unavailable
+    case noDNSRuntimeEvidence
+    case dnsRuntimeEvidencePresent
+    case inconclusive
+}
+
+struct TunDNSRuntimeEvidence: Codable {
+    var evidenceState: TunDNSRuntimeEvidenceState
+    var resolverInterfaceNames: [String]
+    var resolverServerCount: Int?
+    var hasScopedResolvers: Bool?
+    var message: String
+}
+
 struct TunRuntimeVerificationReport: Codable {
     var expectedEnabled: Bool
     var controllerReportedEnabled: Bool?
     var interfaceEvidence: TunRuntimeInterfaceEvidence
+    var routeEvidence: TunRouteRuntimeEvidence
+    var dnsEvidence: TunDNSRuntimeEvidence
     var verificationLevels: [TunRuntimeVerificationLevel]
     var isRuntimeConsistentWithController: Bool?
     var message: String

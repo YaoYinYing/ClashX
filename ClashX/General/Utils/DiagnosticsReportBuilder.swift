@@ -89,12 +89,14 @@ enum DiagnosticsReportBuilder {
                                                      helperStatus: helperStatus,
                                                      helperTunDescriptors: helperTunDescriptors)
         let interfaceEvidence = TunRuntimeInterfaceProbe.currentEvidence()
+        let routeEvidence = TunRuntimeRouteProbe.currentEvidence(tunLikeInterfaceNames: interfaceEvidence.tunLikeInterfaceNames)
+        let dnsEvidence = TunRuntimeDNSProbe.currentEvidence()
         let runtimeReport = config?.tun.map {
-            TunPreflightPlanner.runtimeVerificationReport(expectedEnabled: $0.enable,
-                                                          controllerReportedEnabled: $0.enable,
-                                                          didFailToReload: false,
-                                                          preflightReport: report,
-                                                          interfaceEvidence: interfaceEvidence)
+            TunPreflightPlanner.passiveRuntimeSnapshotReport(controllerReportedEnabled: $0.enable,
+                                                             preflightReport: report,
+                                                             interfaceEvidence: interfaceEvidence,
+                                                             routeEvidence: routeEvidence,
+                                                             dnsEvidence: dnsEvidence)
         }
 
         var lines = [
@@ -108,7 +110,15 @@ enum DiagnosticsReportBuilder {
             "Current tun Section: \(config?.tun == nil ? "missing" : "present")",
             "Current tun.enable: \(config?.tun.map { $0.enable ? "true" : "false" } ?? "unknown")",
             "Runtime Interface Evidence State: \(interfaceEvidence.evidenceState.rawValue)",
-            "Tun-like Interface Names: \(interfaceEvidence.tunLikeInterfaceNames.isEmpty ? "none" : interfaceEvidence.tunLikeInterfaceNames.joined(separator: ", "))"
+            "Tun-like Interface Names: \(interfaceEvidence.tunLikeInterfaceNames.isEmpty ? "none" : interfaceEvidence.tunLikeInterfaceNames.joined(separator: ", "))",
+            "Route Evidence State: \(routeEvidence.evidenceState.rawValue)",
+            "Default Route Interface: \(routeEvidence.defaultRouteInterface ?? "unknown")",
+            "Tun-like Route Interfaces: \(routeEvidence.tunLikeRouteInterfaces.isEmpty ? "none" : routeEvidence.tunLikeRouteInterfaces.joined(separator: ", "))",
+            "Observed Route Interfaces: \(routeEvidence.observedRouteInterfaces.isEmpty ? "none" : routeEvidence.observedRouteInterfaces.joined(separator: ", "))",
+            "DNS Runtime Evidence State: \(dnsEvidence.evidenceState.rawValue)",
+            "Resolver Interface Names: \(dnsEvidence.resolverInterfaceNames.isEmpty ? "none" : dnsEvidence.resolverInterfaceNames.joined(separator: ", "))",
+            "Resolver Server Count: \(dnsEvidence.resolverServerCount.map(String.init) ?? "unknown")",
+            "Scoped Resolvers Present: \(dnsEvidence.hasScopedResolvers.map { $0 ? "yes" : "no" } ?? "unknown")"
         ]
 
         if report.blockers.isEmpty {
@@ -127,7 +137,6 @@ enum DiagnosticsReportBuilder {
 
         if let runtimeReport {
             lines.append("Runtime Verification Levels: \(runtimeReport.verificationLevels.map(\.rawValue).joined(separator: ", "))")
-            lines.append("Runtime Consistency With Controller: \(runtimeReport.isRuntimeConsistentWithController.map { $0 ? "yes" : "no" } ?? "unknown")")
             lines.append("Runtime Message: \(runtimeReport.message)")
             lines.append("Runtime Recovery Suggestion: \(runtimeReport.recoverySuggestion)")
         } else {
@@ -136,12 +145,15 @@ enum DiagnosticsReportBuilder {
         }
 
         lines.append("Interface Evidence Message: \(interfaceEvidence.message)")
+        lines.append("Route Evidence Message: \(routeEvidence.message)")
+        lines.append("DNS Runtime Evidence Message: \(dnsEvidence.message)")
         lines.append("User Message: \(report.userMessage)")
         lines.append("Recovery Suggestion: \(report.recoverySuggestion)")
-        lines.append("Route verification is not implemented.")
-        lines.append("DNS runtime verification is not implemented.")
+        lines.append("Route evidence is read-only and not packet-flow proof.")
+        lines.append("DNS runtime evidence is read-only and not DNS hijack proof.")
         lines.append("Packet-flow verification is not implemented.")
         lines.append("Helper-backed TUN remains reserved only.")
+        lines.append("Embedded-core TUN remains unsupported.")
         return lines.joined(separator: "\n")
     }
 

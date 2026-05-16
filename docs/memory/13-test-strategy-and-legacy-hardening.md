@@ -77,6 +77,7 @@ These are meant for utility-level verification when changing endpoint compositio
 - The helper-command-contract smoke does not prove helper XPC execution, system proxy mutation, helper blessing, or any TUN lifecycle. It only protects the typed contract and reserved-command boundary.
 - The TUN lifecycle diagnostics smoke does not prove route verification, utun creation, packet flow, DNS runtime verification, or helper-backed TUN execution. It only protects the typed diagnostics boundary and controller-config-only verification model.
 - The TUN runtime diagnostics smoke does not prove route verification, packet forwarding, DNS runtime behavior, or helper-backed TUN execution. It only protects read-only interface evidence classification, conservative runtime messaging, and explicit not-implemented levels.
+- The TUN route and DNS runtime smoke does not prove packet forwarding, DNS hijack behavior, route ownership, or helper-backed TUN execution. It only protects read-only route and DNS evidence classification plus conservative runtime-report wording.
 - `CoreCapabilityProbe` currently depends on the app request layer and would benefit from later extraction into more directly testable probe helpers.
 
 ## Why The Harnesses Are Temporary

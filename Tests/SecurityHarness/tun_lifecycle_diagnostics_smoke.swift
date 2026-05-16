@@ -143,8 +143,8 @@ enum TunLifecycleDiagnosticsSmokeMain {
                                                                   preflightReport: ready)
         require(verification.outcome == .controllerStateMatches, "matching controller state should verify")
         require(verification.verificationScope == .controllerConfigOnly, "verification scope should stay controller-config only")
-        require(verification.message.contains("Route verification is not implemented"), "verification message should keep route boundary explicit")
-        require(verification.message.contains("DNS runtime verification is not implemented"), "verification message should keep DNS boundary explicit")
+        require(verification.message.contains("Route evidence is read-only and not packet-flow proof"), "verification message should keep route boundary explicit")
+        require(verification.message.contains("DNS runtime evidence is read-only and not DNS hijack proof"), "verification message should keep DNS boundary explicit")
         require(verification.runtimeVerification?.verificationLevels.contains(.packetFlowVerificationNotImplemented) == true, "runtime verification should keep packet-flow boundary explicit")
 
         let encodedVerification = try! JSONEncoder().encode(verification)

@@ -92,13 +92,11 @@ enum DiagnosticsReportBuilder {
         let routeEvidence = TunRuntimeRouteProbe.currentEvidence(tunLikeInterfaceNames: interfaceEvidence.tunLikeInterfaceNames)
         let dnsEvidence = TunRuntimeDNSProbe.currentEvidence()
         let runtimeReport = config?.tun.map {
-            TunPreflightPlanner.runtimeVerificationReport(expectedEnabled: $0.enable,
-                                                          controllerReportedEnabled: $0.enable,
-                                                          didFailToReload: false,
-                                                          preflightReport: report,
-                                                          interfaceEvidence: interfaceEvidence,
-                                                          routeEvidence: routeEvidence,
-                                                          dnsEvidence: dnsEvidence)
+            TunPreflightPlanner.passiveRuntimeSnapshotReport(controllerReportedEnabled: $0.enable,
+                                                             preflightReport: report,
+                                                             interfaceEvidence: interfaceEvidence,
+                                                             routeEvidence: routeEvidence,
+                                                             dnsEvidence: dnsEvidence)
         }
 
         var lines = [

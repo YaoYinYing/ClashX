@@ -127,6 +127,16 @@ enum TunRouteDNSRuntimeSmokeMain {
         require(runtimePositive.message.contains("DNS"), "runtime report should mention DNS evidence")
         require(!runtimePositive.message.contains("full runtime verification"), "runtime report must not claim full runtime verification")
 
+        let passivePositive = TunPreflightPlanner.passiveRuntimeSnapshotReport(controllerReportedEnabled: true,
+                                                                               preflightReport: preflight,
+                                                                               interfaceEvidence: interfacePresent,
+                                                                               routeEvidence: routeObservedTun,
+                                                                               dnsEvidence: dnsScoped)
+        require(passivePositive.message.contains("passive diagnostics snapshot"), "passive report should mention passive snapshot scope")
+        require(!passivePositive.message.contains("Controller config matches"), "passive report must not claim controller config match")
+        require(passivePositive.message.contains("read-only evidence only"), "passive report should keep read-only evidence wording")
+        require(passivePositive.recoverySuggestion.contains("does not verify a toggle request"), "passive report should not imply toggle verification")
+
         let interfaceAbsent = TunRuntimeInterfaceProbe.classify(interfaceNames: ["lo0", "en0"])
         let runtimeNegative = TunPreflightPlanner.runtimeVerificationReport(expectedEnabled: true,
                                                                             controllerReportedEnabled: true,

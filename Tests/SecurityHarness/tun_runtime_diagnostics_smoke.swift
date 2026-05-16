@@ -103,6 +103,16 @@ enum TunRuntimeDiagnosticsSmokeMain {
         require(runtimeEnabled.message.contains("utun4"), "enabled runtime report should mention tun-like interface name")
         require(!runtimeEnabled.message.contains("full runtime verification"), "runtime report must not claim full verification")
 
+        let passiveEnabled = TunPreflightPlanner.passiveRuntimeSnapshotReport(controllerReportedEnabled: true,
+                                                                              preflightReport: preflight,
+                                                                              interfaceEvidence: utunEvidence,
+                                                                              routeEvidence: routeEvidence,
+                                                                              dnsEvidence: dnsEvidence)
+        require(passiveEnabled.message.contains("passive diagnostics snapshot"), "passive report should declare passive snapshot scope")
+        require(!passiveEnabled.message.contains("Controller config matches"), "passive report must not synthesize controller match wording")
+        require(passiveEnabled.message.contains("read-only evidence only"), "passive report should describe read-only evidence")
+        require(passiveEnabled.recoverySuggestion.contains("does not verify a toggle request"), "passive report should reject post-toggle semantics")
+
         let runtimeNoEvidence = TunPreflightPlanner.runtimeVerificationReport(expectedEnabled: true,
                                                                               controllerReportedEnabled: true,
                                                                               didFailToReload: false,

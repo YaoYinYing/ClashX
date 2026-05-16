@@ -205,6 +205,38 @@ enum TunPreflightPlanner {
                                             recoverySuggestion: recoverySuggestion)
     }
 
+    static func passiveRuntimeSnapshotReport(controllerReportedEnabled: Bool?,
+                                             preflightReport: TunPreflightReport,
+                                             interfaceEvidence: TunRuntimeInterfaceEvidence,
+                                             routeEvidence: TunRouteRuntimeEvidence,
+                                             dnsEvidence: TunDNSRuntimeEvidence) -> TunRuntimeVerificationReport {
+        let verificationLevels = runtimeVerificationLevels(interfaceEvidence: interfaceEvidence,
+                                                           routeEvidence: routeEvidence,
+                                                           dnsEvidence: dnsEvidence)
+        let consistency = runtimeConsistency(controllerReportedEnabled: controllerReportedEnabled,
+                                             interfaceEvidence: interfaceEvidence,
+                                             routeEvidence: routeEvidence)
+        let message = passiveRuntimeSnapshotMessage(controllerReportedEnabled: controllerReportedEnabled,
+                                                    preflightReport: preflightReport,
+                                                    interfaceEvidence: interfaceEvidence,
+                                                    routeEvidence: routeEvidence,
+                                                    dnsEvidence: dnsEvidence,
+                                                    consistency: consistency)
+        let recoverySuggestion = passiveRuntimeSnapshotRecoverySuggestion(controllerReportedEnabled: controllerReportedEnabled,
+                                                                          interfaceEvidence: interfaceEvidence,
+                                                                          routeEvidence: routeEvidence,
+                                                                          dnsEvidence: dnsEvidence)
+        return TunRuntimeVerificationReport(expectedEnabled: controllerReportedEnabled ?? false,
+                                            controllerReportedEnabled: controllerReportedEnabled,
+                                            interfaceEvidence: interfaceEvidence,
+                                            routeEvidence: routeEvidence,
+                                            dnsEvidence: dnsEvidence,
+                                            verificationLevels: verificationLevels,
+                                            isRuntimeConsistentWithController: consistency,
+                                            message: message,
+                                            recoverySuggestion: recoverySuggestion)
+    }
+
     private static func userMessage(for blockers: [TunPreflightBlocker],
                                     runtimeMode: TunRuntimeMode) -> String {
         guard let first = blockers.first else {
@@ -392,6 +424,61 @@ enum TunPreflightPlanner {
             return "Controller config now says tun.enable=false, but DNS runtime evidence is still present. That is read-only evidence only and may require manual inspection."
         case .noDNSRuntimeEvidence, .unavailable, .inconclusive, .notChecked:
             return "Runtime interface evidence is unavailable or inconclusive, so only controller config state is confirmed."
+        }
+    }
+
+    private static func passiveRuntimeSnapshotMessage(controllerReportedEnabled: Bool?,
+                                                      preflightReport: TunPreflightReport,
+                                                      interfaceEvidence: TunRuntimeInterfaceEvidence,
+                                                      routeEvidence: TunRouteRuntimeEvidence,
+                                                      dnsEvidence: TunDNSRuntimeEvidence,
+                                                      consistency: Bool?) -> String {
+        let base: String
+        if let controllerReportedEnabled {
+            base = "Current cached/controller config reports tun.enable=\(controllerReportedEnabled ? "true" : "false"). This is a passive diagnostics snapshot, not a post-toggle verification."
+        } else {
+            base = "Current cached/controller config did not provide a tun.enable value. This is a passive diagnostics snapshot, not a post-toggle verification."
+        }
+
+        let evidenceLine = runtimeEvidenceSummary(expectedEnabled: false,
+                                                  controllerReportedEnabled: controllerReportedEnabled,
+                                                  interfaceEvidence: interfaceEvidence,
+                                                  routeEvidence: routeEvidence,
+                                                  dnsEvidence: dnsEvidence,
+                                                  consistency: consistency)
+        let verificationLine = "Interface, route, and DNS runtime evidence are read-only evidence only. Route evidence is not packet-flow proof. DNS runtime evidence is not DNS hijack proof. Packet-flow verification is not implemented."
+        let helperLine = preflightReport.helperTunCommandsReserved
+            ? "Helper-backed TUN remains reserved only."
+            : nil
+        return [base, evidenceLine, helperLine, verificationLine]
+            .compactMap { $0 }
+            .joined(separator: " ")
+    }
+
+    private static func passiveRuntimeSnapshotRecoverySuggestion(controllerReportedEnabled: Bool?,
+                                                                 interfaceEvidence: TunRuntimeInterfaceEvidence,
+                                                                 routeEvidence: TunRouteRuntimeEvidence,
+                                                                 dnsEvidence: TunDNSRuntimeEvidence) -> String {
+        guard let controllerReportedEnabled else {
+            return "Re-read /configs when available and compare it with the read-only interface, route, and DNS runtime evidence. This snapshot does not verify a toggle request."
+        }
+
+        if controllerReportedEnabled,
+           interfaceEvidence.evidenceState == .noTunLikeInterface,
+           routeEvidence.evidenceState == .noTunLikeRouteEvidence {
+            return "Cached/controller config currently says tun.enable=true, but no tun-like interface or route evidence was observed. This is read-only evidence only and does not prove failure."
+        }
+
+        if !controllerReportedEnabled,
+           interfaceEvidence.evidenceState == .tunLikeInterfacePresent || routeEvidence.evidenceState == .tunLikeRouteEvidencePresent {
+            return "Cached/controller config currently says tun.enable=false, but tun-like interface or route evidence is still present. It may belong to another app or require manual inspection."
+        }
+
+        switch dnsEvidence.evidenceState {
+        case .dnsRuntimeEvidencePresent:
+            return "DNS runtime evidence is present, but it remains read-only evidence only and not DNS hijack proof. This snapshot does not verify a toggle request."
+        case .noDNSRuntimeEvidence, .unavailable, .inconclusive, .notChecked:
+            return "Treat interface, route, and DNS runtime evidence as read-only supporting evidence only. This snapshot does not verify a toggle request."
         }
     }
 

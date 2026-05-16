@@ -36,12 +36,30 @@ cd ClashX/goClash
 python3 build_clash_universal.py
 cd ../..
 
+retry_command() {
+  local attempts="$1"
+  local delay_seconds="$2"
+  shift 2
+
+  local attempt=1
+  local status=0
+  until "$@"; do
+    status="$?"
+    if [[ "$attempt" -ge "$attempts" ]]; then
+      return "$status"
+    fi
+    echo "Command failed with status $status. Retrying in ${delay_seconds}s ($attempt/${attempts})..."
+    sleep "$delay_seconds"
+    attempt=$((attempt + 1))
+  done
+}
+
 echo "Pod install"
 if [ -f Gemfile ]; then
   bundle install --jobs 4
-  bundle exec pod install
+  retry_command 3 10 bundle exec pod install
 else
-  pod install
+  retry_command 3 10 pod install
 fi
 echo "delete old files"
 rm -f ./ClashX/Resources/Country.mmdb

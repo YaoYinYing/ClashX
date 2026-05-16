@@ -284,6 +284,7 @@ jobs:
         with:
           name: validation-logs-PR-${{ github.event.pull_request.number || 'manual' }}-${{ github.sha }}
           path: .ci-logs/**
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
 
@@ -568,5 +569,6 @@ jobs:
             .ci-artifacts/**
             .ci-logs/**
             ${{ env.DERIVED_DATA_PATH }}/Logs/**
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 14

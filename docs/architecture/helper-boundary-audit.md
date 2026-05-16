@@ -148,6 +148,8 @@ Current runtime probing is intentionally conservative. In ordinary app flows thi
 
 The legacy helper install/remove path still builds and executes shell scripts with administrator privileges. That path should not grow and should not be reused for future helper/TUN behavior.
 
+This PR now blocks that legacy fallback from being used through the audited install flow. The code remains in the repository as legacy compatibility residue, but the audited helper path fails closed instead of invoking it.
+
 ### Unsigned Debug build behavior
 
 Debug builds may intentionally carry an empty helper client requirement for local development. That is acceptable for diagnostics, but it must not be mistaken for production-ready helper trust or successful `SMJobBless` installation behavior.
@@ -183,6 +185,8 @@ Current fail-closed behavior in this PR is intentionally narrow:
 - Release helper requirement validation remains explicit and separate
 - helper diagnostics report mismatch or unknown state rather than inferring success
 - TUN messaging now states that helper status does not imply TUN support
+- helper install now returns a structured guardrail failure when helper trust is weak before `SMJobBless`
+- the audited install flow now suppresses the legacy shell-based fallback instead of invoking it
 - no new privileged helper action is added when trust is weak
 
 ## Legacy risk that remains visible

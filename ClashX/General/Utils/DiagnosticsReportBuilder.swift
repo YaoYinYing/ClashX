@@ -269,7 +269,8 @@ enum DiagnosticsReportBuilder {
             "kind=\(metadata.selectedProfileKind)",
             "source=\(sourcePath)",
             "mode=\(metadata.generationMode == "source-copy" ? "Loaded Source Copy" : metadata.generationMode)",
-            "smartxOverrides=\(metadata.includesSmartXOverrides ? "yes" : "no")",
+            "requestedSmartXOverrides=\(metadata.requestedSmartXOverrides ? "yes" : "no")",
+            "emittedSmartXOverrides=\(metadata.emittedSmartXOverrides ? "yes" : "no")",
             "profileMerge=\(metadata.includesProfileMerge ? "yes" : "no")",
             "runtimeOverrides=\(metadata.includesRuntimeOverrides ? "yes" : "no")"
         ]

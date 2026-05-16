@@ -27,7 +27,8 @@ enum DiagnosticsArtifactFormatter {
             lines.append("Generated: \(DateFormatter.localizedString(from: metadata.generatedAt, dateStyle: .short, timeStyle: .medium))")
             lines.append("Controller Mode: \(metadata.controllerMode)")
             lines.append("Generation Mode: \(metadata.generationMode == "source-copy" ? "Loaded Source Copy" : metadata.generationMode)")
-            lines.append("Includes SmartX Overrides: \(metadata.includesSmartXOverrides ? "yes" : "no")")
+            lines.append("Requested SmartX Overrides: \(metadata.requestedSmartXOverrides ? "yes" : "no")")
+            lines.append("Emitted SmartX Overrides: \(metadata.emittedSmartXOverrides ? "yes" : "no")")
             lines.append("Includes Profile Merge: \(metadata.includesProfileMerge ? "yes" : "no")")
             lines.append("Includes Runtime Overrides: \(metadata.includesRuntimeOverrides ? "yes" : "no")")
         } else {

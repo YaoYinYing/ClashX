@@ -1,17 +1,5 @@
 import Foundation
 
-struct SmartXManagedOverride {
-    var schemaVersion: Int
-    var lightGBM: LightGBMOverride?
-}
-
-struct LightGBMOverride {
-    var enabled: Bool
-    var modelURL: String
-    var autoUpdate: Bool
-    var updateIntervalHours: Int
-}
-
 enum Logger {
     enum Level {
         case info
@@ -45,13 +33,17 @@ enum EffectiveConfigGeneratorSmokeMain {
         expect(!result.isGenerated, "generator should stay explicit about unsupported generation")
         expect(result.provenance.baseConfigPath == baseURL.path, "provenance should record the base config path")
         expect(result.provenance.hasManagedOverride, "provenance should record managed override presence")
-        expect(result.provenance.includesSmartXOverrides, "provenance should record SmartX override inclusion")
+        expect(result.provenance.requestedSmartXOverrides, "provenance should record requested SmartX override presence")
+        expect(!result.provenance.emittedSmartXOverrides, "unsupported generation must not claim emitted SmartX overrides")
+        expect(!result.provenance.includesProfileMerge, "unsupported generation must not claim profile merge output")
+        expect(result.provenance.generationMode == "unsupported-safe-yaml-emitter-missing", "unsupported generation should report an honest generation mode")
 
         switch result {
         case let .unsupported(reason, provenance):
             expect(reason.localizedCaseInsensitiveContains("yaml emitter"), "unsupported reason should explain the safe YAML emitter requirement")
             expect(reason.localizedCaseInsensitiveContains("lightgbm"), "unsupported reason should mention the managed LightGBM override scope")
             expect(provenance.reason == reason, "provenance should preserve the unsupported reason")
+            expect(!provenance.emittedSmartXOverrides, "unsupported provenance should not imply emitted overrides")
         case .generated:
             expect(false, "generator must not claim generated output without a safe YAML emitter")
         case let .failed(reason, provenance):

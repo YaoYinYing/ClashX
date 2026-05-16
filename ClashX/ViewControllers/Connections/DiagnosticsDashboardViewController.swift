@@ -508,20 +508,8 @@ class DiagnosticsDashboardViewController: NSViewController {
                                        },
                                        setStatus: { [weak self] text in
                                            self?.setStatus(text)
-                                       }) { [weak self] action, result in
+                                       }) { [weak self] in
             guard let self else { return }
-            let descriptor = action.descriptor
-            CapabilityCache.shared.mark(descriptor.capability, endpointResult: result)
-            switch result {
-            case .success:
-                self.setStatus(descriptor.successText)
-            case .unsupported:
-                self.setStatus(descriptor.unsupportedText)
-            case .unauthorized:
-                self.setStatus(descriptor.unauthorizedText)
-            case let .failed(message):
-                self.setStatus(message)
-            }
             self.updateCapabilityDrivenState()
         }
     }

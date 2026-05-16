@@ -550,47 +550,22 @@ class ApiRequest {
     }
 
     static func requestPolicyGroups(completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        guard let request = req("/group") else {
-            completeHandler(unavailableJSONResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load policy group diagnostics.", comment: "")))
-        }
+        PolicyGroupAPI.requestPolicyGroups(completeHandler: completeHandler)
     }
 
     static func requestPolicyGroup(name: String, completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        guard let request = req(pathComponents: ["group", name]) else {
-            completeHandler(unavailableJSONResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load policy group details.", comment: "")))
-        }
+        PolicyGroupAPI.requestPolicyGroup(name: name, completeHandler: completeHandler)
     }
 
     static func deletePolicyGroup(name: String, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        guard let request = req(pathComponents: ["group", name], method: .delete) else {
-            completeHandler?(unavailableEndpointResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler?(endpointResult(from: response, defaultMessage: NSLocalizedString("Failed to delete policy group state.", comment: "")))
-        }
+        PolicyGroupAPI.deletePolicyGroup(name: name, completeHandler: completeHandler)
     }
 
     static func requestPolicyGroupDelay(name: String, timeout: Int = 5000, url: String = Settings.benchMarkUrl, completeHandler: @escaping (ControllerJSONResult) -> Void) {
-        let queryItems = [
-            URLQueryItem(name: "timeout", value: String(timeout)),
-            URLQueryItem(name: "url", value: url)
-        ]
-        guard let request = req(pathComponents: ["group", name, "delay"], queryItems: queryItems) else {
-            completeHandler(unavailableJSONResult())
-            return
-        }
-        request.responseData { response in
-            completeHandler(jsonResult(from: response, defaultMessage: NSLocalizedString("Failed to load policy group delay diagnostics.", comment: "")))
-        }
+        PolicyGroupAPI.requestPolicyGroupDelay(name: name,
+                                               timeout: timeout,
+                                               url: url,
+                                               completeHandler: completeHandler)
     }
 }
 

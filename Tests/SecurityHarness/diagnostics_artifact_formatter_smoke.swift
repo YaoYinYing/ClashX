@@ -8,7 +8,8 @@ struct ProfileArtifactMetadata {
     let generatedAt: Date
     let controllerMode: String
     let generationMode: String
-    let includesSmartXOverrides: Bool
+    let requestedSmartXOverrides: Bool
+    let emittedSmartXOverrides: Bool
     let includesProfileMerge: Bool
     let includesRuntimeOverrides: Bool
 }
@@ -22,7 +23,8 @@ enum ProfileArtifactManager {
                                 generatedAt: Date(timeIntervalSince1970: 1_700_000_000),
                                 controllerMode: "external",
                                 generationMode: "source-copy",
-                                includesSmartXOverrides: false,
+                                requestedSmartXOverrides: false,
+                                emittedSmartXOverrides: false,
                                 includesProfileMerge: false,
                                 includesRuntimeOverrides: false)
     }

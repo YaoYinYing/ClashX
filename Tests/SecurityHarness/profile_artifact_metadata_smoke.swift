@@ -58,7 +58,8 @@ enum ProfileArtifactMetadataSmokeMain {
                                                    generatedAt: Date(timeIntervalSince1970: 1_700_000_000),
                                                    controllerMode: "embedded",
                                                    generationMode: "source-copy",
-                                                   includesSmartXOverrides: false,
+                                                   requestedSmartXOverrides: false,
+                                                   emittedSmartXOverrides: false,
                                                    includesProfileMerge: false,
                                                    includesRuntimeOverrides: false)
 
@@ -77,7 +78,8 @@ enum ProfileArtifactMetadataSmokeMain {
             expect(decoded.generatedAt == metadata.generatedAt, "generated timestamp should round-trip")
             expect(decoded.controllerMode == metadata.controllerMode, "controller mode should round-trip")
             expect(decoded.generationMode == "source-copy", "generation mode should remain honest for source-copy artifacts")
-            expect(decoded.includesSmartXOverrides == false, "override flag should remain false for source-copy artifacts")
+            expect(decoded.requestedSmartXOverrides == false, "requested override flag should remain false for source-copy artifacts")
+            expect(decoded.emittedSmartXOverrides == false, "emitted override flag should remain false for source-copy artifacts")
             expect(decoded.includesProfileMerge == false, "profile merge flag should remain false for source-copy artifacts")
             expect(decoded.includesRuntimeOverrides == false, "runtime override flag should remain false for source-copy artifacts")
 

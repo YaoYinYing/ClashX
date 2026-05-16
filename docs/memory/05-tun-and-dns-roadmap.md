@@ -56,7 +56,7 @@ The branch now also records helper-aware TUN boundary messaging through `TunLife
 
 That helper command contract now exists as a typed model and diagnostics boundary in `HelperCommandContract.swift` plus `HelperCommandRegistry.swift`, but all TUN helper commands remain reserved only. No helper-backed TUN execution path exists.
 
-The branch now also has a typed TUN lifecycle diagnostics boundary in `TunLifecycleDiagnostics.swift` plus `TunPreflightPlanner.swift`. That boundary can explain blockers, warnings, helper-reserved state, and controller-config-only verification, but it still does not perform system-level TUN verification.
+The branch now also has a typed TUN lifecycle diagnostics boundary in `TunLifecycleDiagnostics.swift` plus `TunPreflightPlanner.swift`, and a read-only runtime interface probe in `TunRuntimeInterfaceProbe.swift`. That boundary can explain blockers, warnings, helper-reserved state, controller-config verification, and visible tun-like interface evidence, but interface presence is still only evidence, interface absence is not proof of failure, and route, DNS runtime, and packet-flow verification remain unimplemented.
 
 ## Missing TUN Fields
 

@@ -81,12 +81,21 @@ enum DiagnosticsReportBuilder {
         let config = ConfigManager.shared.currentConfig
         let helperStatus = HelperDiagnosticsProbe.currentStatus()
         let configPatchAvailability = CapabilityCache.shared.status(for: .configPatch)?.availability ?? .unknown
+        let helperTunDescriptors = HelperCommandRegistry.reservedTunDescriptors()
         let report = TunPreflightPlanner.buildReport(config: config,
                                                      isControllerRunning: ConfigManager.shared.isRunning,
                                                      isUsingEmbeddedCore: Settings.isUsingEmbeddedCore,
                                                      configPatchAvailability: configPatchAvailability,
                                                      helperStatus: helperStatus,
-                                                     helperTunDescriptors: HelperCommandRegistry.reservedTunDescriptors())
+                                                     helperTunDescriptors: helperTunDescriptors)
+        let interfaceEvidence = TunRuntimeInterfaceProbe.currentEvidence()
+        let runtimeReport = config?.tun.map {
+            TunPreflightPlanner.runtimeVerificationReport(expectedEnabled: $0.enable,
+                                                          controllerReportedEnabled: $0.enable,
+                                                          didFailToReload: false,
+                                                          preflightReport: report,
+                                                          interfaceEvidence: interfaceEvidence)
+        }
 
         var lines = [
             "TUN Lifecycle Boundary",
@@ -97,7 +106,9 @@ enum DiagnosticsReportBuilder {
             "Helper TUN Commands Reserved Only: \(report.helperTunCommandsReserved ? "yes" : "no")",
             "Verification Scope: \(report.verificationScope.rawValue)",
             "Current tun Section: \(config?.tun == nil ? "missing" : "present")",
-            "Current tun.enable: \(config?.tun.map { $0.enable ? "true" : "false" } ?? "unknown")"
+            "Current tun.enable: \(config?.tun.map { $0.enable ? "true" : "false" } ?? "unknown")",
+            "Runtime Interface Evidence State: \(interfaceEvidence.evidenceState.rawValue)",
+            "Tun-like Interface Names: \(interfaceEvidence.tunLikeInterfaceNames.isEmpty ? "none" : interfaceEvidence.tunLikeInterfaceNames.joined(separator: ", "))"
         ]
 
         if report.blockers.isEmpty {
@@ -114,9 +125,23 @@ enum DiagnosticsReportBuilder {
             lines.append(contentsOf: report.warnings.map { "- \($0)" })
         }
 
+        if let runtimeReport {
+            lines.append("Runtime Verification Levels: \(runtimeReport.verificationLevels.map(\.rawValue).joined(separator: ", "))")
+            lines.append("Runtime Consistency With Controller: \(runtimeReport.isRuntimeConsistentWithController.map { $0 ? "yes" : "no" } ?? "unknown")")
+            lines.append("Runtime Message: \(runtimeReport.message)")
+            lines.append("Runtime Recovery Suggestion: \(runtimeReport.recoverySuggestion)")
+        } else {
+            lines.append("Runtime Verification Levels: controller state unavailable")
+            lines.append("Runtime Message: Current tun.enable is unavailable, so only the read-only interface evidence summary is available.")
+        }
+
+        lines.append("Interface Evidence Message: \(interfaceEvidence.message)")
         lines.append("User Message: \(report.userMessage)")
         lines.append("Recovery Suggestion: \(report.recoverySuggestion)")
-        lines.append("System-level TUN verification is not implemented.")
+        lines.append("Route verification is not implemented.")
+        lines.append("DNS runtime verification is not implemented.")
+        lines.append("Packet-flow verification is not implemented.")
+        lines.append("Helper-backed TUN remains reserved only.")
         return lines.joined(separator: "\n")
     }
 

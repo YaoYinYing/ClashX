@@ -105,14 +105,25 @@ enum TunPreflightPlanner {
     static func verificationReport(expectedEnabled: Bool,
                                    controllerReportedEnabled: Bool?,
                                    didFailToReload: Bool,
-                                   preflightReport: TunPreflightReport) -> TunLifecycleVerificationReport {
+                                   preflightReport: TunPreflightReport,
+                                   interfaceEvidence: TunRuntimeInterfaceEvidence = TunRuntimeInterfaceEvidence(interfaceNames: [],
+                                                                                                                tunLikeInterfaceNames: [],
+                                                                                                                evidenceState: .notChecked,
+                                                                                                                message: "Runtime interface evidence was not checked.")) -> TunLifecycleVerificationReport {
+        let runtimeReport = runtimeVerificationReport(expectedEnabled: expectedEnabled,
+                                                      controllerReportedEnabled: controllerReportedEnabled,
+                                                      didFailToReload: didFailToReload,
+                                                      preflightReport: preflightReport,
+                                                      interfaceEvidence: interfaceEvidence)
+
         if didFailToReload {
             return TunLifecycleVerificationReport(expectedEnabled: expectedEnabled,
                                                   outcome: .requestedButUnverified,
                                                   verificationScope: .controllerConfigOnly,
                                                   controllerReportedEnabled: nil,
-                                                  message: "SmartX sent the controller TUN update request, but could only keep controller-config verification at an unverified state. System-level TUN verification is not implemented.",
-                                                  recoverySuggestion: "Refresh the controller config, review the reported tun.enable state, and remember that helper-backed TUN and system-level verification remain future work.")
+                                                  runtimeVerification: runtimeReport,
+                                                  message: runtimeReport.message,
+                                                  recoverySuggestion: runtimeReport.recoverySuggestion)
         }
 
         guard let controllerReportedEnabled else {
@@ -120,8 +131,9 @@ enum TunPreflightPlanner {
                                                   outcome: .failed,
                                                   verificationScope: preflightReport.verificationScope,
                                                   controllerReportedEnabled: nil,
-                                                  message: "SmartX could not read a controller-config TUN state after the request. System-level TUN verification is not implemented.",
-                                                  recoverySuggestion: "Re-read /configs when available. SmartX currently verifies only controller config state, not utun, route, or DNS runtime state.")
+                                                  runtimeVerification: runtimeReport,
+                                                  message: runtimeReport.message,
+                                                  recoverySuggestion: runtimeReport.recoverySuggestion)
         }
 
         if controllerReportedEnabled == expectedEnabled {
@@ -129,16 +141,45 @@ enum TunPreflightPlanner {
                                                   outcome: .controllerStateMatches,
                                                   verificationScope: .controllerConfigOnly,
                                                   controllerReportedEnabled: controllerReportedEnabled,
-                                                  message: "SmartX verified that controller config state matches the requested tun.enable value. This remains controller-config verification only. System-level TUN verification is not implemented.",
-                                                  recoverySuggestion: "Treat this as a controller-config match only. Helper-backed TUN, route checks, DNS runtime checks, and utun verification remain future work.")
+                                                  runtimeVerification: runtimeReport,
+                                                  message: runtimeReport.message,
+                                                  recoverySuggestion: runtimeReport.recoverySuggestion)
         }
 
         return TunLifecycleVerificationReport(expectedEnabled: expectedEnabled,
                                               outcome: .controllerStateMismatch,
                                               verificationScope: .controllerConfigOnly,
                                               controllerReportedEnabled: controllerReportedEnabled,
-                                              message: "SmartX requested a TUN update, but the controller reported a different tun.enable value after reload. System-level TUN verification is not implemented.",
-                                              recoverySuggestion: "Inspect the current controller config and retry after fixing validation issues. SmartX does not perform route, interface, or DNS runtime verification.")
+                                              runtimeVerification: runtimeReport,
+                                              message: runtimeReport.message,
+                                              recoverySuggestion: runtimeReport.recoverySuggestion)
+    }
+
+    static func runtimeVerificationReport(expectedEnabled: Bool,
+                                          controllerReportedEnabled: Bool?,
+                                          didFailToReload: Bool,
+                                          preflightReport: TunPreflightReport,
+                                          interfaceEvidence: TunRuntimeInterfaceEvidence) -> TunRuntimeVerificationReport {
+        let verificationLevels = runtimeVerificationLevels(interfaceEvidence: interfaceEvidence)
+        let consistency = runtimeConsistency(controllerReportedEnabled: controllerReportedEnabled,
+                                             interfaceEvidence: interfaceEvidence)
+        let message = runtimeVerificationMessage(expectedEnabled: expectedEnabled,
+                                                 controllerReportedEnabled: controllerReportedEnabled,
+                                                 didFailToReload: didFailToReload,
+                                                 preflightReport: preflightReport,
+                                                 interfaceEvidence: interfaceEvidence,
+                                                 consistency: consistency)
+        let recoverySuggestion = runtimeRecoverySuggestion(expectedEnabled: expectedEnabled,
+                                                           controllerReportedEnabled: controllerReportedEnabled,
+                                                           didFailToReload: didFailToReload,
+                                                           interfaceEvidence: interfaceEvidence)
+        return TunRuntimeVerificationReport(expectedEnabled: expectedEnabled,
+                                            controllerReportedEnabled: controllerReportedEnabled,
+                                            interfaceEvidence: interfaceEvidence,
+                                            verificationLevels: verificationLevels,
+                                            isRuntimeConsistentWithController: consistency,
+                                            message: message,
+                                            recoverySuggestion: recoverySuggestion)
     }
 
     private static func userMessage(for blockers: [TunPreflightBlocker],
@@ -207,6 +248,127 @@ enum TunPreflightPlanner {
             warnings.append("External-controller TUN remains a guarded controller API patch path.")
         }
         return warnings
+    }
+
+    private static func runtimeVerificationLevels(interfaceEvidence: TunRuntimeInterfaceEvidence) -> [TunRuntimeVerificationLevel] {
+        var levels = [TunRuntimeVerificationLevel.controllerConfigOnly]
+        if interfaceEvidence.evidenceState != .notChecked {
+            levels.append(.interfacePresenceOnly)
+        }
+        levels.append(.routeVerificationNotImplemented)
+        levels.append(.dnsRuntimeVerificationNotImplemented)
+        levels.append(.packetFlowVerificationNotImplemented)
+        return levels
+    }
+
+    private static func runtimeConsistency(controllerReportedEnabled: Bool?,
+                                           interfaceEvidence: TunRuntimeInterfaceEvidence) -> Bool? {
+        guard let controllerReportedEnabled else { return nil }
+
+        switch (controllerReportedEnabled, interfaceEvidence.evidenceState) {
+        case (true, .tunLikeInterfacePresent), (false, .noTunLikeInterface):
+            return true
+        case (true, .noTunLikeInterface), (false, .tunLikeInterfacePresent):
+            return false
+        case (_, .notChecked), (_, .unavailable), (_, .inconclusive):
+            return nil
+        }
+    }
+
+    private static func runtimeVerificationMessage(expectedEnabled: Bool,
+                                                   controllerReportedEnabled: Bool?,
+                                                   didFailToReload: Bool,
+                                                   preflightReport: TunPreflightReport,
+                                                   interfaceEvidence: TunRuntimeInterfaceEvidence,
+                                                   consistency: Bool?) -> String {
+        let base: String
+        if didFailToReload {
+            base = "SmartX sent the controller TUN update request, but could not confirm controller-config state after reload."
+        } else if let controllerReportedEnabled {
+            if controllerReportedEnabled == expectedEnabled {
+                base = "Controller config matches tun.enable=\(expectedEnabled ? "true" : "false")."
+            } else {
+                base = "SmartX requested tun.enable=\(expectedEnabled ? "true" : "false"), but the controller reported tun.enable=\(controllerReportedEnabled ? "true" : "false")."
+            }
+        } else {
+            base = "SmartX could not read controller-config TUN state after the request."
+        }
+
+        let evidenceLine = runtimeEvidenceSummary(expectedEnabled: expectedEnabled,
+                                                  controllerReportedEnabled: controllerReportedEnabled,
+                                                  interfaceEvidence: interfaceEvidence,
+                                                  consistency: consistency)
+
+        let verificationLine = "Route verification is not implemented. DNS runtime verification is not implemented. Packet-flow verification is not implemented."
+        let helperLine = preflightReport.helperTunCommandsReserved
+            ? "Helper-backed TUN remains reserved only."
+            : nil
+        return [base, evidenceLine, helperLine, verificationLine]
+            .compactMap { $0 }
+            .joined(separator: " ")
+    }
+
+    private static func runtimeRecoverySuggestion(expectedEnabled: Bool,
+                                                  controllerReportedEnabled: Bool?,
+                                                  didFailToReload: Bool,
+                                                  interfaceEvidence: TunRuntimeInterfaceEvidence) -> String {
+        if didFailToReload {
+            return "Refresh controller config, inspect the current core log, and compare the latest tun.enable state with the read-only interface evidence. SmartX does not implement route, DNS runtime, or packet-flow verification."
+        }
+
+        guard let controllerReportedEnabled else {
+            return "Re-read /configs when available and compare it with the read-only interface evidence. SmartX does not implement route, DNS runtime, or packet-flow verification."
+        }
+
+        if controllerReportedEnabled != expectedEnabled {
+            return "Inspect controller config first, then compare it with the read-only interface evidence. SmartX will not mutate routes, DNS, or helper state to force runtime alignment."
+        }
+
+        if expectedEnabled {
+            switch interfaceEvidence.evidenceState {
+            case .tunLikeInterfacePresent:
+                return "Treat the tun-like interface as supporting evidence only. Route, DNS runtime, and packet-flow verification remain future work."
+            case .noTunLikeInterface:
+                return "No tun-like interface evidence was observed. This does not prove failure; inspect the core log and current controller state before assuming TUN is broken."
+            case .unavailable, .inconclusive, .notChecked:
+                return "Runtime interface evidence is unavailable or inconclusive. Inspect controller state and the core log; SmartX does not implement route, DNS runtime, or packet-flow verification."
+            }
+        }
+
+        switch interfaceEvidence.evidenceState {
+        case .tunLikeInterfacePresent:
+            return "Tun-like interface evidence remains even though controller config now says tun.enable=false. The interface may belong to another app or may require manual inspection."
+        case .noTunLikeInterface:
+            return "Controller config now says tun.enable=false and no tun-like interface evidence was observed. Route, DNS runtime, and packet-flow verification still remain unimplemented."
+        case .unavailable, .inconclusive, .notChecked:
+            return "Runtime interface evidence is unavailable or inconclusive, so only controller config state is confirmed."
+        }
+    }
+
+    private static func runtimeEvidenceSummary(expectedEnabled: Bool,
+                                               controllerReportedEnabled: Bool?,
+                                               interfaceEvidence: TunRuntimeInterfaceEvidence,
+                                               consistency: Bool?) -> String {
+        switch interfaceEvidence.evidenceState {
+        case .notChecked:
+            return "Runtime interface evidence was not checked."
+        case .unavailable, .inconclusive:
+            return interfaceEvidence.message
+        case .tunLikeInterfacePresent:
+            let names = interfaceEvidence.tunLikeInterfaceNames.joined(separator: ", ")
+            if controllerReportedEnabled == false {
+                return "Tun-like interface evidence remains: \(names). This does not prove route ownership and may belong to another app or require manual inspection."
+            }
+            return "A tun-like interface was observed: \(names). This is evidence only and does not prove packet forwarding, route ownership, or DNS hijack behavior."
+        case .noTunLikeInterface:
+            if controllerReportedEnabled == true || expectedEnabled {
+                return "No tun-like interface was observed. This does not prove failure; inspect the core log and current controller state."
+            }
+            if consistency == true {
+                return "No tun-like interface was observed."
+            }
+            return "No tun-like interface was observed. Absence of utun-style or tun-style names does not prove TUN failed."
+        }
     }
 
     private static func ordered(_ blockers: [TunPreflightBlocker]) -> [TunPreflightBlocker] {

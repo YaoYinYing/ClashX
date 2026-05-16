@@ -563,10 +563,21 @@ class CoreSettingViewController: NSViewController {
                                                      configPatchAvailability: configPatchAvailability,
                                                      helperStatus: HelperDiagnosticsProbe.currentStatus(),
                                                      helperTunDescriptors: HelperCommandRegistry.reservedTunDescriptors())
+        let runtimeNote: String
+        if let enabled = config?.tun?.enable {
+            let runtimeReport = TunPreflightPlanner.runtimeVerificationReport(expectedEnabled: enabled,
+                                                                              controllerReportedEnabled: enabled,
+                                                                              didFailToReload: false,
+                                                                              preflightReport: report,
+                                                                              interfaceEvidence: TunRuntimeInterfaceProbe.currentEvidence())
+            runtimeNote = "\(runtimeReport.message)\n\(runtimeReport.recoverySuggestion)"
+        } else {
+            runtimeNote = NSLocalizedString("Read-only runtime interface evidence is only available after SmartX can read a tun.enable value from the current controller config.", comment: "")
+        }
         let warningText = report.warnings.isEmpty
             ? NSLocalizedString("No additional TUN validation warnings were detected.", comment: "")
             : report.warnings.joined(separator: "\n")
-        return "\(report.userMessage)\n\(report.recoverySuggestion)\n\(helperCapabilityNote)\n\(warningText)"
+        return "\(report.userMessage)\n\(report.recoverySuggestion)\n\(runtimeNote)\n\(helperCapabilityNote)\n\(warningText)"
     }
 
     private func dnsCapabilityNoteText(config: ClashConfig?) -> String {

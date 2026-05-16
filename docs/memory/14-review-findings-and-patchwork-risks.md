@@ -12,6 +12,7 @@ SmartX has improved its foundation work, but several surfaces are still explicit
 - TUN and DNS validation now live in reusable validators, and TUN toggling now has a named lifecycle coordinator, but embedded-core TUN remains unsupported and privileged TUN architecture is still missing.
 - The branch now has a helper boundary audit with `HelperStatus` and `HelperDiagnosticsProbe`, but that status is diagnostic only and must not be described as proof of helper-backed TUN or successful helper installation.
 - The branch now also has a typed helper command contract model and registry, but reserved TUN commands must not be described as implemented helper-backed TUN behavior.
+- The branch now also has a typed TUN lifecycle diagnostics boundary, but controller-config verification must not be described as route, interface, or DNS runtime verification.
 - The audited helper install flow now blocks the legacy shell fallback and returns a structured guardrail failure when helper trust is weak; the legacy code still exists as residue and should stay treated as historical risk, not supported architecture.
 - Diagnostics log viewing is safer because `DiagnosticsLogReader` now tails large rolling files instead of re-reading them whole every refresh cycle, `DiagnosticsArtifactFormatter` plus `DiagnosticsProviderFormatter` moved formatting into small helpers, and dangerous maintenance actions have started moving through `DiagnosticsMaintenanceCoordinator`, but the Diagnostics dashboard remains structurally too large.
 - `ApiRequest` is now partially decomposed into `DiagnosticsAPI`, `ProviderAPI`, `SmartAPI`, `ConfigAPI`, and the new `ConnectionAPI`, but the compatibility facade still remains broader than it should be.
@@ -25,6 +26,7 @@ SmartX has improved its foundation work, but several surfaces are still explicit
 - Do not let the initial `TunLifecycleCoordinator` be described as full TUN support.
 - Do not let helper diagnostic status be described as a verified privileged-helper install unless a real audited runtime verification path exists.
 - Do not let reserved helper TUN command names be described as executable helper capabilities in the current branch.
+- Do not let controller-config verification be described as full system-level TUN verification.
 - Do not treat the legacy AppleScript shell-install fallback as a valid future helper or TUN contract.
 - Do not treat the modern-only CI policy as proof of signed or notarized release readiness.
 - Do not treat a locally skipped Xcode build or test step as evidence of a broken workspace when the actual blocker is simulator-service or cache-permission access in the host environment.

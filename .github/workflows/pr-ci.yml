@@ -206,6 +206,22 @@ jobs:
             -o /tmp/helper-command-contract-smoke
           /tmp/helper-command-contract-smoke | tee .ci-logs/helper-command-contract-smoke.log
 
+      - name: TUN lifecycle diagnostics smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/ConfigValidationIssue.swift \
+            ClashX/General/Utils/TunConfigValidator.swift \
+            ClashX/General/Utils/DNSConfigValidator.swift \
+            ClashX/Models/HelperStatus.swift \
+            ClashX/Models/HelperCommandContract.swift \
+            ClashX/General/Utils/HelperCommandRegistry.swift \
+            ClashX/Models/TunLifecycleDiagnostics.swift \
+            ClashX/General/Managers/TunPreflightPlanner.swift \
+            Tests/SecurityHarness/tun_lifecycle_diagnostics_smoke.swift \
+            -o /tmp/tun-lifecycle-diagnostics-smoke
+          /tmp/tun-lifecycle-diagnostics-smoke | tee .ci-logs/tun-lifecycle-diagnostics-smoke.log
+
       - name: Redactor smoke harness
         run: |
           set -o pipefail
@@ -421,6 +437,22 @@ jobs:
             Tests/SecurityHarness/helper_command_contract_smoke.swift \
             -o /tmp/helper-command-contract-smoke
           /tmp/helper-command-contract-smoke | tee .ci-logs/helper-command-contract-smoke.log
+
+      - name: TUN lifecycle diagnostics smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/ConfigValidationIssue.swift \
+            ClashX/General/Utils/TunConfigValidator.swift \
+            ClashX/General/Utils/DNSConfigValidator.swift \
+            ClashX/Models/HelperStatus.swift \
+            ClashX/Models/HelperCommandContract.swift \
+            ClashX/General/Utils/HelperCommandRegistry.swift \
+            ClashX/Models/TunLifecycleDiagnostics.swift \
+            ClashX/General/Managers/TunPreflightPlanner.swift \
+            Tests/SecurityHarness/tun_lifecycle_diagnostics_smoke.swift \
+            -o /tmp/tun-lifecycle-diagnostics-smoke
+          /tmp/tun-lifecycle-diagnostics-smoke | tee .ci-logs/tun-lifecycle-diagnostics-smoke.log
 
       - name: Build unsigned Debug app
         run: |

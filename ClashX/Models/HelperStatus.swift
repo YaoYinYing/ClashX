@@ -59,8 +59,7 @@ struct HelperStatus: Codable {
                                     bundleIdentifier: String?,
                                     launchdLabel: String?,
                                     lastCheckedAt: Date?,
-                                    invalidPlaceholderPatterns: [String]) -> HelperStatus
-    {
+                                    invalidPlaceholderPatterns: [String]) -> HelperStatus {
         let summary = summarizeRequirement(requirement, invalidPlaceholderPatterns: invalidPlaceholderPatterns)
 
         if requirement == nil || summary == "placeholder-like" {

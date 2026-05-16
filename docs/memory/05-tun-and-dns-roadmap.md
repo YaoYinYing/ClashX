@@ -56,6 +56,8 @@ The branch now also records helper-aware TUN boundary messaging through `TunLife
 
 That helper command contract now exists as a typed model and diagnostics boundary in `HelperCommandContract.swift` plus `HelperCommandRegistry.swift`, but all TUN helper commands remain reserved only. No helper-backed TUN execution path exists.
 
+The branch now also has a typed TUN lifecycle diagnostics boundary in `TunLifecycleDiagnostics.swift` plus `TunPreflightPlanner.swift`. That boundary can explain blockers, warnings, helper-reserved state, and controller-config-only verification, but it still does not perform system-level TUN verification.
+
 ## Missing TUN Fields
 
 Based on current mihomo TUN configuration docs, SmartX will eventually need a broader model. The fields below are grouped by whether they are broadly relevant to macOS or mainly relevant to Linux/Android platforms.

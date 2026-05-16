@@ -229,3 +229,5 @@ What remains true:
 - helper installation does not imply TUN readiness
 
 Future helper-backed TUN requires a separate command contract and should not reuse system-proxy helper assumptions.
+
+SmartX now also has a typed TUN lifecycle diagnostics boundary for the current external-controller path, but that boundary still only models controller-config preflight and controller-config verification. It does not add system-level route, DNS, interface, or utun verification.

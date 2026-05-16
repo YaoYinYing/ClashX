@@ -57,15 +57,24 @@ final class TunLifecycleCoordinator {
     func setTunEnabled(_ enabled: Bool, completion: @escaping (TunLifecycleResult) -> Void) {
         let fallbackPreviousState = TunLifecycleUIState(enabled: ConfigManager.shared.currentConfig?.tun?.enable ?? false)
         let helperStatus = HelperDiagnosticsProbe.currentStatus()
+        let helperTunDescriptors = HelperCommandRegistry.reservedTunDescriptors()
+        let configPatchAvailability = CapabilityCache.shared.status(for: .configPatch)?.availability ?? .unknown
+
+        let initialReport = TunPreflightPlanner.buildReport(config: ConfigManager.shared.currentConfig,
+                                                            isControllerRunning: ConfigManager.shared.isRunning,
+                                                            isUsingEmbeddedCore: Settings.isUsingEmbeddedCore,
+                                                            configPatchAvailability: configPatchAvailability,
+                                                            helperStatus: helperStatus,
+                                                            helperTunDescriptors: helperTunDescriptors)
 
         guard ConfigManager.shared.isRunning else {
-            completion(.failed(message: NSLocalizedString("The active controller is not running, so SmartX cannot attempt a TUN update.", comment: ""),
+            completion(.failed(message: initialReport.userMessage,
                                previousState: fallbackPreviousState))
             return
         }
 
         guard !Settings.isUsingEmbeddedCore else {
-            completion(.unsupported(message: embeddedTunUnsupportedMessage(helperStatus: helperStatus),
+            completion(.unsupported(message: initialReport.userMessage,
                                     previousState: fallbackPreviousState))
             return
         }
@@ -76,40 +85,53 @@ final class TunLifecycleCoordinator {
                 completion(.failed(message: error.localizedDescription, previousState: fallbackPreviousState))
             case let .success(config):
                 let previousState = TunLifecycleUIState(enabled: config.tun?.enable ?? fallbackPreviousState.enabled)
-                guard config.tun != nil else {
-                    completion(.unsupported(message: self.externalControllerBoundaryMessage(prefix: NSLocalizedString("The current controller config does not expose a tun section, so SmartX keeps TUN disabled.", comment: ""),
-                                                                                            helperStatus: helperStatus),
-                                            previousState: previousState))
+                let preflight = TunPreflightPlanner.buildReport(config: config,
+                                                                isControllerRunning: ConfigManager.shared.isRunning,
+                                                                isUsingEmbeddedCore: Settings.isUsingEmbeddedCore,
+                                                                configPatchAvailability: configPatchAvailability,
+                                                                helperStatus: helperStatus,
+                                                                helperTunDescriptors: helperTunDescriptors)
+
+                if preflight.blockers.contains(.tunSectionMissing) {
+                    completion(.unsupported(message: preflight.userMessage, previousState: previousState))
                     return
                 }
 
                 if enabled {
-                    let tunValidation = TunConfigValidator.validate(config.tun)
-                    let dnsValidation = DNSConfigValidator.validate(config.dns)
-                    let blockingIssues = tunValidation.blockingErrors + dnsValidation.issues.filter { $0.severity == .blocking }
+                    let blockingIssues = TunConfigValidator.validate(config.tun).blockingErrors
+                        + DNSConfigValidator.validate(config.dns).issues.filter { $0.severity == .blocking }
                     if !blockingIssues.isEmpty {
                         completion(.blockedByValidation(issues: blockingIssues,
-                                                        recoveryText: NSLocalizedString("SmartX blocked the TUN update because the current config has blocking validation issues. SmartX will restore the previous UI state, but it does not roll back controller state automatically. Review the warnings on the Core settings page, fix the config, and try again.", comment: ""),
+                                                        recoveryText: preflight.recoverySuggestion,
                                                         previousState: previousState))
                         return
                     }
+                }
+
+                if preflight.blockers.contains(.configPatchUnsupported) {
+                    completion(.unsupported(message: preflight.userMessage, previousState: previousState))
+                    return
+                }
+                if preflight.blockers.contains(.controllerUnauthorized) {
+                    completion(.unauthorized(message: preflight.userMessage, previousState: previousState))
+                    return
                 }
 
                 ApiRequest.updateTunResult(enable: enabled) { endpointResult in
                     switch endpointResult {
                     case .success:
                         self.verifyTunState(expected: enabled,
+                                            preflightReport: preflight,
                                             previousState: previousState,
-                                            helperStatus: helperStatus,
                                             completion: completion)
                     case .unsupported:
-                        completion(.unsupported(message: self.externalControllerBoundaryMessage(prefix: NSLocalizedString("The active controller does not support guarded TUN updates.", comment: ""),
-                                                                                                helperStatus: helperStatus),
-                                                previousState: previousState))
+                        completion(.unsupported(message: preflight.userMessage, previousState: previousState))
                     case let .unauthorized(message):
-                        completion(.unauthorized(message: message, previousState: previousState))
+                        completion(.unauthorized(message: [message, preflight.recoverySuggestion].joined(separator: " "),
+                                                 previousState: previousState))
                     case let .failed(message):
-                        completion(.failed(message: message, previousState: previousState))
+                        completion(.failed(message: [message, preflight.recoverySuggestion].joined(separator: " "),
+                                           previousState: previousState))
                     }
                 }
             }
@@ -135,46 +157,35 @@ final class TunLifecycleCoordinator {
     }
 
     private func verifyTunState(expected: Bool,
+                                preflightReport: TunPreflightReport,
                                 previousState: TunLifecycleUIState,
-                                helperStatus: HelperStatus,
                                 completion: @escaping (TunLifecycleResult) -> Void) {
         loadCurrentConfig { result in
             switch result {
             case .failure:
-                completion(.requestedButUnverified(message: self.externalControllerBoundaryMessage(prefix: NSLocalizedString("SmartX sent the TUN update request, but could not verify the new controller state afterward.", comment: ""),
-                                                                                                   helperStatus: helperStatus),
+                let report = TunPreflightPlanner.verificationReport(expectedEnabled: expected,
+                                                                    controllerReportedEnabled: nil,
+                                                                    didFailToReload: true,
+                                                                    preflightReport: preflightReport)
+                completion(.requestedButUnverified(message: report.message,
                                                    previousState: previousState))
             case let .success(config):
                 ConfigManager.shared.currentConfig = config
-                if config.tun?.enable == expected {
-                    completion(.success(message: self.externalControllerBoundaryMessage(prefix: NSLocalizedString("SmartX updated the controller TUN state successfully through the controller API.", comment: ""),
-                                                                                        helperStatus: helperStatus),
-                                        previousState: previousState))
-                } else {
-                    completion(.failed(message: self.externalControllerBoundaryMessage(prefix: NSLocalizedString("SmartX requested a TUN update, but the controller reported a different final state after reload.", comment: ""),
-                                                                                       helperStatus: helperStatus),
-                                       previousState: previousState))
+                let report = TunPreflightPlanner.verificationReport(expectedEnabled: expected,
+                                                                    controllerReportedEnabled: config.tun?.enable,
+                                                                    didFailToReload: false,
+                                                                    preflightReport: preflightReport)
+                switch report.outcome {
+                case .controllerStateMatches:
+                    completion(.success(message: report.message, previousState: previousState))
+                case .controllerStateMismatch, .failed:
+                    completion(.failed(message: report.message, previousState: previousState))
+                case .requestedButUnverified:
+                    completion(.requestedButUnverified(message: report.message, previousState: previousState))
+                case .notAttempted:
+                    completion(.failed(message: report.message, previousState: previousState))
                 }
             }
         }
-    }
-
-    private func embeddedTunUnsupportedMessage(helperStatus: HelperStatus) -> String {
-        [
-            String(format: NSLocalizedString("Helper status is %@.", comment: ""), helperStatus.trustState.rawValue),
-            helperStatus.diagnosticMessage,
-            NSLocalizedString("Embedded TUN is not supported in this build.", comment: ""),
-            NSLocalizedString("Future helper-backed TUN requires a separate command contract.", comment: "")
-        ].joined(separator: " ")
-    }
-
-    private func externalControllerBoundaryMessage(prefix: String, helperStatus: HelperStatus) -> String {
-        [
-            prefix,
-            NSLocalizedString("External controller TUN can only be attempted through the controller API.", comment: ""),
-            String(format: NSLocalizedString("Helper status is %@.", comment: ""), helperStatus.trustState.rawValue),
-            helperStatus.diagnosticMessage,
-            NSLocalizedString("Future helper-backed TUN requires a separate command contract.", comment: "")
-        ].joined(separator: " ")
     }
 }

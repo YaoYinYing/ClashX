@@ -14,6 +14,7 @@ enum DiagnosticsReportBuilder {
             controllerSection(),
             helperSection(),
             helperCommandContractSection(),
+            tunLifecycleBoundarySection(),
             configSection(),
             profileSection(),
             profileArtifactsSection(),
@@ -74,6 +75,49 @@ enum DiagnosticsReportBuilder {
 
     private static func helperCommandContractSection() -> String {
         HelperCommandRegistry.renderedDiagnosticsSection()
+    }
+
+    private static func tunLifecycleBoundarySection() -> String {
+        let config = ConfigManager.shared.currentConfig
+        let helperStatus = HelperDiagnosticsProbe.currentStatus()
+        let configPatchAvailability = CapabilityCache.shared.status(for: .configPatch)?.availability ?? .unknown
+        let report = TunPreflightPlanner.buildReport(config: config,
+                                                     isControllerRunning: ConfigManager.shared.isRunning,
+                                                     isUsingEmbeddedCore: Settings.isUsingEmbeddedCore,
+                                                     configPatchAvailability: configPatchAvailability,
+                                                     helperStatus: helperStatus,
+                                                     helperTunDescriptors: HelperCommandRegistry.reservedTunDescriptors())
+
+        var lines = [
+            "TUN Lifecycle Boundary",
+            "----------------------",
+            "Runtime Mode: \(report.runtimeMode.rawValue)",
+            "Controller Patch Attemptable: \(report.canAttemptControllerPatch ? "yes" : "no")",
+            "Helper Trust State: \(report.helperTrustState.rawValue)",
+            "Helper TUN Commands Reserved Only: \(report.helperTunCommandsReserved ? "yes" : "no")",
+            "Verification Scope: \(report.verificationScope.rawValue)",
+            "Current tun Section: \(config?.tun == nil ? "missing" : "present")",
+            "Current tun.enable: \(config?.tun.map { $0.enable ? "true" : "false" } ?? "unknown")"
+        ]
+
+        if report.blockers.isEmpty {
+            lines.append("Blockers: none")
+        } else {
+            lines.append("Blockers:")
+            lines.append(contentsOf: report.blockers.map { "- \($0.rawValue)" })
+        }
+
+        if report.warnings.isEmpty {
+            lines.append("Warnings: none")
+        } else {
+            lines.append("Warnings:")
+            lines.append(contentsOf: report.warnings.map { "- \($0)" })
+        }
+
+        lines.append("User Message: \(report.userMessage)")
+        lines.append("Recovery Suggestion: \(report.recoverySuggestion)")
+        lines.append("System-level TUN verification is not implemented.")
+        return lines.joined(separator: "\n")
     }
 
     private static func configSection() -> String {

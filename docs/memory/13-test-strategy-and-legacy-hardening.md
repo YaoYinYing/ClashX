@@ -37,6 +37,7 @@ For the controller API foundation and SmartX hardening work, SmartX now has seve
 - `diagnostics_artifact_formatter_smoke.swift`: production compile of `SmartXRedactor.swift` and `DiagnosticsArtifactFormatter.swift` with small compile-only stubs for unrelated metadata types.
 - `profile_artifact_metadata_smoke.swift`: direct production compile of `ProfileArtifactManager.swift`.
 - `effective_config_generator_smoke.swift`: production compile of `SmartXManagedOverrideModel.swift` plus `EffectiveConfigGenerator.swift` with lightweight stubs for unrelated app infrastructure, and the result must remain explicitly unsupported until a safe YAML emitter exists.
+- `helper_status_smoke.swift`: direct production compile of `HelperStatus.swift`.
 - `redactor_smoke.swift`: direct production compile of `SmartXRedactor.swift`.
 - `remote_config_decode_smoke.swift`: direct production compile of `RemoteConfigModel.swift`.
 - `security_harness.swift`: mirrored compatibility smoke only, not a direct production compile.
@@ -56,6 +57,7 @@ Local commands:
 - `swiftc ClashX/General/Utils/SmartXRedactor.swift ClashX/General/Utils/DiagnosticsArtifactFormatter.swift Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift -o /tmp/diagnostics-artifact-formatter-smoke && /tmp/diagnostics-artifact-formatter-smoke`
 - `swiftc ClashX/General/Managers/ProfileArtifactManager.swift Tests/SecurityHarness/profile_artifact_metadata_smoke.swift -o /tmp/profile-artifact-metadata-smoke && /tmp/profile-artifact-metadata-smoke`
 - `swiftc ClashX/Models/SmartXManagedOverrideModel.swift ClashX/General/Managers/EffectiveConfigGenerator.swift Tests/SecurityHarness/effective_config_generator_smoke.swift -o /tmp/effective-config-generator-smoke && /tmp/effective-config-generator-smoke`
+- `swiftc ClashX/Models/HelperStatus.swift Tests/SecurityHarness/helper_status_smoke.swift -o /tmp/helper-status-smoke && /tmp/helper-status-smoke`
 - `swiftc ClashX/General/Utils/SmartXRedactor.swift Tests/SecurityHarness/redactor_smoke.swift -o /tmp/redactor-smoke && /tmp/redactor-smoke`
 - `swiftc ClashX/Models/RemoteConfigModel.swift Tests/SecurityHarness/remote_config_decode_smoke.swift -o /tmp/remote-config-decode-smoke && /tmp/remote-config-decode-smoke`
 - `swift -module-cache-path /private/tmp/swift-module-cache Tests/SecurityHarness/security_harness.swift`
@@ -67,6 +69,7 @@ These are meant for utility-level verification when changing endpoint compositio
 - There is still no real XCTest coverage for controller endpoint construction, capability probing, override persistence, diagnostics log tailing, config-validation transitions, or effective-config generation behavior.
 - The smoke harnesses do not exercise the full app target, Alamofire request execution, or AppKit controller wiring.
 - The effective-config smoke now verifies shared production model wiring, but it still does not prove a generated effective-config pipeline because the generator remains explicitly unsupported.
+- The helper-status smoke does not prove `SMJobBless`, launchd registration, XPC trust, or privileged-helper installation. It only protects the diagnostic model boundary.
 - `CoreCapabilityProbe` currently depends on the app request layer and would benefit from later extraction into more directly testable probe helpers.
 
 ## Why The Harnesses Are Temporary

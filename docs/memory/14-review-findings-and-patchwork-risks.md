@@ -10,6 +10,7 @@ SmartX has improved its foundation work, but several surfaces are still explicit
 - Hidden SmartX override bootstrap side effects were reduced by removing migration writes from low-level Settings getters, but override migration is still a sensitive path because it bridges UserDefaults compatibility data and the managed JSON file.
 - Profile artifact terminology is now more honest in new code and UI, but the compatibility `generated-effective.*` paths still exist until a real profile pipeline lands.
 - TUN and DNS validation now live in reusable validators, and TUN toggling now has a named lifecycle coordinator, but embedded-core TUN remains unsupported and privileged TUN architecture is still missing.
+- The branch now has a helper boundary audit with `HelperStatus` and `HelperDiagnosticsProbe`, but that status is diagnostic only and must not be described as proof of helper-backed TUN or successful helper installation.
 - Diagnostics log viewing is safer because `DiagnosticsLogReader` now tails large rolling files instead of re-reading them whole every refresh cycle, `DiagnosticsArtifactFormatter` plus `DiagnosticsProviderFormatter` moved formatting into small helpers, and dangerous maintenance actions have started moving through `DiagnosticsMaintenanceCoordinator`, but the Diagnostics dashboard remains structurally too large.
 - `ApiRequest` is now partially decomposed into `DiagnosticsAPI`, `ProviderAPI`, `SmartAPI`, `ConfigAPI`, and the new `ConnectionAPI`, but the compatibility facade still remains broader than it should be.
 - `ProfileArtifactManager` and the smoke harnesses under `Tests/SecurityHarness` are already first-pass groundwork, but neither should be mistaken for a full generated-config pipeline or high test coverage.
@@ -20,6 +21,8 @@ SmartX has improved its foundation work, but several surfaces are still explicit
 - Do not let requested SmartX overrides be described as emitted/generated overrides when the generator still returns an unsupported result.
 - Do not let preserved future-schema override files be mistaken for a successful persisted save when SmartX only applied settings in memory.
 - Do not let the initial `TunLifecycleCoordinator` be described as full TUN support.
+- Do not let helper diagnostic status be described as a verified privileged-helper install unless a real audited runtime verification path exists.
+- Do not treat the legacy AppleScript shell-install fallback as a valid future helper or TUN contract.
 - Do not treat the modern-only CI policy as proof of signed or notarized release readiness.
 - Do not treat a locally skipped Xcode build or test step as evidence of a broken workspace when the actual blocker is simulator-service or cache-permission access in the host environment.
 - Do not add new Smart dashboard or diagnostics logic by copying LightGBM save code or controller-specific validation checks back into view controllers.
@@ -30,4 +33,5 @@ SmartX has improved its foundation work, but several surfaces are still explicit
 
 - Promote the new smoke harnesses into a real Xcode test target when the repo is ready for one.
 - Continue decomposing diagnostics helpers out of the dashboard controller.
+- Keep future helper-backed TUN work behind a separate explicit helper command contract instead of extending the current system-proxy helper ad hoc.
 - Insert SmartX storage isolation and privileged TUN architecture work before any roadmap phase that would otherwise imply those problems are solved.

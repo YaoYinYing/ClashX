@@ -12,6 +12,7 @@ enum DiagnosticsReportBuilder {
         let report = [
             headerSection(),
             controllerSection(),
+            helperSection(),
             configSection(),
             profileSection(),
             profileArtifactsSection(),
@@ -64,6 +65,10 @@ enum DiagnosticsReportBuilder {
         }
 
         return lines.joined(separator: "\n")
+    }
+
+    private static func helperSection() -> String {
+        HelperDiagnosticsProbe.currentStatus().renderedSection(title: "Privileged Helper")
     }
 
     private static func configSection() -> String {

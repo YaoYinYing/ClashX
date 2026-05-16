@@ -187,6 +187,15 @@ jobs:
             -o /tmp/effective-config-generator-smoke
           /tmp/effective-config-generator-smoke | tee .ci-logs/effective-config-generator-smoke.log
 
+      - name: Helper status smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/Models/HelperStatus.swift \
+            Tests/SecurityHarness/helper_status_smoke.swift \
+            -o /tmp/helper-status-smoke
+          /tmp/helper-status-smoke | tee .ci-logs/helper-status-smoke.log
+
       - name: Redactor smoke harness
         run: |
           set -o pipefail

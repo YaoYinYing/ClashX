@@ -109,8 +109,19 @@ enum TunRuntimeDiagnosticsSmokeMain {
                                                                               routeEvidence: routeEvidence,
                                                                               dnsEvidence: dnsEvidence)
         require(passiveEnabled.message.contains("passive diagnostics snapshot"), "passive report should declare passive snapshot scope")
+        require(passiveEnabled.message.contains("not a post-toggle verification"), "passive report should reject post-toggle verification wording")
+        require(passiveEnabled.message.contains("may be stale"), "passive report should warn that cached/current state may be stale")
         require(!passiveEnabled.message.contains("Controller config matches"), "passive report must not synthesize controller match wording")
+        require(!passiveEnabled.message.localizedCaseInsensitiveContains("verified"), "passive report must not claim verified state")
+        require(!passiveEnabled.message.localizedCaseInsensitiveContains("succeeded"), "passive report must not claim success")
         require(passiveEnabled.message.contains("read-only evidence only"), "passive report should describe read-only evidence")
+        require(passiveEnabled.isRuntimeConsistentWithController == nil, "passive report must not compute runtime consistency")
+        require(passiveEnabled.interfaceEvidence.evidenceState == utunEvidence.evidenceState, "passive report should preserve interface evidence")
+        require(passiveEnabled.routeEvidence.evidenceState == routeEvidence.evidenceState, "passive report should preserve route evidence")
+        require(passiveEnabled.dnsEvidence.evidenceState == dnsEvidence.evidenceState, "passive report should preserve DNS evidence")
+        require(passiveEnabled.verificationLevels.contains(.packetFlowVerificationNotImplemented), "passive report should keep packet-flow boundary explicit")
+        require(!passiveEnabled.message.contains("helper-backed TUN is implemented"), "passive report must not claim helper-backed TUN support")
+        require(!passiveEnabled.message.contains("embedded-core TUN is supported"), "passive report must not claim embedded-core TUN support")
         require(passiveEnabled.recoverySuggestion.contains("does not verify a toggle request"), "passive report should reject post-toggle semantics")
 
         let runtimeNoEvidence = TunPreflightPlanner.runtimeVerificationReport(expectedEnabled: true,

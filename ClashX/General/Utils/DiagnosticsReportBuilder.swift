@@ -137,7 +137,6 @@ enum DiagnosticsReportBuilder {
 
         if let runtimeReport {
             lines.append("Runtime Verification Levels: \(runtimeReport.verificationLevels.map(\.rawValue).joined(separator: ", "))")
-            lines.append("Runtime Consistency With Controller: \(runtimeReport.isRuntimeConsistentWithController.map { $0 ? "yes" : "no" } ?? "unknown")")
             lines.append("Runtime Message: \(runtimeReport.message)")
             lines.append("Runtime Recovery Suggestion: \(runtimeReport.recoverySuggestion)")
         } else {

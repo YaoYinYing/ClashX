@@ -19,9 +19,12 @@ enum HelperDiagnosticsProbe {
         let lastCheckedAt = Date()
 
         guard let helperInfo else {
+            // `bundleIdentifier` must describe the helper bundle when helper
+            // metadata is available. Do not substitute the app bundle
+            // identifier when helper metadata is missing.
             return HelperStatus(trustState: .unknown,
                                 isPrivilegedHelperAvailable: false,
-                                bundleIdentifier: bundle.bundleIdentifier,
+                                bundleIdentifier: nil,
                                 launchdLabel: machServiceName,
                                 requirementSummary: "bundled helper metadata missing",
                                 lastCheckedAt: lastCheckedAt)

@@ -84,12 +84,20 @@ enum TunRuntimeDiagnosticsSmokeMain {
                                            verificationScope: .controllerConfigOnly,
                                            userMessage: "guarded external-controller path",
                                            recoverySuggestion: "controller path only")
+        let routeEvidence = TunRuntimeRouteProbe.classify(defaultRouteInterface: "utun4",
+                                                          observedRouteInterfaces: ["utun4"],
+                                                          tunLikeInterfaceNames: ["utun4"])
+        let dnsEvidence = TunRuntimeDNSProbe.classify(resolverInterfaceNames: ["utun4"],
+                                                      resolverServerCount: 1,
+                                                      hasScopedResolvers: true)
 
         let runtimeEnabled = TunPreflightPlanner.runtimeVerificationReport(expectedEnabled: true,
                                                                            controllerReportedEnabled: true,
                                                                            didFailToReload: false,
                                                                            preflightReport: preflight,
-                                                                           interfaceEvidence: utunEvidence)
+                                                                           interfaceEvidence: utunEvidence,
+                                                                           routeEvidence: routeEvidence,
+                                                                           dnsEvidence: dnsEvidence)
         require(runtimeEnabled.interfaceEvidence.evidenceState == .tunLikeInterfacePresent, "runtime report should keep tun-like evidence")
         require(runtimeEnabled.message.contains("Controller config matches tun.enable=true"), "enabled runtime report should mention config match")
         require(runtimeEnabled.message.contains("utun4"), "enabled runtime report should mention tun-like interface name")
@@ -99,7 +107,13 @@ enum TunRuntimeDiagnosticsSmokeMain {
                                                                               controllerReportedEnabled: true,
                                                                               didFailToReload: false,
                                                                               preflightReport: preflight,
-                                                                              interfaceEvidence: noTunEvidence)
+                                                                              interfaceEvidence: noTunEvidence,
+                                                                              routeEvidence: TunRuntimeRouteProbe.classify(defaultRouteInterface: nil,
+                                                                                                                           observedRouteInterfaces: ["en0"],
+                                                                                                                           tunLikeInterfaceNames: ["utun4"]),
+                                                                              dnsEvidence: TunRuntimeDNSProbe.classify(resolverInterfaceNames: [],
+                                                                                                                       resolverServerCount: nil,
+                                                                                                                       hasScopedResolvers: nil))
         require(runtimeNoEvidence.interfaceEvidence.evidenceState == .noTunLikeInterface, "runtime report should keep no-interface evidence")
         require(runtimeNoEvidence.message.contains("does not prove failure"), "no-interface runtime report should stay conservative")
         require(runtimeNoEvidence.verificationLevels.contains(.routeVerificationNotImplemented), "runtime report should keep route verification boundary explicit")

@@ -234,10 +234,31 @@ jobs:
             ClashX/General/Utils/HelperCommandRegistry.swift \
             ClashX/Models/TunLifecycleDiagnostics.swift \
             ClashX/General/Utils/TunRuntimeInterfaceProbe.swift \
+            ClashX/General/Utils/TunRuntimeRouteProbe.swift \
+            ClashX/General/Utils/TunRuntimeDNSProbe.swift \
             ClashX/General/Managers/TunPreflightPlanner.swift \
             Tests/SecurityHarness/tun_runtime_diagnostics_smoke.swift \
             -o /tmp/tun-runtime-diagnostics-smoke
           /tmp/tun-runtime-diagnostics-smoke | tee .ci-logs/tun-runtime-diagnostics-smoke.log
+
+      - name: TUN route and DNS runtime smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/ConfigValidationIssue.swift \
+            ClashX/General/Utils/TunConfigValidator.swift \
+            ClashX/General/Utils/DNSConfigValidator.swift \
+            ClashX/Models/HelperStatus.swift \
+            ClashX/Models/HelperCommandContract.swift \
+            ClashX/General/Utils/HelperCommandRegistry.swift \
+            ClashX/Models/TunLifecycleDiagnostics.swift \
+            ClashX/General/Utils/TunRuntimeInterfaceProbe.swift \
+            ClashX/General/Utils/TunRuntimeRouteProbe.swift \
+            ClashX/General/Utils/TunRuntimeDNSProbe.swift \
+            ClashX/General/Managers/TunPreflightPlanner.swift \
+            Tests/SecurityHarness/tun_route_dns_runtime_smoke.swift \
+            -o /tmp/tun-route-dns-runtime-smoke
+          /tmp/tun-route-dns-runtime-smoke | tee .ci-logs/tun-route-dns-runtime-smoke.log
 
       - name: Redactor smoke harness
         run: |
@@ -483,10 +504,31 @@ jobs:
             ClashX/General/Utils/HelperCommandRegistry.swift \
             ClashX/Models/TunLifecycleDiagnostics.swift \
             ClashX/General/Utils/TunRuntimeInterfaceProbe.swift \
+            ClashX/General/Utils/TunRuntimeRouteProbe.swift \
+            ClashX/General/Utils/TunRuntimeDNSProbe.swift \
             ClashX/General/Managers/TunPreflightPlanner.swift \
             Tests/SecurityHarness/tun_runtime_diagnostics_smoke.swift \
             -o /tmp/tun-runtime-diagnostics-smoke
           /tmp/tun-runtime-diagnostics-smoke | tee .ci-logs/tun-runtime-diagnostics-smoke.log
+
+      - name: TUN route and DNS runtime smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/General/Utils/ConfigValidationIssue.swift \
+            ClashX/General/Utils/TunConfigValidator.swift \
+            ClashX/General/Utils/DNSConfigValidator.swift \
+            ClashX/Models/HelperStatus.swift \
+            ClashX/Models/HelperCommandContract.swift \
+            ClashX/General/Utils/HelperCommandRegistry.swift \
+            ClashX/Models/TunLifecycleDiagnostics.swift \
+            ClashX/General/Utils/TunRuntimeInterfaceProbe.swift \
+            ClashX/General/Utils/TunRuntimeRouteProbe.swift \
+            ClashX/General/Utils/TunRuntimeDNSProbe.swift \
+            ClashX/General/Managers/TunPreflightPlanner.swift \
+            Tests/SecurityHarness/tun_route_dns_runtime_smoke.swift \
+            -o /tmp/tun-route-dns-runtime-smoke
+          /tmp/tun-route-dns-runtime-smoke | tee .ci-logs/tun-route-dns-runtime-smoke.log
 
       - name: Build unsigned Debug app
         run: |

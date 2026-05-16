@@ -95,4 +95,4 @@ The typed command contract introduced in this PR is a pure Swift model and diagn
 
 The legacy AppleScript shell install fallback remains legacy risk and must not grow into the future helper-backed TUN design.
 
-Future helper-backed TUN work should compose with the typed TUN lifecycle diagnostics boundary and its read-only interface-evidence layer rather than bypassing it with shell commands, route helpers, or generic root execution.
+Future helper-backed TUN work should compose with the typed TUN lifecycle diagnostics boundary and its read-only interface, route, and DNS evidence layers rather than bypassing them with shell commands, route helpers, or generic root execution.

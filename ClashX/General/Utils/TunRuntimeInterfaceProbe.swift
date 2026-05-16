@@ -36,7 +36,7 @@ enum TunRuntimeInterfaceProbe {
 
     static func classify(interfaceNames: [String]) -> TunRuntimeInterfaceEvidence {
         let normalizedNames = Array(Set(interfaceNames)).sorted()
-        let tunLikeInterfaceNames = normalizedNames.filter { isTunLikeInterfaceName($0) }
+        let tunLikeInterfaceNames = normalizedNames.filter { isTunLikeInterfaceNameForTesting($0) }
 
         if normalizedNames.isEmpty {
             return TunRuntimeInterfaceEvidence(interfaceNames: [],
@@ -58,7 +58,7 @@ enum TunRuntimeInterfaceProbe {
                                            message: "Observed tun-like interfaces: \(tunLikeInterfaceNames.joined(separator: ", ")). This is evidence only, not proof of route, DNS, or packet-flow behavior.")
     }
 
-    private static func isTunLikeInterfaceName(_ name: String) -> Bool {
+    static func isTunLikeInterfaceNameForTesting(_ name: String) -> Bool {
         let normalized = name.lowercased()
         return normalized.hasPrefix("utun") || normalized.hasPrefix("tun")
     }

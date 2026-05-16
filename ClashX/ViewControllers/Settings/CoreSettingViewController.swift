@@ -565,11 +565,16 @@ class CoreSettingViewController: NSViewController {
                                                      helperTunDescriptors: HelperCommandRegistry.reservedTunDescriptors())
         let runtimeNote: String
         if let enabled = config?.tun?.enable {
+            let interfaceEvidence = TunRuntimeInterfaceProbe.currentEvidence()
+            let routeEvidence = TunRuntimeRouteProbe.currentEvidence(tunLikeInterfaceNames: interfaceEvidence.tunLikeInterfaceNames)
+            let dnsEvidence = TunRuntimeDNSProbe.currentEvidence()
             let runtimeReport = TunPreflightPlanner.runtimeVerificationReport(expectedEnabled: enabled,
                                                                               controllerReportedEnabled: enabled,
                                                                               didFailToReload: false,
                                                                               preflightReport: report,
-                                                                              interfaceEvidence: TunRuntimeInterfaceProbe.currentEvidence())
+                                                                              interfaceEvidence: interfaceEvidence,
+                                                                              routeEvidence: routeEvidence,
+                                                                              dnsEvidence: dnsEvidence)
             runtimeNote = "\(runtimeReport.message)\n\(runtimeReport.recoverySuggestion)"
         } else {
             runtimeNote = NSLocalizedString("Read-only runtime interface evidence is only available after SmartX can read a tun.enable value from the current controller config.", comment: "")

@@ -128,6 +128,9 @@ run_swiftc_harness "effective-config-generator-smoke" "/tmp/effective-config-gen
     ClashX/Models/SmartXManagedOverrideModel.swift \
     ClashX/General/Managers/EffectiveConfigGenerator.swift \
     Tests/SecurityHarness/effective_config_generator_smoke.swift
+run_swiftc_harness "helper-status-smoke" "/tmp/helper-status-smoke" \
+    ClashX/Models/HelperStatus.swift \
+    Tests/SecurityHarness/helper_status_smoke.swift
 run_swiftc_harness "redactor-smoke" "/tmp/redactor-smoke" \
     ClashX/General/Utils/SmartXRedactor.swift \
     Tests/SecurityHarness/redactor_smoke.swift

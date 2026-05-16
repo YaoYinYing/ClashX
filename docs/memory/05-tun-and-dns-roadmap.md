@@ -44,8 +44,15 @@ The current UI is also explicit that:
 
 - embedded-core TUN remains disabled
 - helper installation does not imply TUN support
+- helper status is now surfaced as a diagnostic-only trust boundary and does not imply helper-backed TUN readiness
 - failed TUN updates restore the previous UI state, and unverified TUN updates remain explicitly unverified instead of being treated as success
 - SmartX refreshes the UI from controller state when possible after an unverified update, but it still does not implement controller rollback
+
+The branch now also records helper-aware TUN boundary messaging through `TunLifecycleCoordinator`, but that is still messaging only:
+
+- external-controller TUN remains a guarded controller API patch path
+- embedded-core TUN remains unsupported
+- future helper-backed TUN still requires a separate helper command contract
 
 ## Missing TUN Fields
 
@@ -125,6 +132,8 @@ The branch should keep stating that macOS TUN support is a privileged-routing pr
 - restart mihomo with elevated privileges
 - manage route insertion
 - manage DNS hijack outside what mihomo itself can do after startup
+
+The branch now also has a read-only helper diagnostics probe and `HelperStatus` model so diagnostics can surface whether the helper boundary looks unknown, mismatched, not installed, or only installed-but-unverified. That probe is diagnostic only and does not perform privileged actions.
 
 ### UI messaging
 

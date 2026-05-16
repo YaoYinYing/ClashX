@@ -130,6 +130,7 @@ The current branch already points in this direction:
 - `CapabilityCache` stores those states for UI and diagnostics reuse.
 - `SmartDashboardViewController` disables Smart surfaces when `smartWeights` or `lightGBMUpgrade` are unsupported or unauthorized.
 - `CoreSettingViewController` explicitly separates helper support from TUN support and now treats unverified TUN updates as unverified rather than as success.
+- `HelperStatus` plus `HelperDiagnosticsProbe` now give diagnostics a read-only helper trust boundary, but they do not add helper-backed TUN or a verified helper install flow.
 - `DiagnosticsDashboardViewController` already hides or disables actions based on capability state instead of assuming support.
 - `ConnectionDetailViewModel` only adds Smart explanation sections when Smart metadata is present.
 

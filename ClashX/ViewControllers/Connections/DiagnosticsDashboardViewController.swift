@@ -82,6 +82,7 @@ class DiagnosticsDashboardViewController: NSViewController {
     private var dnsOutput = NSLocalizedString("DNS diagnostics have not been queried yet.", comment: "")
     private var providerOutput = NSLocalizedString("Provider diagnostics have not been loaded yet.", comment: "")
     private var artifactOutput = NSLocalizedString("Profile artifacts have not been inspected yet.", comment: "")
+    private var helperOutput = NSLocalizedString("Helper diagnostics have not been loaded yet.", comment: "")
     private var logOutput = NSLocalizedString("Log viewer has not loaded any log lines yet.", comment: "")
     private var httpProxyProviderNames = [String]()
     private var latestProxyProviderResult: ControllerJSONResult?
@@ -103,6 +104,7 @@ class DiagnosticsDashboardViewController: NSViewController {
         refreshMemory()
         refreshProviders()
         refreshArtifacts(announce: false)
+        refreshHelperStatus(announce: false)
         refreshLogs()
         startLogRefreshTimer()
     }
@@ -274,6 +276,7 @@ class DiagnosticsDashboardViewController: NSViewController {
             "DNS Query\n---------\n\(dnsOutput)",
             "Providers\n---------\n\(providerOutput)",
             "Profile Artifacts\n-----------------\n\(artifactOutput)",
+            "Privileged Helper\n-----------------\n\(helperOutput)",
             "Logs\n----\n\(logOutput)"
         ].joined(separator: "\n\n")
     }
@@ -370,8 +373,16 @@ class DiagnosticsDashboardViewController: NSViewController {
         if announce {
             setStatus(NSLocalizedString("Profile artifact inspection refreshed.", comment: ""))
         }
+        refreshHelperStatus(announce: false)
         renderOutput()
         updateCapabilityDrivenState()
+    }
+
+    private func refreshHelperStatus(announce: Bool = true) {
+        helperOutput = HelperDiagnosticsProbe.currentStatus().renderedSection(title: "Helper Status")
+        if announce {
+            setStatus(NSLocalizedString("Privileged helper diagnostics refreshed.", comment: ""))
+        }
     }
 
     private func prettyPrinted(_ json: JSON) -> String {

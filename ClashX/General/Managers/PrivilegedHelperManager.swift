@@ -95,6 +95,15 @@ class PrivilegedHelperManager {
             resetConnection()
         }
 
+        let helperStatus = HelperDiagnosticsProbe.currentStatus()
+        switch helperStatus.trustState {
+        case .unknown, .unavailable, .unsignedDebugBuild, .requirementMismatch:
+            Logger.log("blocking helper install before SMJobBless because helper trust is \(helperStatus.trustState.rawValue): \(helperStatus.diagnosticMessage)", level: .error)
+            return .guardrailBlocked(helperStatus)
+        case .notInstalled, .installedButUnverified, .verified:
+            break
+        }
+
         // Create authorization reference for the user
         var authRef: AuthorizationRef?
         var authStatus = AuthorizationCreate(nil, nil, [], &authRef)
@@ -235,11 +244,13 @@ extension PrivilegedHelperManager {
 
         if useLegacyInstall {
             useLegacyInstall = false
-            Logger.log("falling back to legacy helper install path for \(PrivilegedHelperManager.machServiceName)", level: .warning)
-            legacyInstallHelper()
-            if !cancelInstallCheck {
-                checkInstall()
-            }
+            let helperStatus = HelperDiagnosticsProbe.currentStatus()
+            Logger.log("legacy helper install path is disabled by helper-boundary guardrails for \(PrivilegedHelperManager.machServiceName): \(helperStatus.diagnosticMessage)", level: .error)
+            NSAlert.alert(with: [
+                helperStatus.diagnosticMessage,
+                helperStatus.recoverySuggestion,
+                NSLocalizedString("SmartX intentionally will not use the legacy shell-based helper install fallback in this audited path.", comment: "")
+            ].joined(separator: "\n"))
             return
         }
 
@@ -248,7 +259,10 @@ extension PrivilegedHelperManager {
             return
         }
         result.alertAction()
-        useLegacyInstall = result.shouldRetryLegacyWay()
+        if result.shouldRetryLegacyWay() {
+            Logger.log("legacy helper install retry is suppressed by helper-boundary guardrails for \(PrivilegedHelperManager.machServiceName)", level: .warning)
+        }
+        useLegacyInstall = false
         NSAlert.alert(with: result.alertContent)
         if !cancelInstallCheck {
             checkInstall()
@@ -295,6 +309,7 @@ private enum DaemonInstallResult {
     case authorizationFail
     case getAdminFail
     case blessError(Int)
+    case guardrailBlocked(HelperStatus)
 
     var alertContent: String {
         switch self {
@@ -302,6 +317,12 @@ private enum DaemonInstallResult {
             return ""
         case .authorizationFail: return "Failed to create authorization!"
         case .getAdminFail: return "Failed to get admin authorization!"
+        case let .guardrailBlocked(status):
+            return [
+                status.diagnosticMessage,
+                status.recoverySuggestion,
+                "SmartX blocked helper installation before requesting privilege because the helper trust boundary is not trusted enough yet."
+            ].joined(separator: "\n")
         case let .blessError(code):
             switch code {
             case kSMErrorInternalFailure: return "blessError: kSMErrorInternalFailure"
@@ -321,6 +342,7 @@ private enum DaemonInstallResult {
     func shouldRetryLegacyWay() -> Bool {
         switch self {
         case .success: return false
+        case .guardrailBlocked: return false
         case let .blessError(code):
             switch code {
             case kSMErrorJobMustBeEnabled:

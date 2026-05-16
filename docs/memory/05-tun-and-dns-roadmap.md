@@ -54,6 +54,8 @@ The branch now also records helper-aware TUN boundary messaging through `TunLife
 - embedded-core TUN remains unsupported
 - future helper-backed TUN still requires a separate helper command contract
 
+That helper command contract now exists as a typed model and diagnostics boundary in `HelperCommandContract.swift` plus `HelperCommandRegistry.swift`, but all TUN helper commands remain reserved only. No helper-backed TUN execution path exists.
+
 ## Missing TUN Fields
 
 Based on current mihomo TUN configuration docs, SmartX will eventually need a broader model. The fields below are grouped by whether they are broadly relevant to macOS or mainly relevant to Linux/Android platforms.
@@ -132,6 +134,8 @@ The branch should keep stating that macOS TUN support is a privileged-routing pr
 - restart mihomo with elevated privileges
 - manage route insertion
 - manage DNS hijack outside what mihomo itself can do after startup
+
+Future helper-backed TUN work must use typed allowlisted commands rather than shell scripts or generic root execution.
 
 The branch now also has a read-only helper diagnostics probe and `HelperStatus` model so diagnostics can surface whether the helper boundary looks unknown, mismatched, not installed, or only installed-but-unverified. That probe is diagnostic only and does not perform privileged actions.
 

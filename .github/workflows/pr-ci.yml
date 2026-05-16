@@ -196,6 +196,16 @@ jobs:
             -o /tmp/helper-status-smoke
           /tmp/helper-status-smoke | tee .ci-logs/helper-status-smoke.log
 
+      - name: Helper command contract smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/Models/HelperCommandContract.swift \
+            ClashX/General/Utils/HelperCommandRegistry.swift \
+            Tests/SecurityHarness/helper_command_contract_smoke.swift \
+            -o /tmp/helper-command-contract-smoke
+          /tmp/helper-command-contract-smoke | tee .ci-logs/helper-command-contract-smoke.log
+
       - name: Redactor smoke harness
         run: |
           set -o pipefail
@@ -401,6 +411,16 @@ jobs:
             Tests/SecurityHarness/effective_config_generator_smoke.swift \
             -o /tmp/effective-config-generator-smoke
           /tmp/effective-config-generator-smoke | tee .ci-logs/effective-config-generator-smoke.log
+
+      - name: Helper command contract smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/Models/HelperCommandContract.swift \
+            ClashX/General/Utils/HelperCommandRegistry.swift \
+            Tests/SecurityHarness/helper_command_contract_smoke.swift \
+            -o /tmp/helper-command-contract-smoke
+          /tmp/helper-command-contract-smoke | tee .ci-logs/helper-command-contract-smoke.log
 
       - name: Build unsigned Debug app
         run: |

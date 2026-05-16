@@ -13,6 +13,7 @@ enum DiagnosticsReportBuilder {
             headerSection(),
             controllerSection(),
             helperSection(),
+            helperCommandContractSection(),
             configSection(),
             profileSection(),
             profileArtifactsSection(),
@@ -69,6 +70,10 @@ enum DiagnosticsReportBuilder {
 
     private static func helperSection() -> String {
         HelperDiagnosticsProbe.currentStatus().renderedSection(title: "Privileged Helper")
+    }
+
+    private static func helperCommandContractSection() -> String {
+        HelperCommandRegistry.renderedDiagnosticsSection()
     }
 
     private static func configSection() -> String {

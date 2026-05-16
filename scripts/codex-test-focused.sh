@@ -131,6 +131,10 @@ run_swiftc_harness "effective-config-generator-smoke" "/tmp/effective-config-gen
 run_swiftc_harness "helper-status-smoke" "/tmp/helper-status-smoke" \
     ClashX/Models/HelperStatus.swift \
     Tests/SecurityHarness/helper_status_smoke.swift
+run_swiftc_harness "helper-command-contract-smoke" "/tmp/helper-command-contract-smoke" \
+    ClashX/Models/HelperCommandContract.swift \
+    ClashX/General/Utils/HelperCommandRegistry.swift \
+    Tests/SecurityHarness/helper_command_contract_smoke.swift
 run_swiftc_harness "redactor-smoke" "/tmp/redactor-smoke" \
     ClashX/General/Utils/SmartXRedactor.swift \
     Tests/SecurityHarness/redactor_smoke.swift

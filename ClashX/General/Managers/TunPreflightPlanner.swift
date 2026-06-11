@@ -8,7 +8,8 @@
 import Foundation
 
 enum TunPreflightPlanner {
-    static func buildReport(config: ClashConfig?,
+    static func buildReport(operation: TunPreflightOperation,
+                            config: ClashConfig?,
                             isControllerRunning: Bool,
                             isUsingEmbeddedCore: Bool,
                             configPatchAvailability: CoreEndpointAvailability,
@@ -18,6 +19,43 @@ enum TunPreflightPlanner {
         var warnings = [String]()
 
         let runtimeMode: TunRuntimeMode = isUsingEmbeddedCore ? .embeddedCoreUnsupported : .externalController
+        if operation == .passiveSnapshot {
+            if !isControllerRunning {
+                warnings.append("The active controller is not running. Passive diagnostics may rely on stale cached state plus read-only runtime evidence.")
+            }
+            if isUsingEmbeddedCore {
+                warnings.append("Embedded-core TUN remains unsupported in this build. Passive diagnostics remain read-only.")
+            }
+            if config == nil {
+                warnings.append("Current controller config state is unavailable. Passive diagnostics may rely on stale cached state plus read-only runtime evidence.")
+            }
+
+            let tunValidation = TunConfigValidator.validate(config?.tun)
+            let dnsValidation = DNSConfigValidator.validate(config?.dns)
+            warnings.append(contentsOf: tunValidation.blockingErrors.map(\.message))
+            warnings.append(contentsOf: tunValidation.warnings.map(\.message))
+            warnings.append(contentsOf: tunValidation.informational.map(\.message))
+            warnings.append(contentsOf: dnsValidation.issues.map(\.message))
+            warnings.append(contentsOf: boundaryWarnings(config: config,
+                                                         helperStatus: helperStatus,
+                                                         helperTunDescriptors: helperTunDescriptors))
+
+            let verificationScope: TunVerificationScope = config?.tun != nil ? .controllerConfigOnly : .systemTunNotImplemented
+            return TunPreflightReport(operation: operation,
+                                      runtimeMode: runtimeMode,
+                                      canAttemptRequestedOperation: true,
+                                      blockers: [],
+                                      warnings: deduplicated(warnings),
+                                      helperTrustState: helperStatus.trustState,
+                                      helperTunCommandsReserved: true,
+                                      verificationScope: verificationScope,
+                                      userMessage: userMessage(for: operation,
+                                                               blockers: [],
+                                                               runtimeMode: runtimeMode),
+                                      recoverySuggestion: recoverySuggestion(for: operation,
+                                                                             blockers: []))
+        }
+
         if !isControllerRunning {
             blockers.append(.controllerNotRunning)
         }
@@ -29,34 +67,44 @@ enum TunPreflightPlanner {
                                                 helperStatus: helperStatus,
                                                 helperTunDescriptors: helperTunDescriptors)
             warnings.append(contentsOf: warningLines)
-            return TunPreflightReport(runtimeMode: runtimeMode,
-                                      canAttemptControllerPatch: false,
+            return TunPreflightReport(operation: operation,
+                                      runtimeMode: runtimeMode,
+                                      canAttemptRequestedOperation: false,
                                       blockers: ordered(blockers),
                                       warnings: deduplicated(warnings),
                                       helperTrustState: helperStatus.trustState,
                                       helperTunCommandsReserved: true,
                                       verificationScope: .systemTunNotImplemented,
-                                      userMessage: userMessage(for: ordered(blockers), runtimeMode: runtimeMode),
-                                      recoverySuggestion: recoverySuggestion(for: ordered(blockers)))
+                                      userMessage: userMessage(for: operation,
+                                                               blockers: ordered(blockers),
+                                                               runtimeMode: runtimeMode),
+                                      recoverySuggestion: recoverySuggestion(for: operation,
+                                                                             blockers: ordered(blockers)))
         }
 
         guard let config else {
-            blockers.append(.controllerConfigUnavailable)
+            if operation != .passiveSnapshot {
+                blockers.append(.controllerConfigUnavailable)
+            }
             warnings.append(contentsOf: boundaryWarnings(config: nil,
                                                          helperStatus: helperStatus,
                                                          helperTunDescriptors: helperTunDescriptors))
-            return TunPreflightReport(runtimeMode: runtimeMode,
-                                      canAttemptControllerPatch: false,
+            return TunPreflightReport(operation: operation,
+                                      runtimeMode: runtimeMode,
+                                      canAttemptRequestedOperation: operation == .passiveSnapshot,
                                       blockers: ordered(blockers),
                                       warnings: deduplicated(warnings),
                                       helperTrustState: helperStatus.trustState,
                                       helperTunCommandsReserved: true,
-                                      verificationScope: .systemTunNotImplemented,
-                                      userMessage: userMessage(for: ordered(blockers), runtimeMode: runtimeMode),
-                                      recoverySuggestion: recoverySuggestion(for: ordered(blockers)))
+                                      verificationScope: operation == .passiveSnapshot ? .controllerConfigOnly : .systemTunNotImplemented,
+                                      userMessage: userMessage(for: operation,
+                                                               blockers: ordered(blockers),
+                                                               runtimeMode: runtimeMode),
+                                      recoverySuggestion: recoverySuggestion(for: operation,
+                                                                             blockers: ordered(blockers)))
         }
 
-        if config.tun == nil {
+        if config.tun == nil, operation != .passiveSnapshot {
             blockers.append(.tunSectionMissing)
         }
 
@@ -64,22 +112,26 @@ enum TunPreflightPlanner {
         let dnsValidation = DNSConfigValidator.validate(config.dns)
         let tunBlocking = !tunValidation.blockingErrors.isEmpty
         let dnsBlocking = dnsValidation.issues.contains { $0.severity == .blocking }
-        if tunBlocking {
+        let shouldBlockValidation = operation == .enable
+        if tunBlocking, shouldBlockValidation {
             blockers.append(.tunValidationFailed)
         }
-        if dnsBlocking {
+        if dnsBlocking, shouldBlockValidation {
             blockers.append(.dnsValidationFailed)
         }
 
-        switch configPatchAvailability {
-        case .unsupported:
-            blockers.append(.configPatchUnsupported)
-        case .unauthorized:
-            blockers.append(.controllerUnauthorized)
-        case .unknown, .available, .degraded, .unavailable:
-            break
+        if operation != .passiveSnapshot {
+            switch configPatchAvailability {
+            case .unsupported:
+                blockers.append(.configPatchUnsupported)
+            case .unauthorized:
+                blockers.append(.controllerUnauthorized)
+            case .unknown, .available, .degraded, .unavailable:
+                break
+            }
         }
 
+        warnings.append(contentsOf: tunValidation.blockingErrors.map(\.message))
         warnings.append(contentsOf: tunValidation.warnings.map(\.message))
         warnings.append(contentsOf: tunValidation.informational.map(\.message))
         warnings.append(contentsOf: dnsValidation.issues.map(\.message))
@@ -88,18 +140,22 @@ enum TunPreflightPlanner {
                                                      helperTunDescriptors: helperTunDescriptors))
 
         let finalBlockers = ordered(blockers)
-        let canAttemptControllerPatch = finalBlockers.isEmpty
-        let verificationScope: TunVerificationScope = canAttemptControllerPatch ? .controllerConfigOnly : .systemTunNotImplemented
+        let canAttemptRequestedOperation = finalBlockers.isEmpty
+        let verificationScope: TunVerificationScope = config.tun != nil ? .controllerConfigOnly : .systemTunNotImplemented
 
-        return TunPreflightReport(runtimeMode: runtimeMode,
-                                  canAttemptControllerPatch: canAttemptControllerPatch,
+        return TunPreflightReport(operation: operation,
+                                  runtimeMode: runtimeMode,
+                                  canAttemptRequestedOperation: canAttemptRequestedOperation,
                                   blockers: finalBlockers,
                                   warnings: deduplicated(warnings),
                                   helperTrustState: helperStatus.trustState,
                                   helperTunCommandsReserved: true,
                                   verificationScope: verificationScope,
-                                  userMessage: userMessage(for: finalBlockers, runtimeMode: runtimeMode),
-                                  recoverySuggestion: recoverySuggestion(for: finalBlockers))
+                                  userMessage: userMessage(for: operation,
+                                                           blockers: finalBlockers,
+                                                           runtimeMode: runtimeMode),
+                                  recoverySuggestion: recoverySuggestion(for: operation,
+                                                                         blockers: finalBlockers))
     }
 
     static func verificationReport(expectedEnabled: Bool,
@@ -111,9 +167,10 @@ enum TunPreflightPlanner {
                                                                                                                 evidenceState: .notChecked,
                                                                                                                 message: "Runtime interface evidence was not checked."),
                                    routeEvidence: TunRouteRuntimeEvidence = TunRouteRuntimeEvidence(evidenceState: .notChecked,
-                                                                                                    defaultRouteInterface: nil,
+                                                                                                    ipv4PrimaryInterface: nil,
+                                                                                                    ipv6PrimaryInterface: nil,
                                                                                                     tunLikeRouteInterfaces: [],
-                                                                                                    observedRouteInterfaces: [],
+                                                                                                    observedPrimaryRouteInterfaces: [],
                                                                                                     message: "Route runtime evidence was not checked."),
                                    dnsEvidence: TunDNSRuntimeEvidence = TunDNSRuntimeEvidence(evidenceState: .notChecked,
                                                                                               resolverInterfaceNames: [],
@@ -233,29 +290,49 @@ enum TunPreflightPlanner {
                                             recoverySuggestion: recoverySuggestion)
     }
 
-    private static func userMessage(for blockers: [TunPreflightBlocker],
+    private static func userMessage(for operation: TunPreflightOperation,
+                                    blockers: [TunPreflightBlocker],
                                     runtimeMode: TunRuntimeMode) -> String {
         guard let first = blockers.first else {
-            return "External-controller TUN can be attempted only through the controller API, helper-backed TUN remains reserved only, and any verification is limited to controller config state."
+            switch operation {
+            case .passiveSnapshot:
+                return "SmartX is showing a passive TUN diagnostics snapshot only. Helper-backed TUN remains reserved only, and any visible evidence is limited to cached/controller state plus read-only runtime clues."
+            case .enable:
+                return "External-controller TUN can be attempted only through the controller API, helper-backed TUN remains reserved only, and any verification is limited to controller config state."
+            case .disable:
+                return "SmartX can only request TUN disable through the external controller API path. Helper-backed TUN remains reserved only, and any verification is limited to controller config state."
+            }
         }
 
         switch first {
         case .controllerNotRunning:
-            return "The active controller is not running, so SmartX cannot attempt a guarded TUN patch."
+            return operation == .passiveSnapshot
+                ? "The active controller is not running, so this passive snapshot may rely only on stale cached state plus read-only runtime evidence."
+                : "The active controller is not running, so SmartX cannot attempt a guarded TUN patch."
         case .embeddedCoreUnsupported:
-            return "Embedded-core TUN is unsupported in this build, and helper-backed TUN remains reserved only."
+            return operation == .passiveSnapshot
+                ? "Embedded-core TUN is unsupported in this build. This passive snapshot remains diagnostic only, and helper-backed TUN remains reserved only."
+                : "Embedded-core TUN is unsupported in this build, and helper-backed TUN remains reserved only."
         case .controllerConfigUnavailable:
-            return "SmartX could not load controller config state, so it cannot safely attempt a guarded TUN patch."
+            return operation == .passiveSnapshot
+                ? "SmartX could not load current controller config state, so this passive snapshot may rely on stale cached state plus read-only runtime evidence."
+                : "SmartX could not load controller config state, so it cannot safely attempt a guarded TUN patch."
         case .tunSectionMissing:
-            return "The current controller config does not expose a tun section, so SmartX keeps TUN disabled."
+            return operation == .disable
+                ? "The current controller config does not expose a tun section, so SmartX cannot issue a guarded TUN disable request through /configs."
+                : "The current controller config does not expose a tun section, so SmartX keeps TUN disabled."
         case .tunValidationFailed:
-            return "SmartX blocked the guarded TUN patch because the current tun config has blocking validation issues."
+            return "SmartX blocked the guarded TUN enable request because the current tun config has blocking validation issues."
         case .dnsValidationFailed:
-            return "SmartX blocked the guarded TUN patch because the current DNS config has blocking validation issues."
+            return "SmartX blocked the guarded TUN enable request because the current DNS config has blocking validation issues."
         case .configPatchUnsupported:
-            return "The active controller does not support guarded TUN updates through the controller API, and helper-backed TUN remains reserved only."
+            return operation == .disable
+                ? "The active controller does not support guarded TUN disable updates through the controller API, and helper-backed TUN remains reserved only."
+                : "The active controller does not support guarded TUN updates through the controller API, and helper-backed TUN remains reserved only."
         case .controllerUnauthorized:
-            return "The active controller rejected config patch access, so SmartX cannot attempt a guarded TUN update."
+            return operation == .disable
+                ? "The active controller rejected config patch access, so SmartX cannot attempt a guarded TUN disable update."
+                : "The active controller rejected config patch access, so SmartX cannot attempt a guarded TUN update."
         case .helperTunReservedOnly:
             return runtimeMode == .embeddedCoreUnsupported
                 ? "Helper-backed TUN commands remain reserved only, and embedded-core TUN is unsupported in this build."
@@ -263,16 +340,24 @@ enum TunPreflightPlanner {
         }
     }
 
-    private static func recoverySuggestion(for blockers: [TunPreflightBlocker]) -> String {
+    private static func recoverySuggestion(for operation: TunPreflightOperation,
+                                           blockers: [TunPreflightBlocker]) -> String {
         if blockers.isEmpty {
-            return "A successful request can only prove controller-config state. SmartX does not implement utun, route, interface, or DNS runtime verification yet."
+            switch operation {
+            case .passiveSnapshot:
+                return "Treat cached/controller state plus interface, route, and DNS observations as passive diagnostics only. SmartX does not verify a toggle request, and packet-flow verification remains unimplemented."
+            case .enable, .disable:
+                return "A successful request can only prove controller-config state. SmartX does not implement utun, route, interface, or DNS runtime verification yet."
+            }
         }
 
         if blockers.contains(.embeddedCoreUnsupported) {
             return "Keep using the external-controller config patch path only. Embedded-core TUN and helper-backed TUN remain future work."
         }
         if blockers.contains(.controllerNotRunning) || blockers.contains(.controllerConfigUnavailable) {
-            return "Reconnect the external controller, reload config state, and retry only after SmartX can read /configs reliably."
+            return operation == .passiveSnapshot
+                ? "Reconnect the external controller and refresh config state before trusting the cached/current tun.enable value. This passive snapshot remains read-only."
+                : "Reconnect the external controller, reload config state, and retry only after SmartX can read /configs reliably."
         }
         if blockers.contains(.tunSectionMissing) {
             return "Add or expose a tun section in controller config before attempting a guarded TUN update."

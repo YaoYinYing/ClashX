@@ -12,59 +12,69 @@ enum TunRuntimeRouteProbe {
     static func currentEvidence(tunLikeInterfaceNames: [String]) -> TunRouteRuntimeEvidence {
         guard let store = SCDynamicStoreCreate(nil, "ClashX.TunRuntimeRouteProbe" as CFString, nil, nil) else {
             return TunRouteRuntimeEvidence(evidenceState: .unavailable,
-                                           defaultRouteInterface: nil,
+                                           ipv4PrimaryInterface: nil,
+                                           ipv6PrimaryInterface: nil,
                                            tunLikeRouteInterfaces: [],
-                                           observedRouteInterfaces: [],
+                                           observedPrimaryRouteInterfaces: [],
                                            message: "Read-only route runtime evidence is unavailable on this host. Route evidence remains read-only and is not packet-flow proof.")
         }
 
-        let observedRouteInterfaces = Array(Set([primaryInterface(from: store, entity: kSCEntNetIPv4),
-                                                 primaryInterface(from: store, entity: kSCEntNetIPv6)]
-                .compactMap { $0 }))
-            .sorted()
-
-        let defaultRouteInterface = observedRouteInterfaces.first
-        return classify(defaultRouteInterface: defaultRouteInterface,
-                        observedRouteInterfaces: observedRouteInterfaces,
+        let ipv4PrimaryInterface = primaryInterface(from: store, entity: kSCEntNetIPv4)
+        let ipv6PrimaryInterface = primaryInterface(from: store, entity: kSCEntNetIPv6)
+        return classify(ipv4PrimaryInterface: ipv4PrimaryInterface,
+                        ipv6PrimaryInterface: ipv6PrimaryInterface,
                         tunLikeInterfaceNames: tunLikeInterfaceNames)
     }
 
-    static func classify(defaultRouteInterface: String?,
-                         observedRouteInterfaces: [String],
+    static func classify(ipv4PrimaryInterface: String?,
+                         ipv6PrimaryInterface: String?,
                          tunLikeInterfaceNames: [String]) -> TunRouteRuntimeEvidence {
-        let observed = Array(Set(observedRouteInterfaces)).sorted()
+        let observed = deduplicated([ipv4PrimaryInterface, ipv6PrimaryInterface].compactMap { $0 })
         let tunLikeSet = Set(tunLikeInterfaceNames.map { $0.lowercased() })
         let tunLikeRouteInterfaces = observed.filter { tunLikeSet.contains($0.lowercased()) || TunRuntimeInterfaceProbe.isTunLikeInterfaceNameForTesting($0) }
 
         if observed.isEmpty {
             return TunRouteRuntimeEvidence(evidenceState: .inconclusive,
-                                           defaultRouteInterface: defaultRouteInterface,
+                                           ipv4PrimaryInterface: ipv4PrimaryInterface,
+                                           ipv6PrimaryInterface: ipv6PrimaryInterface,
                                            tunLikeRouteInterfaces: [],
-                                           observedRouteInterfaces: [],
+                                           observedPrimaryRouteInterfaces: [],
                                            message: "No route-visible interfaces were observed, so route evidence is inconclusive. Route evidence is read-only and is not packet-flow proof.")
         }
 
-        if let defaultRouteInterface, TunRuntimeInterfaceProbe.isTunLikeInterfaceNameForTesting(defaultRouteInterface) {
+        if let ipv4PrimaryInterface, TunRuntimeInterfaceProbe.isTunLikeInterfaceNameForTesting(ipv4PrimaryInterface) {
             return TunRouteRuntimeEvidence(evidenceState: .tunLikeRouteEvidencePresent,
-                                           defaultRouteInterface: defaultRouteInterface,
-                                           tunLikeRouteInterfaces: deduplicated([defaultRouteInterface] + tunLikeRouteInterfaces),
-                                           observedRouteInterfaces: observed,
-                                           message: "The default route interface appears tun-like: \(defaultRouteInterface). This is read-only route evidence only and is not packet-flow proof.")
+                                           ipv4PrimaryInterface: ipv4PrimaryInterface,
+                                           ipv6PrimaryInterface: ipv6PrimaryInterface,
+                                           tunLikeRouteInterfaces: deduplicated([ipv4PrimaryInterface] + tunLikeRouteInterfaces),
+                                           observedPrimaryRouteInterfaces: observed,
+                                           message: "The IPv4 primary route interface appears tun-like: \(ipv4PrimaryInterface). This is read-only route evidence only and is not packet-flow proof.")
+        }
+
+        if let ipv6PrimaryInterface, TunRuntimeInterfaceProbe.isTunLikeInterfaceNameForTesting(ipv6PrimaryInterface) {
+            return TunRouteRuntimeEvidence(evidenceState: .tunLikeRouteEvidencePresent,
+                                           ipv4PrimaryInterface: ipv4PrimaryInterface,
+                                           ipv6PrimaryInterface: ipv6PrimaryInterface,
+                                           tunLikeRouteInterfaces: deduplicated([ipv6PrimaryInterface] + tunLikeRouteInterfaces),
+                                           observedPrimaryRouteInterfaces: observed,
+                                           message: "The IPv6 primary route interface appears tun-like: \(ipv6PrimaryInterface). This is read-only route evidence only and is not packet-flow proof.")
         }
 
         if !tunLikeRouteInterfaces.isEmpty {
             return TunRouteRuntimeEvidence(evidenceState: .tunLikeRouteEvidencePresent,
-                                           defaultRouteInterface: defaultRouteInterface,
+                                           ipv4PrimaryInterface: ipv4PrimaryInterface,
+                                           ipv6PrimaryInterface: ipv6PrimaryInterface,
                                            tunLikeRouteInterfaces: tunLikeRouteInterfaces,
-                                           observedRouteInterfaces: observed,
-                                           message: "Observed route-visible interfaces include tun-like names: \(tunLikeRouteInterfaces.joined(separator: ", ")). This is read-only route evidence only and is not packet-flow proof.")
+                                           observedPrimaryRouteInterfaces: observed,
+                                           message: "Observed primary route interfaces include tun-like names: \(tunLikeRouteInterfaces.joined(separator: ", ")). This is read-only route evidence only and is not packet-flow proof.")
         }
 
         return TunRouteRuntimeEvidence(evidenceState: .noTunLikeRouteEvidence,
-                                       defaultRouteInterface: defaultRouteInterface,
+                                       ipv4PrimaryInterface: ipv4PrimaryInterface,
+                                       ipv6PrimaryInterface: ipv6PrimaryInterface,
                                        tunLikeRouteInterfaces: [],
-                                       observedRouteInterfaces: observed,
-                                       message: "Observed route-visible interfaces do not include tun-like names. This does not prove failure, and route evidence is not packet-flow proof.")
+                                       observedPrimaryRouteInterfaces: observed,
+                                       message: "Observed primary route interfaces do not include tun-like names. This does not prove failure, and route evidence is not packet-flow proof.")
     }
 
     private static func primaryInterface(from store: SCDynamicStore, entity: CFString) -> String? {

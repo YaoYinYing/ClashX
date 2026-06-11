@@ -12,7 +12,7 @@ SmartX has improved its foundation work, but several surfaces are still explicit
 - TUN and DNS validation now live in reusable validators, and TUN toggling now has a named lifecycle coordinator, but embedded-core TUN remains unsupported and privileged TUN architecture is still missing.
 - The branch now has a helper boundary audit with `HelperStatus` and `HelperDiagnosticsProbe`, but that status is diagnostic only and must not be described as proof of helper-backed TUN or successful helper installation.
 - The branch now also has a typed helper command contract model and registry, but reserved TUN commands must not be described as implemented helper-backed TUN behavior.
-- The branch now also has a typed TUN lifecycle diagnostics boundary with read-only interface, route, and DNS evidence, but controller-config verification plus those evidence layers still must not be described as route verification, DNS hijack verification, packet-flow verification, or full system-level TUN verification.
+- The branch now also has a typed TUN lifecycle diagnostics boundary with operation-aware preflight semantics for passive snapshots, enable requests, and disable requests plus read-only interface, route, and DNS evidence, but controller-config verification plus those evidence layers still must not be described as route verification, DNS hijack verification, packet-flow verification, or full system-level TUN verification.
 - The audited helper install flow now blocks the legacy shell fallback and returns a structured guardrail failure when helper trust is weak; the legacy code still exists as residue and should stay treated as historical risk, not supported architecture.
 - Diagnostics log viewing is safer because `DiagnosticsLogReader` now tails large rolling files instead of re-reading them whole every refresh cycle, `DiagnosticsArtifactFormatter` plus `DiagnosticsProviderFormatter` moved formatting into small helpers, and dangerous maintenance actions have started moving through `DiagnosticsMaintenanceCoordinator`, but the Diagnostics dashboard remains structurally too large.
 - `ApiRequest` is now partially decomposed into `DiagnosticsAPI`, `ProviderAPI`, `SmartAPI`, `ConfigAPI`, and the new `ConnectionAPI`, but the compatibility facade still remains broader than it should be.
@@ -24,6 +24,7 @@ SmartX has improved its foundation work, but several surfaces are still explicit
 - Do not let requested SmartX overrides be described as emitted/generated overrides when the generator still returns an unsupported result.
 - Do not let preserved future-schema override files be mistaken for a successful persisted save when SmartX only applied settings in memory.
 - Do not let the initial `TunLifecycleCoordinator` be described as full TUN support.
+- Do not let passive diagnostics snapshots be described as post-toggle verification, and do not let disable-path warnings be treated as enable-path hard blockers.
 - Do not let helper diagnostic status be described as a verified privileged-helper install unless a real audited runtime verification path exists.
 - Do not let reserved helper TUN command names be described as executable helper capabilities in the current branch.
 - Do not let controller-config verification be described as full system-level TUN verification.

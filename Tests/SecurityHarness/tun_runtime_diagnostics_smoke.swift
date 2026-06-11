@@ -75,8 +75,9 @@ enum TunRuntimeDiagnosticsSmokeMain {
         let decodedEvidence = try! JSONDecoder().decode(TunRuntimeInterfaceEvidence.self, from: encodedEvidence)
         require(decodedEvidence.evidenceState == .tunLikeInterfacePresent, "interface evidence codable round trip changed state")
 
-        let preflight = TunPreflightReport(runtimeMode: .externalController,
-                                           canAttemptControllerPatch: true,
+        let preflight = TunPreflightReport(operation: .enable,
+                                           runtimeMode: .externalController,
+                                           canAttemptRequestedOperation: true,
                                            blockers: [],
                                            warnings: [],
                                            helperTrustState: .installedButUnverified,
@@ -84,8 +85,8 @@ enum TunRuntimeDiagnosticsSmokeMain {
                                            verificationScope: .controllerConfigOnly,
                                            userMessage: "guarded external-controller path",
                                            recoverySuggestion: "controller path only")
-        let routeEvidence = TunRuntimeRouteProbe.classify(defaultRouteInterface: "utun4",
-                                                          observedRouteInterfaces: ["utun4"],
+        let routeEvidence = TunRuntimeRouteProbe.classify(ipv4PrimaryInterface: "utun4",
+                                                          ipv6PrimaryInterface: nil,
                                                           tunLikeInterfaceNames: ["utun4"])
         let dnsEvidence = TunRuntimeDNSProbe.classify(resolverInterfaceNames: ["utun4"],
                                                       resolverServerCount: 1,
@@ -129,8 +130,8 @@ enum TunRuntimeDiagnosticsSmokeMain {
                                                                               didFailToReload: false,
                                                                               preflightReport: preflight,
                                                                               interfaceEvidence: noTunEvidence,
-                                                                              routeEvidence: TunRuntimeRouteProbe.classify(defaultRouteInterface: nil,
-                                                                                                                           observedRouteInterfaces: ["en0"],
+                                                                              routeEvidence: TunRuntimeRouteProbe.classify(ipv4PrimaryInterface: "en0",
+                                                                                                                           ipv6PrimaryInterface: nil,
                                                                                                                            tunLikeInterfaceNames: ["utun4"]),
                                                                               dnsEvidence: TunRuntimeDNSProbe.classify(resolverInterfaceNames: [],
                                                                                                                        resolverServerCount: nil,

@@ -82,7 +82,8 @@ enum DiagnosticsReportBuilder {
         let helperStatus = HelperDiagnosticsProbe.currentStatus()
         let configPatchAvailability = CapabilityCache.shared.status(for: .configPatch)?.availability ?? .unknown
         let helperTunDescriptors = HelperCommandRegistry.reservedTunDescriptors()
-        let report = TunPreflightPlanner.buildReport(config: config,
+        let report = TunPreflightPlanner.buildReport(operation: .passiveSnapshot,
+                                                     config: config,
                                                      isControllerRunning: ConfigManager.shared.isRunning,
                                                      isUsingEmbeddedCore: Settings.isUsingEmbeddedCore,
                                                      configPatchAvailability: configPatchAvailability,
@@ -102,8 +103,9 @@ enum DiagnosticsReportBuilder {
         var lines = [
             "TUN Lifecycle Boundary",
             "----------------------",
+            "Preflight Operation: \(report.operation.rawValue)",
             "Runtime Mode: \(report.runtimeMode.rawValue)",
-            "Controller Patch Attemptable: \(report.canAttemptControllerPatch ? "yes" : "no")",
+            "Requested Operation Attemptable: \(report.canAttemptRequestedOperation ? "yes" : "no")",
             "Helper Trust State: \(report.helperTrustState.rawValue)",
             "Helper TUN Commands Reserved Only: \(report.helperTunCommandsReserved ? "yes" : "no")",
             "Verification Scope: \(report.verificationScope.rawValue)",
@@ -112,9 +114,10 @@ enum DiagnosticsReportBuilder {
             "Runtime Interface Evidence State: \(interfaceEvidence.evidenceState.rawValue)",
             "Tun-like Interface Names: \(interfaceEvidence.tunLikeInterfaceNames.isEmpty ? "none" : interfaceEvidence.tunLikeInterfaceNames.joined(separator: ", "))",
             "Route Evidence State: \(routeEvidence.evidenceState.rawValue)",
-            "Default Route Interface: \(routeEvidence.defaultRouteInterface ?? "unknown")",
+            "IPv4 Primary Route Interface: \(routeEvidence.ipv4PrimaryInterface ?? "unknown")",
+            "IPv6 Primary Route Interface: \(routeEvidence.ipv6PrimaryInterface ?? "unknown")",
             "Tun-like Route Interfaces: \(routeEvidence.tunLikeRouteInterfaces.isEmpty ? "none" : routeEvidence.tunLikeRouteInterfaces.joined(separator: ", "))",
-            "Observed Route Interfaces: \(routeEvidence.observedRouteInterfaces.isEmpty ? "none" : routeEvidence.observedRouteInterfaces.joined(separator: ", "))",
+            "Observed Primary Route Interfaces: \(routeEvidence.observedPrimaryRouteInterfaces.isEmpty ? "none" : routeEvidence.observedPrimaryRouteInterfaces.joined(separator: ", "))",
             "DNS Runtime Evidence State: \(dnsEvidence.evidenceState.rawValue)",
             "Resolver Interface Names: \(dnsEvidence.resolverInterfaceNames.isEmpty ? "none" : dnsEvidence.resolverInterfaceNames.joined(separator: ", "))",
             "Resolver Server Count: \(dnsEvidence.resolverServerCount.map(String.init) ?? "unknown")",

@@ -67,17 +67,19 @@ enum TunLifecycleDiagnosticsSmokeMain {
                                         recoverySuggestion: nil)
         let helperTunDescriptors = HelperCommandRegistry.reservedTunDescriptors()
 
-        let embedded = TunPreflightPlanner.buildReport(config: nil,
+        let embedded = TunPreflightPlanner.buildReport(operation: .enable,
+                                                       config: nil,
                                                        isControllerRunning: true,
                                                        isUsingEmbeddedCore: true,
                                                        configPatchAvailability: .unknown,
                                                        helperStatus: helperStatus,
                                                        helperTunDescriptors: helperTunDescriptors)
         require(embedded.blockers.contains(.embeddedCoreUnsupported), "embedded core should block TUN")
-        require(!embedded.canAttemptControllerPatch, "embedded core should not allow controller patch")
+        require(!embedded.canAttemptRequestedOperation, "embedded core should not allow controller patch")
         require(embedded.verificationScope == .systemTunNotImplemented, "embedded core should not imply controller-only verification")
 
-        let stopped = TunPreflightPlanner.buildReport(config: nil,
+        let stopped = TunPreflightPlanner.buildReport(operation: .enable,
+                                                      config: nil,
                                                       isControllerRunning: false,
                                                       isUsingEmbeddedCore: false,
                                                       configPatchAvailability: .unknown,
@@ -85,7 +87,8 @@ enum TunLifecycleDiagnosticsSmokeMain {
                                                       helperTunDescriptors: helperTunDescriptors)
         require(stopped.blockers.contains(.controllerNotRunning), "stopped controller should block patch attempts")
 
-        let missingTun = TunPreflightPlanner.buildReport(config: ClashConfig(tun: nil, dns: nil),
+        let missingTun = TunPreflightPlanner.buildReport(operation: .enable,
+                                                         config: ClashConfig(tun: nil, dns: nil),
                                                          isControllerRunning: true,
                                                          isUsingEmbeddedCore: false,
                                                          configPatchAvailability: .available,
@@ -121,20 +124,82 @@ enum TunLifecycleDiagnosticsSmokeMain {
                                                            useSystemHosts: nil,
                                                            preferH3: nil,
                                                            listen: nil))
-        let ready = TunPreflightPlanner.buildReport(config: validConfig,
+        let ready = TunPreflightPlanner.buildReport(operation: .enable,
+                                                    config: validConfig,
                                                     isControllerRunning: true,
                                                     isUsingEmbeddedCore: false,
                                                     configPatchAvailability: .available,
                                                     helperStatus: helperStatus,
                                                     helperTunDescriptors: helperTunDescriptors)
         require(ready.blockers == [], "valid external controller config should not block")
-        require(ready.canAttemptControllerPatch, "valid external controller config should allow patch attempt")
+        require(ready.canAttemptRequestedOperation, "valid external controller config should allow patch attempt")
         require(ready.verificationScope == .controllerConfigOnly, "successful preflight should only allow controller-config verification")
         require(ready.warnings.contains { $0.contains("System-level TUN verification is not implemented") }, "warnings should keep system verification boundary explicit")
         require(!ready.userMessage.contains("implemented"), "preflight text must not claim helper-backed TUN is implemented")
 
+        let disableWithBrokenValidation = TunPreflightPlanner.buildReport(operation: .disable,
+                                                                          config: ClashConfig(tun: ClashConfig.Tun(enable: true,
+                                                                                                                   device: nil,
+                                                                                                                   stack: nil,
+                                                                                                                   dnsHijack: nil,
+                                                                                                                   autoRoute: nil,
+                                                                                                                   autoDetectInterface: nil,
+                                                                                                                   strictRoute: nil,
+                                                                                                                   mtu: 42,
+                                                                                                                   udpTimeout: -1,
+                                                                                                                   routeAddress: nil,
+                                                                                                                   routeExcludeAddress: nil,
+                                                                                                                   includeInterface: nil,
+                                                                                                                   excludeInterface: nil),
+                                                                                              dns: ClashConfig.DNS(enable: true,
+                                                                                                                   enhancedMode: "fake-ip",
+                                                                                                                   fakeIPRange: nil,
+                                                                                                                   fakeIPFilter: nil,
+                                                                                                                   fakeIPFilterMode: nil,
+                                                                                                                   nameserver: [],
+                                                                                                                   fallback: nil,
+                                                                                                                   directNameserver: nil,
+                                                                                                                   respectRules: nil,
+                                                                                                                   useHosts: nil,
+                                                                                                                   useSystemHosts: nil,
+                                                                                                                   preferH3: nil,
+                                                                                                                   listen: nil)),
+                                                                          isControllerRunning: true,
+                                                                          isUsingEmbeddedCore: false,
+                                                                          configPatchAvailability: .available,
+                                                                          helperStatus: helperStatus,
+                                                                          helperTunDescriptors: helperTunDescriptors)
+        require(!disableWithBrokenValidation.blockers.contains(.tunValidationFailed), "disable should not be blocked by tun validation")
+        require(!disableWithBrokenValidation.blockers.contains(.dnsValidationFailed), "disable should not be blocked by DNS validation")
+        require(disableWithBrokenValidation.canAttemptRequestedOperation, "disable should stay attemptable when only validation is broken")
+        require(disableWithBrokenValidation.warnings.contains { $0.localizedCaseInsensitiveContains("blocking") }, "disable should keep validation issues as warnings")
+
+        let passiveWithBrokenValidation = TunPreflightPlanner.buildReport(operation: .passiveSnapshot,
+                                                                          config: ClashConfig(tun: nil, dns: ClashConfig.DNS(enable: true,
+                                                                                                                             enhancedMode: "fake-ip",
+                                                                                                                             fakeIPRange: nil,
+                                                                                                                             fakeIPFilter: nil,
+                                                                                                                             fakeIPFilterMode: nil,
+                                                                                                                             nameserver: [],
+                                                                                                                             fallback: nil,
+                                                                                                                             directNameserver: nil,
+                                                                                                                             respectRules: nil,
+                                                                                                                             useHosts: nil,
+                                                                                                                             useSystemHosts: nil,
+                                                                                                                             preferH3: nil,
+                                                                                                                             listen: nil)),
+                                                                          isControllerRunning: true,
+                                                                          isUsingEmbeddedCore: false,
+                                                                          configPatchAvailability: .unsupported,
+                                                                          helperStatus: helperStatus,
+                                                                          helperTunDescriptors: helperTunDescriptors)
+        require(passiveWithBrokenValidation.blockers.isEmpty, "passive snapshot should not inherit toggle blockers")
+        require(passiveWithBrokenValidation.canAttemptRequestedOperation, "passive snapshot should remain attemptable")
+        require(passiveWithBrokenValidation.userMessage.contains("passive TUN diagnostics snapshot"), "passive preflight text drifted")
+
         let encodedPreflight = try! JSONEncoder().encode(ready)
         let decodedPreflight = try! JSONDecoder().decode(TunPreflightReport.self, from: encodedPreflight)
+        require(decodedPreflight.operation == .enable, "preflight codable round trip changed operation")
         require(decodedPreflight.verificationScope == .controllerConfigOnly, "preflight codable round trip changed verification scope")
 
         let verification = TunPreflightPlanner.verificationReport(expectedEnabled: true,

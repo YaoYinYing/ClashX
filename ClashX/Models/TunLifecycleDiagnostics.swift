@@ -12,6 +12,12 @@ enum TunRuntimeMode: String, Codable {
     case embeddedCoreUnsupported
 }
 
+enum TunPreflightOperation: String, Codable {
+    case passiveSnapshot
+    case enable
+    case disable
+}
+
 enum TunPreflightBlocker: String, Codable, CaseIterable {
     case controllerNotRunning
     case embeddedCoreUnsupported
@@ -70,9 +76,10 @@ enum TunRouteEvidenceState: String, Codable {
 
 struct TunRouteRuntimeEvidence: Codable {
     var evidenceState: TunRouteEvidenceState
-    var defaultRouteInterface: String?
+    var ipv4PrimaryInterface: String?
+    var ipv6PrimaryInterface: String?
     var tunLikeRouteInterfaces: [String]
-    var observedRouteInterfaces: [String]
+    var observedPrimaryRouteInterfaces: [String]
     var message: String
 }
 
@@ -105,8 +112,9 @@ struct TunRuntimeVerificationReport: Codable {
 }
 
 struct TunPreflightReport: Codable {
+    var operation: TunPreflightOperation
     var runtimeMode: TunRuntimeMode
-    var canAttemptControllerPatch: Bool
+    var canAttemptRequestedOperation: Bool
     var blockers: [TunPreflightBlocker]
     var warnings: [String]
     var helperTrustState: HelperTrustState

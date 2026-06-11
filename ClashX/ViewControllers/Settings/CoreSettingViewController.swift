@@ -557,7 +557,8 @@ class CoreSettingViewController: NSViewController {
 
     private func tunCapabilityNoteText(config: ClashConfig?) -> String {
         let configPatchAvailability = CapabilityCache.shared.status(for: .configPatch)?.availability ?? .unknown
-        let report = TunPreflightPlanner.buildReport(config: config,
+        let report = TunPreflightPlanner.buildReport(operation: .passiveSnapshot,
+                                                     config: config,
                                                      isControllerRunning: ConfigManager.shared.isRunning,
                                                      isUsingEmbeddedCore: Settings.isUsingEmbeddedCore,
                                                      configPatchAvailability: configPatchAvailability,

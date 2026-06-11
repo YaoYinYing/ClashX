@@ -223,7 +223,7 @@ Current note:
 - SmartX now has an initial guarded `TunLifecycleCoordinator`, but embedded-core TUN remains explicitly unsupported and privileged TUN architecture is still a later prerequisite
 - helper-aware TUN messaging is now in place, but external-controller TUN still stays on the controller API path and future helper-backed TUN still needs a separate command contract
 - the helper command contract now exists as a typed diagnostic boundary, but it still does not add helper-backed TUN execution, helper-owned route changes, or generic root command execution
-- the new typed TUN lifecycle diagnostics boundary now makes controller-config verification explicit and adds read-only interface, route, and DNS runtime evidence, but route evidence is still not packet-flow proof, DNS runtime evidence is not DNS hijack proof, packet-flow verification remains unimplemented, and absence of interface or route evidence is still not proof of failure
+- the new typed TUN lifecycle diagnostics boundary now distinguishes passive snapshots, enable requests, and disable requests; blocking TUN/DNS validation currently applies only to enable requests, passive snapshots stay explicitly non-verifying, and the read-only interface, route, and DNS runtime evidence still must not be described as packet-flow verification or DNS hijack verification
 - SmartX now also routes guarded config patching through narrower `ConfigAPI` helpers, but that is still external-controller lifecycle hardening rather than full TUN architecture
 
 ## Phase 8: DNS/TUN Validation Module

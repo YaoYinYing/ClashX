@@ -59,8 +59,10 @@ final class TunLifecycleCoordinator {
         let helperStatus = HelperDiagnosticsProbe.currentStatus()
         let helperTunDescriptors = HelperCommandRegistry.reservedTunDescriptors()
         let configPatchAvailability = CapabilityCache.shared.status(for: .configPatch)?.availability ?? .unknown
+        let operation: TunPreflightOperation = enabled ? .enable : .disable
 
-        let initialReport = TunPreflightPlanner.buildReport(config: ConfigManager.shared.currentConfig,
+        let initialReport = TunPreflightPlanner.buildReport(operation: operation,
+                                                            config: ConfigManager.shared.currentConfig,
                                                             isControllerRunning: ConfigManager.shared.isRunning,
                                                             isUsingEmbeddedCore: Settings.isUsingEmbeddedCore,
                                                             configPatchAvailability: configPatchAvailability,
@@ -85,7 +87,8 @@ final class TunLifecycleCoordinator {
                 completion(.failed(message: error.localizedDescription, previousState: fallbackPreviousState))
             case let .success(config):
                 let previousState = TunLifecycleUIState(enabled: config.tun?.enable ?? fallbackPreviousState.enabled)
-                let preflight = TunPreflightPlanner.buildReport(config: config,
+                let preflight = TunPreflightPlanner.buildReport(operation: operation,
+                                                                config: config,
                                                                 isControllerRunning: ConfigManager.shared.isRunning,
                                                                 isUsingEmbeddedCore: Settings.isUsingEmbeddedCore,
                                                                 configPatchAvailability: configPatchAvailability,

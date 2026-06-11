@@ -61,25 +61,27 @@ private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
 @main
 enum TunRouteDNSRuntimeSmokeMain {
     static func main() {
-        let routeInconclusive = TunRuntimeRouteProbe.classify(defaultRouteInterface: nil,
-                                                              observedRouteInterfaces: [],
+        let routeInconclusive = TunRuntimeRouteProbe.classify(ipv4PrimaryInterface: nil,
+                                                              ipv6PrimaryInterface: nil,
                                                               tunLikeInterfaceNames: [])
         require(routeInconclusive.evidenceState == .inconclusive, "empty route data should be inconclusive")
 
-        let routeNoTun = TunRuntimeRouteProbe.classify(defaultRouteInterface: nil,
-                                                       observedRouteInterfaces: ["en0"],
+        let routeNoTun = TunRuntimeRouteProbe.classify(ipv4PrimaryInterface: "en0",
+                                                       ipv6PrimaryInterface: nil,
                                                        tunLikeInterfaceNames: ["utun4"])
         require(routeNoTun.evidenceState == .noTunLikeRouteEvidence, "non-tun route interfaces should stay negative evidence")
 
-        let routeObservedTun = TunRuntimeRouteProbe.classify(defaultRouteInterface: nil,
-                                                             observedRouteInterfaces: ["en0", "utun4"],
+        let routeObservedTun = TunRuntimeRouteProbe.classify(ipv4PrimaryInterface: "en0",
+                                                             ipv6PrimaryInterface: "utun4",
                                                              tunLikeInterfaceNames: ["utun4"])
         require(routeObservedTun.evidenceState == .tunLikeRouteEvidencePresent, "observed tun route should count as route evidence")
+        require(routeObservedTun.message.contains("primary route interface"), "route evidence should use primary-route wording")
 
-        let routeDefaultTun = TunRuntimeRouteProbe.classify(defaultRouteInterface: "utun4",
-                                                            observedRouteInterfaces: ["en0"],
+        let routeDefaultTun = TunRuntimeRouteProbe.classify(ipv4PrimaryInterface: "utun4",
+                                                            ipv6PrimaryInterface: "en0",
                                                             tunLikeInterfaceNames: [])
         require(routeDefaultTun.evidenceState == .tunLikeRouteEvidencePresent, "tun default route should count as route evidence")
+        require(routeDefaultTun.message.contains("IPv4 primary route interface"), "route evidence should not call a sorted first value the default route")
         require(!routeDefaultTun.message.contains("packet-flow verification succeeded"), "route evidence must not claim packet-flow verification")
 
         let dnsInconclusive = TunRuntimeDNSProbe.classify(resolverInterfaceNames: [],
@@ -104,8 +106,9 @@ enum TunRouteDNSRuntimeSmokeMain {
         require(dnsNone.evidenceState == .noDNSRuntimeEvidence, "zero DNS server count should be negative evidence")
         require(!dnsNone.message.contains("DNS hijack verified"), "DNS evidence must not claim DNS hijack verification")
 
-        let preflight = TunPreflightReport(runtimeMode: .externalController,
-                                           canAttemptControllerPatch: true,
+        let preflight = TunPreflightReport(operation: .enable,
+                                           runtimeMode: .externalController,
+                                           canAttemptRequestedOperation: true,
                                            blockers: [],
                                            warnings: [],
                                            helperTrustState: .installedButUnverified,

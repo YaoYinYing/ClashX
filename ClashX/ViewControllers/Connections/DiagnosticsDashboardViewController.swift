@@ -190,7 +190,10 @@ class DiagnosticsDashboardViewController: NSViewController {
         pauseLogsButton.target = self
         pauseLogsButton.action = #selector(actionTogglePauseLogs)
 
-        let logRow = NSStackView(views: [NSTextField(labelWithString: NSLocalizedString("Logs", comment: "")), logLevelPopup, logSearchField, pauseLogsButton])
+        let redactLogsButton = NSButton(checkboxWithTitle: NSLocalizedString("Redact", comment: ""), target: self, action: #selector(actionToggleRedactLogs))
+        redactLogsButton.toolTip = NSLocalizedString("Sanitize URLs, tokens, and credentials in log output", comment: "")
+
+        let logRow = NSStackView(views: [NSTextField(labelWithString: NSLocalizedString("Logs", comment: "")), logLevelPopup, logSearchField, pauseLogsButton, redactLogsButton])
         logRow.orientation = .horizontal
         logRow.spacing = 8
         logRow.edgeInsets = NSEdgeInsets(top: 0, left: 12, bottom: 8, right: 12)
@@ -240,7 +243,7 @@ class DiagnosticsDashboardViewController: NSViewController {
             "Providers\n---------\n\(providerOutput)",
             "Profile Artifacts\n-----------------\n\(artifactOutput)",
             "Privileged Helper\n-----------------\n\(helperOutput)",
-            "Logs\n----\n\(logViewModel.output)"
+            "Logs\n----\n\(logViewModel.displayOutput)"
         ].joined(separator: "\n\n")
     }
 
@@ -725,6 +728,11 @@ class DiagnosticsDashboardViewController: NSViewController {
 
     @objc private func actionLogFilterChanged() {
         refreshLogs()
+    }
+
+    @objc private func actionToggleRedactLogs() {
+        logViewModel.redactContent.toggle()
+        renderOutput()
     }
 
     @objc private func actionTogglePauseLogs() {

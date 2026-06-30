@@ -46,11 +46,16 @@ final class LogViewerViewModel {
     private(set) var snapshot: DiagnosticsLogSnapshot?
     private var timer: Timer?
     private var isPaused = false
+    var redactContent = false
 
     var onOutputChanged: (() -> Void)?
 
     var paused: Bool {
         isPaused
+    }
+
+    var displayOutput: String {
+        redactContent ? SmartXRedactor.sanitizeText(output) : output
     }
 
     func togglePause() {

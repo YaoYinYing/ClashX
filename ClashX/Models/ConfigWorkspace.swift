@@ -108,10 +108,66 @@ struct ConfigPipeline: Codable {
         orderedActiveLayers.first { $0.type == .base }
     }
 
-    // ponytail: generateEffectiveConfig deleted — zero production callers.
-    // The ConfigWorkspace model + ConfigYAMLEditor are the foundation.
-    // Add pipeline execution when a feature needs it (e.g. TUN editor
-    // YAML round-trip or profile merge UI).
+    /// Generates effective config from base YAML + active merge layer overrides.
+    /// Supported: fieldOverride (via ConfigYAMLEditor.upsertSection),
+    /// prependRules/appendRules. Unsupported operations skip safely.
+    ///
+    /// ponytail: string-based. Ceiling: comments lost, no YAML validation.
+    /// Upgrade path: YAML parse-emit library when TUN editors need round-trips.
+    func generateEffectiveConfig(baseYAML: String) -> String {
+        var result = baseYAML
+        for layer in orderedActiveLayers {
+            guard layer.type == .merge, let ops = layer.mergeOperations else { continue }
+            for op in ops {
+                switch op.type {
+                case .fieldOverride:
+                    guard let target = op.target, let value = op.value else { continue }
+                    result = ConfigYAMLEditor.upsertSection(
+                        named: target, in: result,
+                        params: parseOverrideParams(value),
+                        keyOrder: [target]
+                    )
+                case .prependRules, .appendRules:
+                    guard let value = op.value else { continue }
+                    result = applyRuleOp(type: op.type, value: value, to: result)
+                default: break // skip unsupported
+                }
+            }
+        }
+        return result
+    }
+}
+
+// ponytail: file-level helpers for generateEffectiveConfig.
+// Internal — used by ConfigPipeline.generateEffectiveConfig().
+
+func parseOverrideParams(_ raw: String) -> [String: Any] {
+    var params: [String: Any] = [:]
+    for pair in raw.split(separator: ",") {
+        let kv = pair.split(separator: "=", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+        guard kv.count == 2 else { continue }
+        let v = kv[1]
+        if v == "true" { params[String(kv[0])] = true }
+        else if v == "false" { params[String(kv[0])] = false }
+        else if let n = Int(v) { params[String(kv[0])] = n }
+        else { params[String(kv[0])] = v }
+    }
+    return params
+}
+
+func applyRuleOp(type: ConfigMergeOperation.OperationType, value: String, to yaml: String) -> String {
+    var lines = yaml.components(separatedBy: "\n")
+    let ruleLine = "  - '\(value)'"
+    if let idx = lines.firstIndex(where: { $0.trimmingCharacters(in: .whitespaces) == "rules:" }) {
+        lines.insert(ruleLine, at: type == .prependRules ? idx + 1 : {
+            var i = idx + 1
+            while i < lines.count, lines[i].first?.isWhitespace == true { i += 1 }
+            return i
+        }())
+    } else {
+        lines.append(contentsOf: ["", "rules:", ruleLine])
+    }
+    return lines.joined(separator: "\n")
 }
 
 // MARK: - Artifacts

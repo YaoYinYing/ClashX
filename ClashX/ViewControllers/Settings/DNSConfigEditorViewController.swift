@@ -487,9 +487,3 @@ final class DNSConfigEditorViewController: NSViewController {
         return row
     }
 }
-
-private extension String {
-    var nilIfEmpty: String? {
-        isEmpty ? nil : self
-    }
-}

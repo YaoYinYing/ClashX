@@ -160,6 +160,7 @@
 		CD3516DDDCB4F7C6256137A9 /* ConfigWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C4E97F0132C4A9E597A76C /* ConfigWorkspace.swift */; };
 		CF2CDC0034931358D3434733 /* SmartXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F296FC523FC1FF80DBD6A9 /* SmartXTests.swift */; };
 		CF5C8FA41EF5D8D333410FC0 /* ConfigValidationIssue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DD41F4E072DFF1CD1AE8B60 /* ConfigValidationIssue.swift */; };
+		E3372EAE7CAFFE5543F30539 /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED18F541347D68E1411606C4 /* String.swift */; };
 		E77500B99723BBF88FEE23E4 /* HelperCommandContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41DDF9BE0900EA7244A9B71A /* HelperCommandContract.swift */; };
 		F28262F111123386DB636457 /* SmartXManagedOverrideModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A2BEBEA3D262C1FE7DC5904 /* SmartXManagedOverrideModel.swift */; };
 		F910AA24240134AF00116E95 /* ProxyGroupMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F910AA23240134AF00116E95 /* ProxyGroupMenu.swift */; };
@@ -399,6 +400,7 @@
 		C7C605625DAB24072E4B4DBB /* DNSConfigEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSConfigEditorViewController.swift; sourceTree = "<group>"; };
 		CAE7981A9F34B5E210C549CB /* libPods-ClashX.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ClashX.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D697C91D6CEDEE3A907D779A /* ProfileArtifactManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Managers/ProfileArtifactManager.swift; sourceTree = SOURCE_ROOT; };
+		ED18F541347D68E1411606C4 /* String.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Extensions/String.swift; sourceTree = SOURCE_ROOT; };
 		F2F296FC523FC1FF80DBD6A9 /* SmartXTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tests/SmartXTests/SmartXTests.swift; sourceTree = SOURCE_ROOT; };
 		F910AA23240134AF00116E95 /* ProxyGroupMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyGroupMenu.swift; sourceTree = "<group>"; };
 		F915A4612366ADEF004840BE /* ClashConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClashConnection.swift; sourceTree = "<group>"; };
@@ -572,6 +574,7 @@
 				491C250121BD561200AB5D44 /* Managers */,
 				491C250021BD55B900AB5D44 /* Utils */,
 				492C4868210EE6B9004554A0 /* ApiRequest.swift */,
+				72BC7AE233FBDA0BF2B71686 /* Extensions */,
 			);
 			path = General;
 			sourceTree = "<group>";
@@ -831,6 +834,15 @@
 				49D767752A6195E600830333 /* StructedLogReq.swift */,
 			);
 			path = Requests;
+			sourceTree = "<group>";
+		};
+		72BC7AE233FBDA0BF2B71686 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				ED18F541347D68E1411606C4 /* String.swift */,
+			);
+			name = Extensions;
+			path = Extensions;
 			sourceTree = "<group>";
 		};
 		76229F122B00E935D126742A /* Pods */ = {
@@ -1312,6 +1324,7 @@
 				7350807FA619750EDDF45590 /* LogViewerViewModel.swift in Sources */,
 				0DC7F1C4A4B1AA1DDA5E1A11 /* ConfigWorkspace.swift in Sources */,
 				13FEFC014A2F2C412354D979 /* ConfigYAMLEditor.swift in Sources */,
+				E3372EAE7CAFFE5543F30539 /* String.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

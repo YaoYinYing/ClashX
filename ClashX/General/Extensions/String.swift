@@ -12,4 +12,10 @@ extension String {
     static func decodeLegacyUnicode(_ data: Data) -> String? {
         return NSString(data: data, encoding: String.Encoding.utf16.rawValue) as String?
     }
+
+    /// Returns nil for an empty string, otherwise returns self.
+    /// ponytail: extracted from duplicated private extensions in TUN/DNS editors.
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
 }

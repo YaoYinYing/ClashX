@@ -122,10 +122,11 @@ struct ConfigPipeline: Codable {
                 switch op.type {
                 case .fieldOverride:
                     guard let target = op.target, let value = op.value else { continue }
+                    let parsed = parseOverrideParams(value)
                     result = ConfigYAMLEditor.upsertSection(
                         named: target, in: result,
-                        params: parseOverrideParams(value),
-                        keyOrder: [target]
+                        params: parsed,
+                        keyOrder: Array(parsed.keys)
                     )
                 case .prependRules, .appendRules:
                     guard let value = op.value else { continue }

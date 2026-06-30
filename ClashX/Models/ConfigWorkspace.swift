@@ -6,10 +6,9 @@
 //  types for the config workspace pipeline. Replaces filename-era assumptions
 //  with a reproducible, inspectable pipeline model.
 //
-//  ponytail: types only — no YAML parse-emit or pipeline execution yet.
-//  Ceiling: these types describe the workspace but don't execute it.
-//  Upgrade path: add ConfigPipeline.execute() when the YAML round-trip
-//  path exists (replacing string-based upsert in TUN/DNS editors).
+//  ponytail: string-based YAML via ConfigYAMLEditor. Pipeline execution
+//  (generateEffectiveConfig) supports fieldOverride and rule operations.
+//  Ceiling: no YAML validation, comments lost. Upgrade path: YAML library.
 
 import Foundation
 

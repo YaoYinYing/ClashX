@@ -2,12 +2,13 @@
 
 ## Current State
 
-SmartX still does not have a dedicated Xcode unit-test bundle wired into the project. That means new infrastructure work must either:
+SmartX now has a dedicated Xcode unit-test bundle (`SmartXTests.xctest`) with 38 XCTest cases across 11 test classes. It compiles pure-logic production sources directly with minimal stubs for CocoaPods-dependent types (ConfigManager, ClashConfig).
 
-- land with direct XCTest coverage if a target exists
-- or use documented pure-logic smoke harnesses without copying production logic
+- **XCTests**: 38 cases covering ControllerEndpointBuilder, config validators, helper command contract, helper status, redactor, remote config model, LightGBM override model, TUN lifecycle diagnostics, config workspace model, ConfigYAMLEditor, and pipeline execution.
+- **Smoke harnesses**: 18 pure-logic harnesses under `Tests/SecurityHarness/` compile production files directly.
+- **Combined**: 56 automated checks per PR.
 
-The current repository is still in the second state.
+The XCTest target is wired into the ClashX scheme's Test action and runs in CI via `xcodebuild test`.
 
 ## Current CI Lanes
 

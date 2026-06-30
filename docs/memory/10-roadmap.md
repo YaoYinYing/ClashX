@@ -72,8 +72,9 @@ Testing gate:
 
 Current note:
 
-- the first pass of `ControllerEndpointBuilder`, stopped-core result cleanup, and Smart endpoint result unification is now implemented, but `ApiRequest` is still only partially decomposed
-- the next small API-domain split has started with `ConnectionAPI`, but stream lifecycle still remains in `ApiRequest` while traffic/log retry ownership is shared with WebSocket delegate state
+- `ControllerEndpointBuilder` is implemented, stopped-core results are cleaned up, Smart endpoint results are unified.
+- 6 thin wrapper methods deleted from `ApiRequest` (→ ConnectionAPI, SmartAPI). Remaining wrappers have active callers.
+- Stream lifecycle (traffic/log WebSocket) still remains in `ApiRequest` while retry ownership is shared with WebSocket delegate state.
 
 ## Phase 2: Capability Probing System
 

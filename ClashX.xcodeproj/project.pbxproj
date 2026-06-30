@@ -119,6 +119,7 @@
 		5BDFEF8A9FC9FBD0C9E43C22 /* DNSConfigValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ED4F2C9C628243798AC9DB7 /* DNSConfigValidator.swift */; };
 		5C7683EB6416DBD0ED4EC669 /* TunLifecycleDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E2635954A673A0F316B84E /* TunLifecycleDiagnostics.swift */; };
 		72EEE8DCFFF3FD12ECE475A2 /* TestStubs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35C92E1DBFA09BA2AC0C9283 /* TestStubs.swift */; };
+		7350807FA619750EDDF45590 /* LogViewerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97B9B43FB1D902184DC5056B /* LogViewerViewModel.swift */; };
 		8A2BBEA727A03ACB0081EBEF /* ProxySetting.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 8A2BBEA627A03ACB0081EBEF /* ProxySetting.sdef */; };
 		8ACD21BB27A04C7800BC4632 /* ProxySettingCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACD21BA27A04C7800BC4632 /* ProxySettingCommand.swift */; };
 		8ACD21BD27A04ED500BC4632 /* ProxyModeChangeCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACD21BC27A04ED500BC4632 /* ProxyModeChangeCommand.swift */; };
@@ -356,6 +357,7 @@
 		8ACD21BA27A04C7800BC4632 /* ProxySettingCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxySettingCommand.swift; sourceTree = "<group>"; };
 		8ACD21BC27A04ED500BC4632 /* ProxyModeChangeCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyModeChangeCommand.swift; sourceTree = "<group>"; };
 		9327611F219CBF8C5949B274 /* CoreCapability.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Managers/CoreCapability.swift; sourceTree = SOURCE_ROOT; };
+		97B9B43FB1D902184DC5056B /* LogViewerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/LogViewerViewModel.swift; sourceTree = SOURCE_ROOT; };
 		9C96DA447FE4CC95C43F83F9 /* TunConfigValidator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/TunConfigValidator.swift; sourceTree = SOURCE_ROOT; };
 		A1485BCE642059532D01B8BA /* Pods-ClashX.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ClashX.release.xcconfig"; path = "Pods/Target Support Files/Pods-ClashX/Pods-ClashX.release.xcconfig"; sourceTree = "<group>"; };
 		A1B000000000000000000201 /* SmartXManagedOverrideManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartXManagedOverrideManager.swift; sourceTree = "<group>"; };
@@ -515,6 +517,7 @@
 				AEBD8BB7C6D50E708CF0A976 /* TunRuntimeInterfaceProbe.swift */,
 				320C42930D99D939DDC89853 /* TunRuntimeRouteProbe.swift */,
 				7ABAB0DEB8ECED1E402DA2B1 /* TunRuntimeDNSProbe.swift */,
+				97B9B43FB1D902184DC5056B /* LogViewerViewModel.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -1298,6 +1301,7 @@
 				4929F684258CE07500A435F6 /* UserDefaultWrapper.swift in Sources */,
 				F9E8F34623A12B89002DE5E8 /* String+Encode.swift in Sources */,
 				49B445162457CDF000B27E3E /* ClashStatusTool.swift in Sources */,
+				7350807FA619750EDDF45590 /* LogViewerViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

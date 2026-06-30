@@ -344,6 +344,28 @@ static NSString * const kHelperLogPrefix = @"[ProxyConfigHelper]";
         reply(@"EINVAL: Invalid restore payload — dictionary required");
         return;
     }
+    // ponytail: validate proxy setting value types before writing to system prefs.
+    // Reject payloads with unexpected value types to prevent privilege escalation.
+    NSArray *stringKeys = @[(__bridge NSString *)kCFNetworkProxiesHTTPProxy,
+                             (__bridge NSString *)kCFNetworkProxiesHTTPSProxy,
+                             (__bridge NSString *)kCFNetworkProxiesSOCKSProxy];
+    NSArray *numberKeys = @[(__bridge NSString *)kCFNetworkProxiesHTTPPort,
+                             (__bridge NSString *)kCFNetworkProxiesHTTPSPort,
+                             (__bridge NSString *)kCFNetworkProxiesSOCKSPort];
+    for (NSString *key in stringKeys) {
+        id val = dict[key];
+        if (val != nil && ![val isKindOfClass:[NSString class]]) {
+            reply(@"EINVAL: Invalid restore payload — proxy host must be a string");
+            return;
+        }
+    }
+    for (NSString *key in numberKeys) {
+        id val = dict[key];
+        if (val != nil && ![val isKindOfClass:[NSNumber class]]) {
+            reply(@"EINVAL: Invalid restore payload — proxy port must be a number");
+            return;
+        }
+    }
 
     dispatch_async(self.workQueue, ^{
         ProxySettingTool *tool = [ProxySettingTool new];

@@ -102,7 +102,17 @@ static NSString * const kHelperLogPrefix = @"[ProxyConfigHelper]";
     NSString *requirement = [self allowedClientRequirement];
 #if DEBUG
     if (requirement.length == 0) {
-        NSLog(@"%@ allowing pid=%d in Debug because %@ is empty", kHelperLogPrefix, pid, kAllowedClientRequirementInfoKey);
+        // ponytail: verify bundle ID even when signing requirement is empty.
+        // Prevents arbitrary local processes from connecting to the privileged
+        // helper when installed via the legacy Debug path.
+        NSString *bundleID = remoteApp.bundleIdentifier;
+        if (![bundleID isEqualToString:@"com.doodlenet.ClashX"]) {
+            NSLog(@"%@ rejecting pid=%d in Debug: empty requirement but bundle ID '%@' does not match expected 'com.doodlenet.ClashX'",
+                  kHelperLogPrefix, pid, bundleID ?: @"(nil)");
+            return NO;
+        }
+        NSLog(@"%@ allowing pid=%d in Debug because %@ is empty and bundle ID matches",
+              kHelperLogPrefix, pid, kAllowedClientRequirementInfoKey);
         return YES;
     }
 #else

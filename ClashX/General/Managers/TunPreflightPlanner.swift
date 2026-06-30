@@ -24,7 +24,7 @@ enum TunPreflightPlanner {
                 warnings.append("The active controller is not running. Passive diagnostics may rely on stale cached state plus read-only runtime evidence.")
             }
             if isUsingEmbeddedCore {
-                warnings.append("Embedded-core TUN remains unsupported in this build. Passive diagnostics remain read-only.")
+                warnings.append("Embedded-core TUN uses config-file update. System-level TUN verification (utun, route, DNS hijack) is not available in this mode.")
             }
             if config == nil {
                 warnings.append("Current controller config state is unavailable. Passive diagnostics may rely on stale cached state plus read-only runtime evidence.")
@@ -311,8 +311,8 @@ enum TunPreflightPlanner {
                 : "The active controller is not running, so SmartX cannot attempt a guarded TUN patch."
         case .embeddedCoreUnsupported:
             return operation == .passiveSnapshot
-                ? "Embedded-core TUN is unsupported in this build. This passive snapshot remains diagnostic only, and helper-backed TUN remains reserved only."
-                : "Embedded-core TUN is unsupported in this build, and helper-backed TUN remains reserved only."
+                ? "Embedded-core TUN uses config-file update. Passive diagnostics are read-only; helper-backed TUN remains reserved only."
+                : "Embedded-core TUN uses config-file update (no system-level utun/route/DNS verification). Helper-backed TUN remains reserved only."
         case .controllerConfigUnavailable:
             return operation == .passiveSnapshot
                 ? "SmartX could not load current controller config state, so this passive snapshot may rely on stale cached state plus read-only runtime evidence."
@@ -335,7 +335,7 @@ enum TunPreflightPlanner {
                 : "The active controller rejected config patch access, so SmartX cannot attempt a guarded TUN update."
         case .helperTunReservedOnly:
             return runtimeMode == .embeddedCoreUnsupported
-                ? "Helper-backed TUN commands remain reserved only, and embedded-core TUN is unsupported in this build."
+                ? "Helper-backed TUN commands remain reserved only. Embedded-core TUN uses config-file update (no system-level verification)."
                 : "Helper-backed TUN commands remain reserved only. SmartX can only attempt an external-controller config patch path."
         }
     }

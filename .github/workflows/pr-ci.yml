@@ -304,6 +304,20 @@ jobs:
             -o /tmp/remote-config-decode-smoke
           /tmp/remote-config-decode-smoke | tee .ci-logs/remote-config-decode-smoke.log
 
+      - name: Run SmartXTests XCTest bundle
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -workspace ClashX.xcworkspace \
+            -scheme ClashX \
+            -destination 'platform=macOS' \
+            -only-testing:SmartXTests \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            -quiet \
+            | tee .ci-logs/xctest-smartxtests.log
+
       - name: Upload validation logs on failure
         if: failure()
         uses: actions/upload-artifact@v5
@@ -574,6 +588,20 @@ jobs:
             Tests/SecurityHarness/tun_route_dns_runtime_smoke.swift \
             -o /tmp/tun-route-dns-runtime-smoke
           /tmp/tun-route-dns-runtime-smoke | tee .ci-logs/tun-route-dns-runtime-smoke.log
+
+      - name: Run SmartXTests XCTest bundle
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -workspace ClashX.xcworkspace \
+            -scheme ClashX \
+            -destination 'platform=macOS' \
+            -only-testing:SmartXTests \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            -quiet \
+            | tee .ci-logs/xctest-smartxtests.log
 
       - name: Build unsigned Debug app
         run: |

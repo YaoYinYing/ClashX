@@ -11,7 +11,9 @@
 		0AD7506B2A5B9A04001FFBBD /* ConnectionLeftPannelViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD7506A2A5B9A04001FFBBD /* ConnectionLeftPannelViewModel.swift */; };
 		0AD7506D2A5B9B26001FFBBD /* ConnectionLeftTextCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD7506C2A5B9B26001FFBBD /* ConnectionLeftTextCellView.swift */; };
 		0AEF6EAF2A5F961B00EFEE23 /* SectionedTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AEF6EAE2A5F961B00EFEE23 /* SectionedTableView.swift */; };
+		0DC7F1C4A4B1AA1DDA5E1A11 /* ConfigWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C4E97F0132C4A9E597A76C /* ConfigWorkspace.swift */; };
 		0DFBE05312F152F685AE4FA2 /* HelperCommandRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD4AEDE541591650C2626F64 /* HelperCommandRegistry.swift */; };
+		13FEFC014A2F2C412354D979 /* ConfigYAMLEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E662B18A07E4E47A2D01AA5 /* ConfigYAMLEditor.swift */; };
 		1CE1FBBD77B5F847D7EAA306 /* TunConfigEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CE1FBBD77B5F847D7EAA307 /* TunConfigEditorViewController.swift */; };
 		221DC5D3FACA3A716EDF8012 /* TunConfigValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C96DA447FE4CC95C43F83F9 /* TunConfigValidator.swift */; };
 		359E244C9B32D446F6E61D7D /* HelperStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EB4ABA4536CF02BE2F35103 /* HelperStatus.swift */; };
@@ -152,10 +154,13 @@
 		A1B00000000000000000011A /* TunRuntimeInterfaceProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000021A /* TunRuntimeInterfaceProbe.swift */; };
 		A1B00000000000000000011B /* TunRuntimeRouteProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000021B /* TunRuntimeRouteProbe.swift */; };
 		A1B00000000000000000011C /* TunRuntimeDNSProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000021C /* TunRuntimeDNSProbe.swift */; };
+		B8D41C8F899C560EADD5D9BE /* ConfigYAMLEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E662B18A07E4E47A2D01AA5 /* ConfigYAMLEditor.swift */; };
 		C298F616EFA104C60D327938 /* ControllerEndpointBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF73E0C6E705AC4F21396B3 /* ControllerEndpointBuilder.swift */; };
 		C7C605625DAB24072E4B4DBA /* DNSConfigEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C605625DAB24072E4B4DBB /* DNSConfigEditorViewController.swift */; };
+		CD3516DDDCB4F7C6256137A9 /* ConfigWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C4E97F0132C4A9E597A76C /* ConfigWorkspace.swift */; };
 		CF2CDC0034931358D3434733 /* SmartXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F296FC523FC1FF80DBD6A9 /* SmartXTests.swift */; };
 		CF5C8FA41EF5D8D333410FC0 /* ConfigValidationIssue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DD41F4E072DFF1CD1AE8B60 /* ConfigValidationIssue.swift */; };
+		E3372EAE7CAFFE5543F30539 /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED18F541347D68E1411606C4 /* String.swift */; };
 		E77500B99723BBF88FEE23E4 /* HelperCommandContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41DDF9BE0900EA7244A9B71A /* HelperCommandContract.swift */; };
 		F28262F111123386DB636457 /* SmartXManagedOverrideModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A2BEBEA3D262C1FE7DC5904 /* SmartXManagedOverrideModel.swift */; };
 		F910AA24240134AF00116E95 /* ProxyGroupMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F910AA23240134AF00116E95 /* ProxyGroupMenu.swift */; };
@@ -225,12 +230,14 @@
 		0DD41F4E072DFF1CD1AE8B60 /* ConfigValidationIssue.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/ConfigValidationIssue.swift; sourceTree = SOURCE_ROOT; };
 		0EB4ABA4536CF02BE2F35103 /* HelperStatus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/Models/HelperStatus.swift; sourceTree = SOURCE_ROOT; };
 		1CE1FBBD77B5F847D7EAA307 /* TunConfigEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunConfigEditorViewController.swift; sourceTree = "<group>"; };
+		1E662B18A07E4E47A2D01AA5 /* ConfigYAMLEditor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/ConfigYAMLEditor.swift; sourceTree = SOURCE_ROOT; };
 		235B2E4B03CE9A45025615DA /* EffectiveConfigGenerator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Managers/EffectiveConfigGenerator.swift; sourceTree = SOURCE_ROOT; };
 		274CAE4EC0C96629922CCAAA /* TunPreflightPlanner.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Managers/TunPreflightPlanner.swift; sourceTree = SOURCE_ROOT; };
 		3206E1F3133A07847BFB7989 /* SmartXRedactor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/SmartXRedactor.swift; sourceTree = SOURCE_ROOT; };
 		320C42930D99D939DDC89853 /* TunRuntimeRouteProbe.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/TunRuntimeRouteProbe.swift; sourceTree = SOURCE_ROOT; };
 		35C92E1DBFA09BA2AC0C9283 /* TestStubs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tests/SmartXTests/TestStubs.swift; sourceTree = SOURCE_ROOT; };
 		41DDF9BE0900EA7244A9B71A /* HelperCommandContract.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/Models/HelperCommandContract.swift; sourceTree = SOURCE_ROOT; };
+		46C4E97F0132C4A9E597A76C /* ConfigWorkspace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/Models/ConfigWorkspace.swift; sourceTree = SOURCE_ROOT; };
 		4740348FD2966724DA34210A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		4905A2C42A2058B000AEDA2E /* GlobalShortCutViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalShortCutViewController.swift; sourceTree = "<group>"; };
 		4905A2C92A20841B00AEDA2E /* NSView+Layout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "NSView+Layout.swift"; sourceTree = "<group>"; };
@@ -393,6 +400,7 @@
 		C7C605625DAB24072E4B4DBB /* DNSConfigEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSConfigEditorViewController.swift; sourceTree = "<group>"; };
 		CAE7981A9F34B5E210C549CB /* libPods-ClashX.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ClashX.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D697C91D6CEDEE3A907D779A /* ProfileArtifactManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Managers/ProfileArtifactManager.swift; sourceTree = SOURCE_ROOT; };
+		ED18F541347D68E1411606C4 /* String.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Extensions/String.swift; sourceTree = SOURCE_ROOT; };
 		F2F296FC523FC1FF80DBD6A9 /* SmartXTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tests/SmartXTests/SmartXTests.swift; sourceTree = SOURCE_ROOT; };
 		F910AA23240134AF00116E95 /* ProxyGroupMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyGroupMenu.swift; sourceTree = "<group>"; };
 		F915A4612366ADEF004840BE /* ClashConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClashConnection.swift; sourceTree = "<group>"; };
@@ -518,6 +526,7 @@
 				320C42930D99D939DDC89853 /* TunRuntimeRouteProbe.swift */,
 				7ABAB0DEB8ECED1E402DA2B1 /* TunRuntimeDNSProbe.swift */,
 				97B9B43FB1D902184DC5056B /* LogViewerViewModel.swift */,
+				1E662B18A07E4E47A2D01AA5 /* ConfigYAMLEditor.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -565,6 +574,7 @@
 				491C250121BD561200AB5D44 /* Managers */,
 				491C250021BD55B900AB5D44 /* Utils */,
 				492C4868210EE6B9004554A0 /* ApiRequest.swift */,
+				72BC7AE233FBDA0BF2B71686 /* Extensions */,
 			);
 			path = General;
 			sourceTree = "<group>";
@@ -588,6 +598,7 @@
 				08E2635954A673A0F316B84E /* TunLifecycleDiagnostics.swift */,
 				4A2BEBEA3D262C1FE7DC5904 /* SmartXManagedOverrideModel.swift */,
 				75BA2DFBB2FE578AAC1D0D64 /* RemoteConfigModel.swift */,
+				46C4E97F0132C4A9E597A76C /* ConfigWorkspace.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -823,6 +834,15 @@
 				49D767752A6195E600830333 /* StructedLogReq.swift */,
 			);
 			path = Requests;
+			sourceTree = "<group>";
+		};
+		72BC7AE233FBDA0BF2B71686 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				ED18F541347D68E1411606C4 /* String.swift */,
+			);
+			name = Extensions;
+			path = Extensions;
 			sourceTree = "<group>";
 		};
 		76229F122B00E935D126742A /* Pods */ = {
@@ -1302,6 +1322,9 @@
 				F9E8F34623A12B89002DE5E8 /* String+Encode.swift in Sources */,
 				49B445162457CDF000B27E3E /* ClashStatusTool.swift in Sources */,
 				7350807FA619750EDDF45590 /* LogViewerViewModel.swift in Sources */,
+				0DC7F1C4A4B1AA1DDA5E1A11 /* ConfigWorkspace.swift in Sources */,
+				13FEFC014A2F2C412354D979 /* ConfigYAMLEditor.swift in Sources */,
+				E3372EAE7CAFFE5543F30539 /* String.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1332,6 +1355,8 @@
 				0A5DF39AFD9D59EFD1D19644 /* RemoteConfigModel.swift in Sources */,
 				CF2CDC0034931358D3434733 /* SmartXTests.swift in Sources */,
 				72EEE8DCFFF3FD12ECE475A2 /* TestStubs.swift in Sources */,
+				CD3516DDDCB4F7C6256137A9 /* ConfigWorkspace.swift in Sources */,
+				B8D41C8F899C560EADD5D9BE /* ConfigYAMLEditor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

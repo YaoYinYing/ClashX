@@ -395,77 +395,14 @@ final class TunConfigEditorViewController: NSViewController {
     }
 
     /// Inserts or updates the `tun:` block in a YAML string while preserving
-    /// all other sections and comments.
+    /// all other sections and comments. Delegates to ConfigYAMLEditor.
     private func upsertTunSection(in yaml: String, tunParams: [String: Any]) -> String {
-        let tunYaml = renderTunYAML(tunParams)
-        var lines = yaml.components(separatedBy: "\n")
-        var tunStart: Int?
-        var tunEnd: Int?
-
-        for (idx, line) in lines.enumerated() {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed == "tun:" || trimmed.hasPrefix("tun:") {
-                tunStart = idx
-                continue
-            }
-            if tunStart != nil, tunEnd == nil {
-                // A top-level key (no leading whitespace, not a comment) ends the tun block.
-                if !trimmed.isEmpty, !trimmed.hasPrefix("#"),
-                   line.first?.isWhitespace == false {
-                    tunEnd = idx
-                    break
-                }
-            }
-        }
-
-        if let start = tunStart {
-            let end = tunEnd ?? lines.count
-            lines.replaceSubrange(start ..< end, with: [tunYaml])
-        } else {
-            // No tun section: append before the first blank-line block or at the end.
-            if let lastNonBlank = lines.lastIndex(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) {
-                let insertAt = min(lastNonBlank + 1, lines.count)
-                if insertAt < lines.count, lines[insertAt].trimmingCharacters(in: .whitespaces).isEmpty {
-                    lines.insert(tunYaml, at: insertAt)
-                } else {
-                    lines.append("")
-                    lines.append(tunYaml)
-                }
-            } else {
-                lines.append(tunYaml)
-            }
-        }
-
-        return lines.joined(separator: "\n")
-    }
-
-    /// Renders a tun parameters dictionary to a YAML block string.
-    private func renderTunYAML(_ params: [String: Any]) -> String {
-        var result = "tun:"
-        let keyOrder = ["enable", "device", "stack", "dns-hijack", "auto-route",
-                        "auto-detect-interface", "strict-route", "mtu", "udp-timeout",
-                        "route-address", "route-exclude-address",
-                        "include-interface", "exclude-interface"]
-        for key in keyOrder {
-            guard let value = params[key] else { continue }
-            switch value {
-            case let b as Bool:
-                result += "\n  \(key): \(b ? "true" : "false")"
-            case let s as String:
-                result += "\n  \(key): \"\(s)\""
-            case let arr as [String]:
-                if arr.isEmpty { continue }
-                result += "\n  \(key):"
-                for item in arr {
-                    result += "\n    - \"\(item)\""
-                }
-            case let n as Int:
-                result += "\n  \(key): \(n)"
-            default:
-                break
-            }
-        }
-        return result
+        ConfigYAMLEditor.upsertSection(named: "tun", in: yaml, params: tunParams, keyOrder: [
+            "enable", "device", "stack", "dns-hijack", "auto-route",
+            "auto-detect-interface", "strict-route", "mtu", "udp-timeout",
+            "route-address", "route-exclude-address",
+            "include-interface", "exclude-interface"
+        ])
     }
 
     // MARK: - Layout helpers
@@ -559,11 +496,5 @@ final class TunConfigEditorViewController: NSViewController {
         f.minimum = NSNumber(value: min)
         f.maximum = NSNumber(value: max)
         return f
-    }
-}
-
-private extension String {
-    var nilIfEmpty: String? {
-        isEmpty ? nil : self
     }
 }

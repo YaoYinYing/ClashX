@@ -1,0 +1,271 @@
+//
+//  SmartXTests.swift
+//  SmartXTests
+//
+//  XCTest cases for pure-logic production code. Migrated from smoke harnesses.
+//
+//  ponytail: covers files that compile without CocoaPods. TestStubs.swift
+//  provides stubs for ConfigManager and ClashConfig (needed by production
+//  files that reference Alamofire/SwiftyJSON-dependent types).
+//  Ceiling: no AppKit or network-dependent code. Upgrade path: add SPM
+//  modularization to remove stub dependency.
+
+import XCTest
+
+// MARK: - ControllerEndpointBuilder
+
+final class ControllerEndpointBuilderTests: XCTestCase {
+    func test_httpPath_returnsURL() throws {
+        ConfigManager.shared.isRunning = true
+        ConfigManager.shared.overrideApiURL = nil
+        ConfigManager.shared.apiPort = "9090"
+        let url = try ControllerEndpointBuilder.httpURL(path: "/configs")
+        XCTAssertEqual(url.absoluteString, "http://127.0.0.1:9090/configs")
+    }
+
+    func test_websocketPath_convertsScheme() throws {
+        ConfigManager.shared.overrideApiURL = URL(string: "https://example.com:9443")
+        let url = try ControllerEndpointBuilder.websocketURL(path: "/logs")
+        XCTAssertEqual(url.absoluteString, "wss://example.com:9443/logs")
+    }
+
+    func test_pathComponents_singleEncode() throws {
+        ConfigManager.shared.overrideApiURL = URL(string: "https://example.com:9443/base")
+        let url = try ControllerEndpointBuilder.httpURL(pathComponents: ["proxies", "Proxy A"])
+        XCTAssertEqual(url.absoluteString, "https://example.com:9443/base/proxies/Proxy%20A")
+        XCTAssertFalse(url.absoluteString.contains("%2520"),
+                       "Dynamic path components must not be double-encoded")
+    }
+
+    func test_pathComponents_slashStaysEncoded() throws {
+        ConfigManager.shared.overrideApiURL = URL(string: "https://example.com:9443/base")
+        let url = try ControllerEndpointBuilder.httpURL(pathComponents: ["providers", "proxies", "Group/A"])
+        XCTAssertEqual(url.absoluteString, "https://example.com:9443/base/providers/proxies/Group%2FA",
+                       "Slash inside a raw component must stay in one path segment")
+    }
+}
+
+// MARK: - Config validators
+
+final class ConfigValidatorTests: XCTestCase {
+    func test_tunValidator_validInput_passes() {
+        let input = TunConfigValidationInput(
+            enable: true, device: nil, stack: "gvisor", dnsHijack: nil,
+            autoRoute: true, autoDetectInterface: true, strictRoute: false,
+            mtu: nil, udpTimeout: nil, routeAddress: nil,
+            routeExcludeAddress: nil, includeInterface: nil, excludeInterface: nil
+        )
+        let result = TunConfigValidator.validate(input)
+        XCTAssertTrue(result.blockingErrors.isEmpty,
+                      "Valid input should have no blocking errors: \(result.blockingErrors.map(\.message))")
+    }
+
+    func test_tunValidator_strictRoute_warns() {
+        let input = TunConfigValidationInput(
+            enable: true, device: nil, stack: "gvisor", dnsHijack: nil,
+            autoRoute: true, autoDetectInterface: true, strictRoute: true,
+            mtu: nil, udpTimeout: nil, routeAddress: nil,
+            routeExcludeAddress: nil, includeInterface: nil, excludeInterface: nil
+        )
+        let result = TunConfigValidator.validate(input)
+        XCTAssertTrue(result.warnings.contains { $0.message.localizedCaseInsensitiveContains("strict-route") },
+                      "strict-route should produce a warning about macOS workflows")
+    }
+
+    func test_tunValidator_bothInterfaces_warns() {
+        let input = TunConfigValidationInput(
+            enable: true, device: nil, stack: "gvisor", dnsHijack: nil,
+            autoRoute: true, autoDetectInterface: false, strictRoute: false,
+            mtu: nil, udpTimeout: nil, routeAddress: nil,
+            routeExcludeAddress: nil,
+            includeInterface: ["en0"], excludeInterface: ["utun1"]
+        )
+        let result = TunConfigValidator.validate(input)
+        // ponytail: both include+exclude interface produces a warning, not a
+        // blocking error — the validator treats it as expert-only, not invalid.
+        XCTAssertTrue(result.warnings.contains {
+            $0.message.localizedCaseInsensitiveContains("include-interface") &&
+                $0.message.localizedCaseInsensitiveContains("exclude-interface")
+        }, "Both include and exclude interface should produce a warning")
+    }
+
+    func test_dnsValidator_validInput_passes() {
+        let input = DNSConfigValidationInput(
+            enable: true, enhancedMode: nil, fakeIPRange: nil, fakeIPFilter: nil,
+            fakeIPFilterMode: nil, nameserver: nil, fallback: nil,
+            directNameserver: nil, respectRules: true, useHosts: true,
+            useSystemHosts: false, preferH3: false, listen: nil
+        )
+        let result = DNSConfigValidator.validate(input)
+        let blocking = result.issues.filter { $0.severity == .blocking }
+        XCTAssertTrue(blocking.isEmpty,
+                      "Valid DNS input should have no blocking issues: \(blocking.map(\.message))")
+    }
+
+    func test_dnsValidator_respectRulesWithoutResolver_warns() {
+        let input = DNSConfigValidationInput(
+            enable: true, enhancedMode: nil, fakeIPRange: nil, fakeIPFilter: nil,
+            fakeIPFilterMode: nil, nameserver: nil, fallback: nil,
+            directNameserver: nil, respectRules: true, useHosts: false,
+            useSystemHosts: false, preferH3: false, listen: nil
+        )
+        let result = DNSConfigValidator.validate(input)
+        XCTAssertTrue(result.issues.contains { $0.message.contains("respect-rules") },
+                      "Respect-rules without resolver should produce a validation issue")
+    }
+}
+
+// MARK: - Helper command contract
+
+final class HelperCommandContractTests: XCTestCase {
+    func test_classifyReplyError_nil_returnsUnknown() {
+        XCTAssertEqual(HelperCommandContract.classifyReplyError(nil), .unknown)
+    }
+
+    func test_classifyReplyError_empty_returnsUnknown() {
+        XCTAssertEqual(HelperCommandContract.classifyReplyError(""), .unknown)
+    }
+
+    func test_classifyReplyError_allPrefixes() {
+        let cases: [(String, HelperCommandErrorCode)] = [
+            ("EINVAL: bad input", .invalidInput),
+            ("EAUTH: no access", .unauthorized),
+            ("EUNSUPPORTED: nope", .unsupported),
+            ("ETIMEOUT: too slow", .timeout),
+            ("EFORBIDDEN: denied", .forbidden),
+            ("ENOTINSTALLED: missing", .notInstalled),
+        ]
+        for (input, expected) in cases {
+            XCTAssertEqual(HelperCommandContract.classifyReplyError(input), expected,
+                           "\(input) should classify as \(expected)")
+        }
+    }
+}
+
+// MARK: - Helper status
+
+final class HelperStatusTests: XCTestCase {
+    func test_allTrustStates_exist() {
+        let states: [HelperTrustState] = [.unknown, .unavailable, .unsignedDebugBuild,
+                                          .requirementMismatch, .notInstalled,
+                                          .installedButUnverified, .verified]
+        XCTAssertEqual(states.count, 7)
+    }
+
+    func test_status_producesDiagnosticMessages() {
+        let status = HelperStatus(trustState: .notInstalled,
+                                  isPrivilegedHelperAvailable: false,
+                                  bundleIdentifier: "com.test.helper")
+        XCTAssertFalse(status.diagnosticMessage.isEmpty)
+        XCTAssertFalse(status.recoverySuggestion.isEmpty)
+    }
+
+    func test_codableRoundtrip() throws {
+        let original = HelperStatus(trustState: .verified,
+                                    isPrivilegedHelperAvailable: true,
+                                    bundleIdentifier: "com.test.helper")
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(HelperStatus.self, from: data)
+        XCTAssertEqual(decoded.trustState, .verified)
+        XCTAssertEqual(decoded.bundleIdentifier, "com.test.helper")
+    }
+}
+
+// MARK: - Redactor
+
+final class RedactorTests: XCTestCase {
+    func test_redactURLString_stripsSecrets() {
+        let redacted = SmartXRedactor.redactURLString("http://127.0.0.1:9090?token=abc123secret")
+        XCTAssertNotNil(redacted)
+        XCTAssertFalse(redacted?.contains("abc123secret") ?? true)
+    }
+
+    func test_sanitizeText_redactsProxyURIs() {
+        let sanitized = SmartXRedactor.sanitizeText("ss://aes-256-gcm:password@example.com:8388")
+        XCTAssertFalse(sanitized.contains("password"))
+    }
+
+    func test_sanitizeText_preservesSafeContent() {
+        let sanitized = SmartXRedactor.sanitizeText("Core version: 1.18.0, mode: rule")
+        XCTAssertTrue(sanitized.contains("Core version"))
+    }
+}
+
+// MARK: - Remote config model
+
+final class RemoteConfigModelTests: XCTestCase {
+    func test_decode_validJSON() throws {
+        let json = #"{"name":"test","url":"https://example.com/config.yaml"}"#
+        let model = try JSONDecoder().decode(RemoteConfigModel.self, from: Data(json.utf8))
+        XCTAssertEqual(model.name, "test")
+        XCTAssertEqual(model.url, "https://example.com/config.yaml")
+    }
+
+    func test_validationState_defaultsToUnknown() throws {
+        let json = #"{"name":"test","url":"https://example.com/config.yaml"}"#
+        let model = try JSONDecoder().decode(RemoteConfigModel.self, from: Data(json.utf8))
+        XCTAssertEqual(model.validationState, .unknown)
+    }
+}
+
+// MARK: - LightGBM override model
+
+final class LightGBMOverrideTests: XCTestCase {
+    func test_codableRoundtrip() throws {
+        let json = """
+        {"enabled":true,"modelURL":"https://example.com/model.bin","autoUpdate":true,"updateIntervalHours":72}
+        """
+        let override = try JSONDecoder().decode(LightGBMOverride.self, from: Data(json.utf8))
+        XCTAssertTrue(override.enabled)
+        XCTAssertEqual(override.modelURL, "https://example.com/model.bin")
+        XCTAssertTrue(override.autoUpdate)
+        XCTAssertEqual(override.updateIntervalHours, 72)
+    }
+
+    func test_managedOverride_roundtrip() throws {
+        let json = """
+        {"schemaVersion":1,"lightGBM":{"enabled":true,"modelURL":"https://example.com/model.bin","autoUpdate":false,"updateIntervalHours":48}}
+        """
+        let model = try JSONDecoder().decode(SmartXManagedOverride.self, from: Data(json.utf8))
+        XCTAssertEqual(model.schemaVersion, 1)
+        XCTAssertEqual(model.lightGBM?.modelURL, "https://example.com/model.bin")
+    }
+}
+
+// MARK: - Tun lifecycle diagnostics
+
+final class TunLifecycleDiagnosticsTests: XCTestCase {
+    func test_preflightReport_codableRoundtrip() throws {
+        let report = TunPreflightReport(
+            operation: .enable,
+            runtimeMode: .externalController,
+            canAttemptRequestedOperation: true,
+            blockers: [],
+            warnings: ["test warning"],
+            helperTrustState: .verified,
+            helperTunCommandsReserved: true,
+            verificationScope: .controllerConfigOnly,
+            userMessage: "TUN is ready",
+            recoverySuggestion: "Proceed"
+        )
+        let data = try JSONEncoder().encode(report)
+        let decoded = try JSONDecoder().decode(TunPreflightReport.self, from: data)
+        XCTAssertEqual(decoded.operation, .enable)
+        XCTAssertEqual(decoded.warnings, ["test warning"])
+    }
+
+    func test_verificationReport_codableRoundtrip() throws {
+        let report = TunLifecycleVerificationReport(
+            expectedEnabled: true,
+            outcome: .controllerStateMatches,
+            verificationScope: .controllerConfigOnly,
+            controllerReportedEnabled: true,
+            runtimeVerification: nil,
+            message: "OK",
+            recoverySuggestion: ""
+        )
+        let data = try JSONEncoder().encode(report)
+        let decoded = try JSONDecoder().decode(TunLifecycleVerificationReport.self, from: data)
+        XCTAssertEqual(decoded.outcome, .controllerStateMatches)
+    }
+}

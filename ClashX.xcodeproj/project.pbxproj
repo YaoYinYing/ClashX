@@ -7,47 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A5DF39AFD9D59EFD1D19644 /* RemoteConfigModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75BA2DFBB2FE578AAC1D0D64 /* RemoteConfigModel.swift */; };
 		0AD7506B2A5B9A04001FFBBD /* ConnectionLeftPannelViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD7506A2A5B9A04001FFBBD /* ConnectionLeftPannelViewModel.swift */; };
 		0AD7506D2A5B9B26001FFBBD /* ConnectionLeftTextCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD7506C2A5B9B26001FFBBD /* ConnectionLeftTextCellView.swift */; };
 		0AEF6EAF2A5F961B00EFEE23 /* SectionedTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AEF6EAE2A5F961B00EFEE23 /* SectionedTableView.swift */; };
+		0DFBE05312F152F685AE4FA2 /* HelperCommandRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD4AEDE541591650C2626F64 /* HelperCommandRegistry.swift */; };
+		1CE1FBBD77B5F847D7EAA306 /* TunConfigEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CE1FBBD77B5F847D7EAA307 /* TunConfigEditorViewController.swift */; };
+		221DC5D3FACA3A716EDF8012 /* TunConfigValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C96DA447FE4CC95C43F83F9 /* TunConfigValidator.swift */; };
+		359E244C9B32D446F6E61D7D /* HelperStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EB4ABA4536CF02BE2F35103 /* HelperStatus.swift */; };
 		4905A2C52A2058B000AEDA2E /* GlobalShortCutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4905A2C42A2058B000AEDA2E /* GlobalShortCutViewController.swift */; };
 		4905A2C82A2058D400AEDA2E /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 4905A2C72A2058D400AEDA2E /* KeyboardShortcuts */; };
 		4905A2CA2A20841B00AEDA2E /* NSView+Layout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4905A2C92A20841B00AEDA2E /* NSView+Layout.swift */; };
 		4908087B29F8F405007A4944 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 4908087A29F8F3FF007A4944 /* libresolv.tbd */; };
 		490C8A102AC26E67007140F2 /* JSBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 490C8A0F2AC26E67007140F2 /* JSBridge.swift */; };
 		4913C82321157D0200F6B87C /* Notification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4913C82221157D0200F6B87C /* Notification.swift */; };
-		491E6203258A424D00313AEF /* CommonUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 491E61FD258A424500313AEF /* CommonUtils.m */; };
 		49228457270AADE20027A4B6 /* RemoteConfigUpdateIntervalSettingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49228456270AADE20027A4B6 /* RemoteConfigUpdateIntervalSettingView.swift */; };
 		49281C802A1F01FA00F60935 /* DebugSettingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49281C7F2A1F01FA00F60935 /* DebugSettingViewController.swift */; };
 		4929F610258CD22E00A435F6 /* menu_icon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 4929F60F258CD22E00A435F6 /* menu_icon@2x.png */; };
 		4929F67F258CE04700A435F6 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4929F67E258CE04700A435F6 /* Settings.swift */; };
-		A1B000000000000000000101 /* SmartXManagedOverrideManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000201 /* SmartXManagedOverrideManager.swift */; };
-		A1B000000000000000000102 /* LightGBMSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000202 /* LightGBMSettingsViewModel.swift */; };
-		A1B000000000000000000103 /* ConfigValidationIssue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000203 /* ConfigValidationIssue.swift */; };
-		A1B000000000000000000104 /* TunConfigValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000204 /* TunConfigValidator.swift */; };
-		A1B000000000000000000105 /* DNSConfigValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000205 /* DNSConfigValidator.swift */; };
-		A1B000000000000000000106 /* TunLifecycleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000206 /* TunLifecycleCoordinator.swift */; };
-		A1B000000000000000000107 /* DiagnosticsLogReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000207 /* DiagnosticsLogReader.swift */; };
-		A1B000000000000000000108 /* DiagnosticsArtifactFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000208 /* DiagnosticsArtifactFormatter.swift */; };
-		A1B000000000000000000109 /* DiagnosticsAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020A /* DiagnosticsAPI.swift */; };
-		A1B00000000000000000010A /* ProviderAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020B /* ProviderAPI.swift */; };
-		A1B00000000000000000010B /* SmartAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020C /* SmartAPI.swift */; };
-		A1B00000000000000000010C /* ConfigAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020D /* ConfigAPI.swift */; };
-		A1B00000000000000000010D /* DiagnosticsProviderFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020E /* DiagnosticsProviderFormatter.swift */; };
-		A1B00000000000000000010E /* EffectiveConfigGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020F /* EffectiveConfigGenerator.swift */; };
-		A1B000000000000000000110 /* ConnectionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000210 /* ConnectionAPI.swift */; };
-		A1B000000000000000000111 /* DiagnosticsMaintenanceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000211 /* DiagnosticsMaintenanceCoordinator.swift */; };
-		A1B000000000000000000112 /* PolicyGroupAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000212 /* PolicyGroupAPI.swift */; };
-		A1B000000000000000000113 /* SmartXManagedOverrideModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000213 /* SmartXManagedOverrideModel.swift */; };
-		A1B000000000000000000114 /* HelperStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000214 /* HelperStatus.swift */; };
-		A1B000000000000000000115 /* HelperDiagnosticsProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000215 /* HelperDiagnosticsProbe.swift */; };
-		A1B000000000000000000116 /* HelperCommandContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000216 /* HelperCommandContract.swift */; };
-		A1B000000000000000000117 /* HelperCommandRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000217 /* HelperCommandRegistry.swift */; };
-		A1B000000000000000000118 /* TunLifecycleDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000218 /* TunLifecycleDiagnostics.swift */; };
-		A1B000000000000000000119 /* TunPreflightPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000219 /* TunPreflightPlanner.swift */; };
-		A1B00000000000000000011A /* TunRuntimeInterfaceProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000021A /* TunRuntimeInterfaceProbe.swift */; };
-		A1B00000000000000000011B /* TunRuntimeRouteProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000021B /* TunRuntimeRouteProbe.swift */; };
-		A1B00000000000000000011C /* TunRuntimeDNSProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000021C /* TunRuntimeDNSProbe.swift */; };
 		4929F684258CE07500A435F6 /* UserDefaultWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4929F683258CE07500A435F6 /* UserDefaultWrapper.swift */; };
 		492C4869210EE6B9004554A0 /* ApiRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 492C4868210EE6B9004554A0 /* ApiRequest.swift */; };
 		492C4871210EF62E004554A0 /* ClashConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 492C4870210EF62E004554A0 /* ClashConfig.swift */; };
@@ -139,10 +116,47 @@
 		4D534D412F44494147010D /* SmartXRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D402F44494147010D /* SmartXRedactor.swift */; };
 		4D534D432F44494147010E /* ControllerEndpointBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D442F44494147010E /* ControllerEndpointBuilder.swift */; };
 		4D534D452F44494147010F /* CoreCapabilityProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D534D462F44494147010F /* CoreCapabilityProbe.swift */; };
+		5BDFEF8A9FC9FBD0C9E43C22 /* DNSConfigValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ED4F2C9C628243798AC9DB7 /* DNSConfigValidator.swift */; };
+		5C7683EB6416DBD0ED4EC669 /* TunLifecycleDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E2635954A673A0F316B84E /* TunLifecycleDiagnostics.swift */; };
+		72EEE8DCFFF3FD12ECE475A2 /* TestStubs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35C92E1DBFA09BA2AC0C9283 /* TestStubs.swift */; };
 		8A2BBEA727A03ACB0081EBEF /* ProxySetting.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 8A2BBEA627A03ACB0081EBEF /* ProxySetting.sdef */; };
 		8ACD21BB27A04C7800BC4632 /* ProxySettingCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACD21BA27A04C7800BC4632 /* ProxySettingCommand.swift */; };
 		8ACD21BD27A04ED500BC4632 /* ProxyModeChangeCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACD21BC27A04ED500BC4632 /* ProxyModeChangeCommand.swift */; };
+		9709FE063E8097242F991371 /* SmartXRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3206E1F3133A07847BFB7989 /* SmartXRedactor.swift */; };
 		9E0E2F1481CB327D3753969D /* libPods-ClashX.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CAE7981A9F34B5E210C549CB /* libPods-ClashX.a */; };
+		A1B000000000000000000101 /* SmartXManagedOverrideManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000201 /* SmartXManagedOverrideManager.swift */; };
+		A1B000000000000000000102 /* LightGBMSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000202 /* LightGBMSettingsViewModel.swift */; };
+		A1B000000000000000000103 /* ConfigValidationIssue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000203 /* ConfigValidationIssue.swift */; };
+		A1B000000000000000000104 /* TunConfigValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000204 /* TunConfigValidator.swift */; };
+		A1B000000000000000000105 /* DNSConfigValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000205 /* DNSConfigValidator.swift */; };
+		A1B000000000000000000106 /* TunLifecycleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000206 /* TunLifecycleCoordinator.swift */; };
+		A1B000000000000000000107 /* DiagnosticsLogReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000207 /* DiagnosticsLogReader.swift */; };
+		A1B000000000000000000108 /* DiagnosticsArtifactFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000208 /* DiagnosticsArtifactFormatter.swift */; };
+		A1B000000000000000000109 /* DiagnosticsAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020A /* DiagnosticsAPI.swift */; };
+		A1B00000000000000000010A /* ProviderAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020B /* ProviderAPI.swift */; };
+		A1B00000000000000000010B /* SmartAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020C /* SmartAPI.swift */; };
+		A1B00000000000000000010C /* ConfigAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020D /* ConfigAPI.swift */; };
+		A1B00000000000000000010D /* DiagnosticsProviderFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020E /* DiagnosticsProviderFormatter.swift */; };
+		A1B00000000000000000010E /* EffectiveConfigGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000020F /* EffectiveConfigGenerator.swift */; };
+		A1B000000000000000000110 /* ConnectionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000210 /* ConnectionAPI.swift */; };
+		A1B000000000000000000111 /* DiagnosticsMaintenanceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000211 /* DiagnosticsMaintenanceCoordinator.swift */; };
+		A1B000000000000000000112 /* PolicyGroupAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000212 /* PolicyGroupAPI.swift */; };
+		A1B000000000000000000113 /* SmartXManagedOverrideModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000213 /* SmartXManagedOverrideModel.swift */; };
+		A1B000000000000000000114 /* HelperStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000214 /* HelperStatus.swift */; };
+		A1B000000000000000000115 /* HelperDiagnosticsProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000215 /* HelperDiagnosticsProbe.swift */; };
+		A1B000000000000000000116 /* HelperCommandContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000216 /* HelperCommandContract.swift */; };
+		A1B000000000000000000117 /* HelperCommandRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000217 /* HelperCommandRegistry.swift */; };
+		A1B000000000000000000118 /* TunLifecycleDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000218 /* TunLifecycleDiagnostics.swift */; };
+		A1B000000000000000000119 /* TunPreflightPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B000000000000000000219 /* TunPreflightPlanner.swift */; };
+		A1B00000000000000000011A /* TunRuntimeInterfaceProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000021A /* TunRuntimeInterfaceProbe.swift */; };
+		A1B00000000000000000011B /* TunRuntimeRouteProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000021B /* TunRuntimeRouteProbe.swift */; };
+		A1B00000000000000000011C /* TunRuntimeDNSProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B00000000000000000021C /* TunRuntimeDNSProbe.swift */; };
+		C298F616EFA104C60D327938 /* ControllerEndpointBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF73E0C6E705AC4F21396B3 /* ControllerEndpointBuilder.swift */; };
+		C7C605625DAB24072E4B4DBA /* DNSConfigEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C605625DAB24072E4B4DBB /* DNSConfigEditorViewController.swift */; };
+		CF2CDC0034931358D3434733 /* SmartXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F296FC523FC1FF80DBD6A9 /* SmartXTests.swift */; };
+		CF5C8FA41EF5D8D333410FC0 /* ConfigValidationIssue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DD41F4E072DFF1CD1AE8B60 /* ConfigValidationIssue.swift */; };
+		E77500B99723BBF88FEE23E4 /* HelperCommandContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41DDF9BE0900EA7244A9B71A /* HelperCommandContract.swift */; };
+		F28262F111123386DB636457 /* SmartXManagedOverrideModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A2BEBEA3D262C1FE7DC5904 /* SmartXManagedOverrideModel.swift */; };
 		F910AA24240134AF00116E95 /* ProxyGroupMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F910AA23240134AF00116E95 /* ProxyGroupMenu.swift */; };
 		F915A4622366ADEF004840BE /* ClashConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F915A4612366ADEF004840BE /* ClashConnection.swift */; };
 		F9203A26236342820020D57D /* AppDelegate+..swift in Sources */ = {isa = PBXBuildFile; fileRef = F9203A25236342820020D57D /* AppDelegate+..swift */; };
@@ -165,6 +179,7 @@
 		F9E754D2239CC28D00CEE7CC /* NSAlert+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9E754D1239CC28D00CEE7CC /* NSAlert+Extension.swift */; };
 		F9E8F34623A12B89002DE5E8 /* String+Encode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9E8F34523A12B89002DE5E8 /* String+Encode.swift */; };
 		F9FAB31E262BE04800DE02A6 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F9FAB31D262BE04800DE02A6 /* Images.xcassets */; };
+		FDF704E1C146908BE969EAF5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4740348FD2966724DA34210A /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -202,47 +217,29 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		08E2635954A673A0F316B84E /* TunLifecycleDiagnostics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/Models/TunLifecycleDiagnostics.swift; sourceTree = SOURCE_ROOT; };
 		0AD7506A2A5B9A04001FFBBD /* ConnectionLeftPannelViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionLeftPannelViewModel.swift; sourceTree = "<group>"; };
 		0AD7506C2A5B9B26001FFBBD /* ConnectionLeftTextCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionLeftTextCellView.swift; sourceTree = "<group>"; };
 		0AEF6EAE2A5F961B00EFEE23 /* SectionedTableView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SectionedTableView.swift; sourceTree = "<group>"; };
+		0DD41F4E072DFF1CD1AE8B60 /* ConfigValidationIssue.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/ConfigValidationIssue.swift; sourceTree = SOURCE_ROOT; };
+		0EB4ABA4536CF02BE2F35103 /* HelperStatus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/Models/HelperStatus.swift; sourceTree = SOURCE_ROOT; };
+		1CE1FBBD77B5F847D7EAA307 /* TunConfigEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunConfigEditorViewController.swift; sourceTree = "<group>"; };
+		235B2E4B03CE9A45025615DA /* EffectiveConfigGenerator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Managers/EffectiveConfigGenerator.swift; sourceTree = SOURCE_ROOT; };
+		274CAE4EC0C96629922CCAAA /* TunPreflightPlanner.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Managers/TunPreflightPlanner.swift; sourceTree = SOURCE_ROOT; };
+		3206E1F3133A07847BFB7989 /* SmartXRedactor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/SmartXRedactor.swift; sourceTree = SOURCE_ROOT; };
+		320C42930D99D939DDC89853 /* TunRuntimeRouteProbe.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/TunRuntimeRouteProbe.swift; sourceTree = SOURCE_ROOT; };
+		35C92E1DBFA09BA2AC0C9283 /* TestStubs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tests/SmartXTests/TestStubs.swift; sourceTree = SOURCE_ROOT; };
+		41DDF9BE0900EA7244A9B71A /* HelperCommandContract.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/Models/HelperCommandContract.swift; sourceTree = SOURCE_ROOT; };
+		4740348FD2966724DA34210A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		4905A2C42A2058B000AEDA2E /* GlobalShortCutViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalShortCutViewController.swift; sourceTree = "<group>"; };
 		4905A2C92A20841B00AEDA2E /* NSView+Layout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "NSView+Layout.swift"; sourceTree = "<group>"; };
 		4908087A29F8F3FF007A4944 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
 		490C8A0F2AC26E67007140F2 /* JSBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSBridge.swift; sourceTree = "<group>"; };
 		4913C82221157D0200F6B87C /* Notification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notification.swift; sourceTree = "<group>"; };
-		491E61FC258A424500313AEF /* CommonUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommonUtils.h; sourceTree = "<group>"; };
-		491E61FD258A424500313AEF /* CommonUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CommonUtils.m; sourceTree = "<group>"; };
 		49228456270AADE20027A4B6 /* RemoteConfigUpdateIntervalSettingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConfigUpdateIntervalSettingView.swift; sourceTree = "<group>"; };
 		49281C7F2A1F01FA00F60935 /* DebugSettingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSettingViewController.swift; sourceTree = "<group>"; };
 		4929F60F258CD22E00A435F6 /* menu_icon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "menu_icon@2x.png"; sourceTree = "<group>"; };
 		4929F67E258CE04700A435F6 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
-		A1B000000000000000000201 /* SmartXManagedOverrideManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartXManagedOverrideManager.swift; sourceTree = "<group>"; };
-		A1B000000000000000000202 /* LightGBMSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightGBMSettingsViewModel.swift; sourceTree = "<group>"; };
-		A1B000000000000000000203 /* ConfigValidationIssue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigValidationIssue.swift; sourceTree = "<group>"; };
-		A1B000000000000000000204 /* TunConfigValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunConfigValidator.swift; sourceTree = "<group>"; };
-		A1B000000000000000000205 /* DNSConfigValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSConfigValidator.swift; sourceTree = "<group>"; };
-		A1B000000000000000000206 /* TunLifecycleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunLifecycleCoordinator.swift; sourceTree = "<group>"; };
-		A1B000000000000000000207 /* DiagnosticsLogReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogReader.swift; sourceTree = "<group>"; };
-		A1B000000000000000000208 /* DiagnosticsArtifactFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsArtifactFormatter.swift; sourceTree = "<group>"; };
-		A1B00000000000000000020A /* DiagnosticsAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsAPI.swift; sourceTree = "<group>"; };
-		A1B00000000000000000020B /* ProviderAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAPI.swift; sourceTree = "<group>"; };
-		A1B00000000000000000020C /* SmartAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartAPI.swift; sourceTree = "<group>"; };
-		A1B00000000000000000020D /* ConfigAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigAPI.swift; sourceTree = "<group>"; };
-		A1B00000000000000000020E /* DiagnosticsProviderFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsProviderFormatter.swift; sourceTree = "<group>"; };
-		A1B00000000000000000020F /* EffectiveConfigGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectiveConfigGenerator.swift; sourceTree = "<group>"; };
-		A1B000000000000000000210 /* ConnectionAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionAPI.swift; sourceTree = "<group>"; };
-		A1B000000000000000000211 /* DiagnosticsMaintenanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsMaintenanceCoordinator.swift; sourceTree = "<group>"; };
-		A1B000000000000000000212 /* PolicyGroupAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolicyGroupAPI.swift; sourceTree = "<group>"; };
-		A1B000000000000000000213 /* SmartXManagedOverrideModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartXManagedOverrideModel.swift; sourceTree = "<group>"; };
-		A1B000000000000000000214 /* HelperStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperStatus.swift; sourceTree = "<group>"; };
-		A1B000000000000000000215 /* HelperDiagnosticsProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperDiagnosticsProbe.swift; sourceTree = "<group>"; };
-		A1B000000000000000000216 /* HelperCommandContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperCommandContract.swift; sourceTree = "<group>"; };
-		A1B000000000000000000217 /* HelperCommandRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperCommandRegistry.swift; sourceTree = "<group>"; };
-		A1B000000000000000000218 /* TunLifecycleDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunLifecycleDiagnostics.swift; sourceTree = "<group>"; };
-		A1B000000000000000000219 /* TunPreflightPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunPreflightPlanner.swift; sourceTree = "<group>"; };
-		A1B00000000000000000021A /* TunRuntimeInterfaceProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunRuntimeInterfaceProbe.swift; sourceTree = "<group>"; };
-		A1B00000000000000000021B /* TunRuntimeRouteProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunRuntimeRouteProbe.swift; sourceTree = "<group>"; };
-		A1B00000000000000000021C /* TunRuntimeDNSProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunRuntimeDNSProbe.swift; sourceTree = "<group>"; };
 		4929F683258CE07500A435F6 /* UserDefaultWrapper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UserDefaultWrapper.swift; sourceTree = "<group>"; };
 		492C4868210EE6B9004554A0 /* ApiRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiRequest.swift; sourceTree = "<group>"; };
 		492C4870210EF62E004554A0 /* ClashConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClashConfig.swift; sourceTree = "<group>"; };
@@ -337,6 +334,7 @@
 		49D8276727E9B01700159D93 /* LoginKitWrapper.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LoginKitWrapper.m; sourceTree = "<group>"; };
 		49D84AD22A56E9760074CCDB /* ConnectionStatusIconCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStatusIconCellView.swift; sourceTree = "<group>"; };
 		49FEC6682AD9369C00BAD9F5 /* Command.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
+		4A2BEBEA3D262C1FE7DC5904 /* SmartXManagedOverrideModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/Models/SmartXManagedOverrideModel.swift; sourceTree = SOURCE_ROOT; };
 		4D534D312F534D4152540101 /* SmartDashboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartDashboardViewController.swift; sourceTree = "<group>"; };
 		4D534D342F444941470101 /* DiagnosticsDashboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsDashboardViewController.swift; sourceTree = "<group>"; };
 		4D534D362F444941470103 /* CoreCapability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreCapability.swift; sourceTree = "<group>"; };
@@ -347,12 +345,53 @@
 		4D534D402F44494147010D /* SmartXRedactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartXRedactor.swift; sourceTree = "<group>"; };
 		4D534D442F44494147010E /* ControllerEndpointBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerEndpointBuilder.swift; sourceTree = "<group>"; };
 		4D534D462F44494147010F /* CoreCapabilityProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreCapabilityProbe.swift; sourceTree = "<group>"; };
+		4ED4F2C9C628243798AC9DB7 /* DNSConfigValidator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/DNSConfigValidator.swift; sourceTree = SOURCE_ROOT; };
 		5217C006C5A22A1CEA24BFC1 /* Pods-ClashX.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ClashX.debug.xcconfig"; path = "Pods/Target Support Files/Pods-ClashX/Pods-ClashX.debug.xcconfig"; sourceTree = "<group>"; };
+		55B587EC1344324F54619A95 /* DiagnosticsLogReader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/DiagnosticsLogReader.swift; sourceTree = SOURCE_ROOT; };
+		75BA2DFBB2FE578AAC1D0D64 /* RemoteConfigModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/Models/RemoteConfigModel.swift; sourceTree = SOURCE_ROOT; };
+		7A0C6F73B7297FAA410208AA /* SmartXTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SmartXTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7AA141DF720BC213D71DCD51 /* SmartXManagedOverrideManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Managers/SmartXManagedOverrideManager.swift; sourceTree = SOURCE_ROOT; };
+		7ABAB0DEB8ECED1E402DA2B1 /* TunRuntimeDNSProbe.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/TunRuntimeDNSProbe.swift; sourceTree = SOURCE_ROOT; };
 		8A2BBEA627A03ACB0081EBEF /* ProxySetting.sdef */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = ProxySetting.sdef; sourceTree = "<group>"; };
 		8ACD21BA27A04C7800BC4632 /* ProxySettingCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxySettingCommand.swift; sourceTree = "<group>"; };
 		8ACD21BC27A04ED500BC4632 /* ProxyModeChangeCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyModeChangeCommand.swift; sourceTree = "<group>"; };
+		9327611F219CBF8C5949B274 /* CoreCapability.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Managers/CoreCapability.swift; sourceTree = SOURCE_ROOT; };
+		9C96DA447FE4CC95C43F83F9 /* TunConfigValidator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/TunConfigValidator.swift; sourceTree = SOURCE_ROOT; };
 		A1485BCE642059532D01B8BA /* Pods-ClashX.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ClashX.release.xcconfig"; path = "Pods/Target Support Files/Pods-ClashX/Pods-ClashX.release.xcconfig"; sourceTree = "<group>"; };
+		A1B000000000000000000201 /* SmartXManagedOverrideManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartXManagedOverrideManager.swift; sourceTree = "<group>"; };
+		A1B000000000000000000202 /* LightGBMSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightGBMSettingsViewModel.swift; sourceTree = "<group>"; };
+		A1B000000000000000000203 /* ConfigValidationIssue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigValidationIssue.swift; sourceTree = "<group>"; };
+		A1B000000000000000000204 /* TunConfigValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunConfigValidator.swift; sourceTree = "<group>"; };
+		A1B000000000000000000205 /* DNSConfigValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSConfigValidator.swift; sourceTree = "<group>"; };
+		A1B000000000000000000206 /* TunLifecycleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunLifecycleCoordinator.swift; sourceTree = "<group>"; };
+		A1B000000000000000000207 /* DiagnosticsLogReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogReader.swift; sourceTree = "<group>"; };
+		A1B000000000000000000208 /* DiagnosticsArtifactFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsArtifactFormatter.swift; sourceTree = "<group>"; };
+		A1B00000000000000000020A /* DiagnosticsAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsAPI.swift; sourceTree = "<group>"; };
+		A1B00000000000000000020B /* ProviderAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAPI.swift; sourceTree = "<group>"; };
+		A1B00000000000000000020C /* SmartAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartAPI.swift; sourceTree = "<group>"; };
+		A1B00000000000000000020D /* ConfigAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigAPI.swift; sourceTree = "<group>"; };
+		A1B00000000000000000020E /* DiagnosticsProviderFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsProviderFormatter.swift; sourceTree = "<group>"; };
+		A1B00000000000000000020F /* EffectiveConfigGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectiveConfigGenerator.swift; sourceTree = "<group>"; };
+		A1B000000000000000000210 /* ConnectionAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionAPI.swift; sourceTree = "<group>"; };
+		A1B000000000000000000211 /* DiagnosticsMaintenanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsMaintenanceCoordinator.swift; sourceTree = "<group>"; };
+		A1B000000000000000000212 /* PolicyGroupAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolicyGroupAPI.swift; sourceTree = "<group>"; };
+		A1B000000000000000000213 /* SmartXManagedOverrideModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartXManagedOverrideModel.swift; sourceTree = "<group>"; };
+		A1B000000000000000000214 /* HelperStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperStatus.swift; sourceTree = "<group>"; };
+		A1B000000000000000000215 /* HelperDiagnosticsProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperDiagnosticsProbe.swift; sourceTree = "<group>"; };
+		A1B000000000000000000216 /* HelperCommandContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperCommandContract.swift; sourceTree = "<group>"; };
+		A1B000000000000000000217 /* HelperCommandRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperCommandRegistry.swift; sourceTree = "<group>"; };
+		A1B000000000000000000218 /* TunLifecycleDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunLifecycleDiagnostics.swift; sourceTree = "<group>"; };
+		A1B000000000000000000219 /* TunPreflightPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunPreflightPlanner.swift; sourceTree = "<group>"; };
+		A1B00000000000000000021A /* TunRuntimeInterfaceProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunRuntimeInterfaceProbe.swift; sourceTree = "<group>"; };
+		A1B00000000000000000021B /* TunRuntimeRouteProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunRuntimeRouteProbe.swift; sourceTree = "<group>"; };
+		A1B00000000000000000021C /* TunRuntimeDNSProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunRuntimeDNSProbe.swift; sourceTree = "<group>"; };
+		AD4AEDE541591650C2626F64 /* HelperCommandRegistry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/HelperCommandRegistry.swift; sourceTree = SOURCE_ROOT; };
+		AEBD8BB7C6D50E708CF0A976 /* TunRuntimeInterfaceProbe.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/TunRuntimeInterfaceProbe.swift; sourceTree = SOURCE_ROOT; };
+		B87F364FF67644168F4D9EFF /* DiagnosticsArtifactFormatter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/DiagnosticsArtifactFormatter.swift; sourceTree = SOURCE_ROOT; };
+		C7C605625DAB24072E4B4DBB /* DNSConfigEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSConfigEditorViewController.swift; sourceTree = "<group>"; };
 		CAE7981A9F34B5E210C549CB /* libPods-ClashX.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ClashX.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D697C91D6CEDEE3A907D779A /* ProfileArtifactManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Managers/ProfileArtifactManager.swift; sourceTree = SOURCE_ROOT; };
+		F2F296FC523FC1FF80DBD6A9 /* SmartXTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tests/SmartXTests/SmartXTests.swift; sourceTree = SOURCE_ROOT; };
 		F910AA23240134AF00116E95 /* ProxyGroupMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyGroupMenu.swift; sourceTree = "<group>"; };
 		F915A4612366ADEF004840BE /* ClashConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClashConnection.swift; sourceTree = "<group>"; };
 		F9203A25236342820020D57D /* AppDelegate+..swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+..swift"; sourceTree = "<group>"; };
@@ -381,9 +420,18 @@
 		F9E754D1239CC28D00CEE7CC /* NSAlert+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSAlert+Extension.swift"; sourceTree = "<group>"; };
 		F9E8F34523A12B89002DE5E8 /* String+Encode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Encode.swift"; sourceTree = "<group>"; };
 		F9FAB31D262BE04800DE02A6 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
+		FEF73E0C6E705AC4F21396B3 /* ControllerEndpointBuilder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClashX/General/Utils/ControllerEndpointBuilder.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		3C893A8F08E063BCBB46ABEA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FDF704E1C146908BE969EAF5 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		49CF3B1A20CD7463001EBF94 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -456,21 +504,19 @@
 				A1B00000000000000000021A /* TunRuntimeInterfaceProbe.swift */,
 				A1B00000000000000000021B /* TunRuntimeRouteProbe.swift */,
 				A1B000000000000000000204 /* TunConfigValidator.swift */,
+				FEF73E0C6E705AC4F21396B3 /* ControllerEndpointBuilder.swift */,
+				0DD41F4E072DFF1CD1AE8B60 /* ConfigValidationIssue.swift */,
+				9C96DA447FE4CC95C43F83F9 /* TunConfigValidator.swift */,
+				4ED4F2C9C628243798AC9DB7 /* DNSConfigValidator.swift */,
+				3206E1F3133A07847BFB7989 /* SmartXRedactor.swift */,
+				55B587EC1344324F54619A95 /* DiagnosticsLogReader.swift */,
+				B87F364FF67644168F4D9EFF /* DiagnosticsArtifactFormatter.swift */,
+				AD4AEDE541591650C2626F64 /* HelperCommandRegistry.swift */,
+				AEBD8BB7C6D50E708CF0A976 /* TunRuntimeInterfaceProbe.swift */,
+				320C42930D99D939DDC89853 /* TunRuntimeRouteProbe.swift */,
+				7ABAB0DEB8ECED1E402DA2B1 /* TunRuntimeDNSProbe.swift */,
 			);
 			path = Utils;
-			sourceTree = "<group>";
-		};
-		A1B000000000000000000209 /* Api */ = {
-			isa = PBXGroup;
-			children = (
-				A1B000000000000000000210 /* ConnectionAPI.swift */,
-				A1B00000000000000000020D /* ConfigAPI.swift */,
-				A1B00000000000000000020A /* DiagnosticsAPI.swift */,
-				A1B000000000000000000212 /* PolicyGroupAPI.swift */,
-				A1B00000000000000000020B /* ProviderAPI.swift */,
-				A1B00000000000000000020C /* SmartAPI.swift */,
-			);
-			path = Api;
 			sourceTree = "<group>";
 		};
 		491C250121BD561200AB5D44 /* Managers */ = {
@@ -500,6 +546,11 @@
 				49BB31E6246853EA008A4CB0 /* ICloudManager.swift */,
 				499ADAFC2498CC5900C488FE /* RemoteControlManager.swift */,
 				4929F67E258CE04700A435F6 /* Settings.swift */,
+				9327611F219CBF8C5949B274 /* CoreCapability.swift */,
+				D697C91D6CEDEE3A907D779A /* ProfileArtifactManager.swift */,
+				7AA141DF720BC213D71DCD51 /* SmartXManagedOverrideManager.swift */,
+				235B2E4B03CE9A45025615DA /* EffectiveConfigGenerator.swift */,
+				274CAE4EC0C96629922CCAAA /* TunPreflightPlanner.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -529,6 +580,11 @@
 				F915A4612366ADEF004840BE /* ClashConnection.swift */,
 				F92D0B23236BC12000575E15 /* SavedProxyModel.swift */,
 				F939724B23A4B33500FE5A3F /* ClashProvider.swift */,
+				0EB4ABA4536CF02BE2F35103 /* HelperStatus.swift */,
+				41DDF9BE0900EA7244A9B71A /* HelperCommandContract.swift */,
+				08E2635954A673A0F316B84E /* TunLifecycleDiagnostics.swift */,
+				4A2BEBEA3D262C1FE7DC5904 /* SmartXManagedOverrideModel.swift */,
+				75BA2DFBB2FE578AAC1D0D64 /* RemoteConfigModel.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -613,6 +669,8 @@
 				498BC2522929CC2A00CA8084 /* SettingTabViewController.swift */,
 				498BC2542929CCAE00CA8084 /* GeneralSettingViewController.swift */,
 				498BC2562F53544100544F52 /* CoreSettingViewController.swift */,
+				1CE1FBBD77B5F847D7EAA307 /* TunConfigEditorViewController.swift */,
+				C7C605625DAB24072E4B4DBB /* DNSConfigEditorViewController.swift */,
 				49281C7F2A1F01FA00F60935 /* DebugSettingViewController.swift */,
 				4905A2C42A2058B000AEDA2E /* GlobalShortCutViewController.swift */,
 			);
@@ -705,6 +763,7 @@
 				49CF3B1E20CD7463001EBF94 /* Products */,
 				76229F122B00E935D126742A /* Pods */,
 				CF1AC9FACC36FCE7663C5583 /* Frameworks */,
+				A6020195199396D99C8081B6 /* Tests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -713,6 +772,7 @@
 			children = (
 				49CF3B1D20CD7463001EBF94 /* ClashX.app */,
 				F9A7C0692306E874007163C7 /* com.west2online.ClashX.ProxyConfigHelper */,
+				7A0C6F73B7297FAA410208AA /* SmartXTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -781,11 +841,44 @@
 			path = AppleScript;
 			sourceTree = "<group>";
 		};
+		A1B000000000000000000209 /* Api */ = {
+			isa = PBXGroup;
+			children = (
+				A1B000000000000000000210 /* ConnectionAPI.swift */,
+				A1B00000000000000000020D /* ConfigAPI.swift */,
+				A1B00000000000000000020A /* DiagnosticsAPI.swift */,
+				A1B000000000000000000212 /* PolicyGroupAPI.swift */,
+				A1B00000000000000000020B /* ProviderAPI.swift */,
+				A1B00000000000000000020C /* SmartAPI.swift */,
+			);
+			path = Api;
+			sourceTree = "<group>";
+		};
+		A6020195199396D99C8081B6 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				BB0CF2D1CDC239811F7BE82F /* SmartXTests */,
+			);
+			name = Tests;
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		BB0CF2D1CDC239811F7BE82F /* SmartXTests */ = {
+			isa = PBXGroup;
+			children = (
+				F2F296FC523FC1FF80DBD6A9 /* SmartXTests.swift */,
+				35C92E1DBFA09BA2AC0C9283 /* TestStubs.swift */,
+			);
+			name = SmartXTests;
+			path = SmartXTests;
+			sourceTree = "<group>";
+		};
 		CF1AC9FACC36FCE7663C5583 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				4908087A29F8F3FF007A4944 /* libresolv.tbd */,
 				CAE7981A9F34B5E210C549CB /* libPods-ClashX.a */,
+				FE4CB4D3B6AAC202BDEC8A92 /* OS X */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -801,8 +894,6 @@
 		F9A7C06A2306E874007163C7 /* ProxyConfigHelper */ = {
 			isa = PBXGroup;
 			children = (
-				491E61FC258A424500313AEF /* CommonUtils.h */,
-				491E61FD258A424500313AEF /* CommonUtils.m */,
 				498960722340F21C00AFB7EC /* com.west2online.ClashX.ProxyConfigHelper.entitlements */,
 				F9A7C06B2306E874007163C7 /* main.m */,
 				F935B2F12307C802009E4D33 /* Helper-Launchd.plist */,
@@ -814,6 +905,14 @@
 				F935B2F923083EE6009E4D33 /* ProxySettingTool.m */,
 			);
 			path = ProxyConfigHelper;
+			sourceTree = "<group>";
+		};
+		FE4CB4D3B6AAC202BDEC8A92 /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				4740348FD2966724DA34210A /* Foundation.framework */,
+			);
+			name = "OS X";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -845,6 +944,23 @@
 			productName = ClashX;
 			productReference = 49CF3B1D20CD7463001EBF94 /* ClashX.app */;
 			productType = "com.apple.product-type.application";
+		};
+		67A158A2297A7BF00A7287F5 /* SmartXTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 76547294D44A371D9C2FB80E /* Build configuration list for PBXNativeTarget "SmartXTests" */;
+			buildPhases = (
+				FCD5FACE827BDFEECB1035C1 /* Sources */,
+				3C893A8F08E063BCBB46ABEA /* Frameworks */,
+				B7C856F54D6B42633196AD8C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SmartXTests;
+			productName = SmartXTests;
+			productReference = 7A0C6F73B7297FAA410208AA /* SmartXTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		F9A7C0682306E874007163C7 /* com.west2online.ClashX.ProxyConfigHelper */ = {
 			isa = PBXNativeTarget;
@@ -903,7 +1019,7 @@
 			);
 			mainGroup = 49CF3B1420CD7463001EBF94;
 			packageReferences = (
-				4905A2C62A2058D400AEDA2E /* XCRemoteSwiftPackageReference "KeyboardShortcuts.git" */,
+				4905A2C62A2058D400AEDA2E /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 			);
 			productRefGroup = 49CF3B1E20CD7463001EBF94 /* Products */;
 			projectDirPath = "";
@@ -911,6 +1027,7 @@
 			targets = (
 				49CF3B1C20CD7463001EBF94 /* ClashX */,
 				F9A7C0682306E874007163C7 /* com.west2online.ClashX.ProxyConfigHelper */,
+				67A158A2297A7BF00A7287F5 /* SmartXTests */,
 			);
 		};
 /* End PBXProject section */
@@ -930,6 +1047,13 @@
 				499A485A22ED781100F6C675 /* RemoteConfigAddView.xib in Resources */,
 				4929F610258CD22E00A435F6 /* menu_icon@2x.png in Resources */,
 				4989F98E20D0AE990001E564 /* sampleConfig.yaml in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B7C856F54D6B42633196AD8C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1072,6 +1196,8 @@
 				8ACD21BD27A04ED500BC4632 /* ProxyModeChangeCommand.swift in Sources */,
 				498BC2552929CCAE00CA8084 /* GeneralSettingViewController.swift in Sources */,
 				498BC2572F53544100544F52 /* CoreSettingViewController.swift in Sources */,
+				1CE1FBBD77B5F847D7EAA306 /* TunConfigEditorViewController.swift in Sources */,
+				C7C605625DAB24072E4B4DBA /* DNSConfigEditorViewController.swift in Sources */,
 				A1B000000000000000000102 /* LightGBMSettingsViewModel.swift in Sources */,
 				498D87D82A617D2200CD456F /* DashboardViewController.swift in Sources */,
 				4991D22E2A564A4200978143 /* ConnectionTextCellView.swift in Sources */,
@@ -1181,8 +1307,27 @@
 			files = (
 				F935B2F42307CD32009E4D33 /* ProxyConfigHelper.m in Sources */,
 				F9A7C06C2306E874007163C7 /* main.m in Sources */,
-				491E6203258A424D00313AEF /* CommonUtils.m in Sources */,
 				F935B2FA23083EE6009E4D33 /* ProxySettingTool.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FCD5FACE827BDFEECB1035C1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C298F616EFA104C60D327938 /* ControllerEndpointBuilder.swift in Sources */,
+				CF5C8FA41EF5D8D333410FC0 /* ConfigValidationIssue.swift in Sources */,
+				221DC5D3FACA3A716EDF8012 /* TunConfigValidator.swift in Sources */,
+				5BDFEF8A9FC9FBD0C9E43C22 /* DNSConfigValidator.swift in Sources */,
+				9709FE063E8097242F991371 /* SmartXRedactor.swift in Sources */,
+				0DFBE05312F152F685AE4FA2 /* HelperCommandRegistry.swift in Sources */,
+				359E244C9B32D446F6E61D7D /* HelperStatus.swift in Sources */,
+				E77500B99723BBF88FEE23E4 /* HelperCommandContract.swift in Sources */,
+				5C7683EB6416DBD0ED4EC669 /* TunLifecycleDiagnostics.swift in Sources */,
+				F28262F111123386DB636457 /* SmartXManagedOverrideModel.swift in Sources */,
+				0A5DF39AFD9D59EFD1D19644 /* RemoteConfigModel.swift in Sources */,
+				CF2CDC0034931358D3434733 /* SmartXTests.swift in Sources */,
+				72EEE8DCFFF3FD12ECE475A2 /* TestStubs.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1447,6 +1592,50 @@
 			};
 			name = Release;
 		};
+		C8ACAF20FEAC9C044E84272F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Tests/SmartXTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.doodlenet.ClashX.SmartXTests;
+				PRODUCT_MODULE_NAME = SmartXTests;
+				PRODUCT_NAME = SmartXTests;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		D449EF7550EF06E62D0C6DEA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Tests/SmartXTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.doodlenet.ClashX.SmartXTests;
+				PRODUCT_MODULE_NAME = SmartXTests;
+				PRODUCT_NAME = SmartXTests;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
 		F9A7C06E2306E874007163C7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1526,6 +1715,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		76547294D44A371D9C2FB80E /* Build configuration list for PBXNativeTarget "SmartXTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C8ACAF20FEAC9C044E84272F /* Release */,
+				D449EF7550EF06E62D0C6DEA /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		F9A7C06D2306E874007163C7 /* Build configuration list for PBXNativeTarget "com.west2online.ClashX.ProxyConfigHelper" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1538,7 +1736,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		4905A2C62A2058D400AEDA2E /* XCRemoteSwiftPackageReference "KeyboardShortcuts.git" */ = {
+		4905A2C62A2058D400AEDA2E /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts.git";
 			requirement = {
@@ -1551,7 +1749,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		4905A2C72A2058D400AEDA2E /* KeyboardShortcuts */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4905A2C62A2058D400AEDA2E /* XCRemoteSwiftPackageReference "KeyboardShortcuts.git" */;
+			package = 4905A2C62A2058D400AEDA2E /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
 		};
 /* End XCSwiftPackageProductDependency section */

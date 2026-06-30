@@ -8,7 +8,7 @@ SmartX is an experimental macOS proxy client derived from ClashX, integrating th
 
 ## Build and test commands
 
-Before building, ensure Go, Ruby 3.2.4 (via rbenv), Bundler, and CocoaPods are set up. See README.md for setup details.
+Before building, ensure Go, Ruby 3.2.4 (via rbenv — see `.ruby-version`), Bundler, and CocoaPods are set up. See README.md for setup details. Ruby 4 is unsupported for the locked Bundler/CocoaPods toolchain.
 
 ```bash
 # Full dependency setup (Go archive, Pods, dashboard, GeoIP DB)
@@ -42,12 +42,26 @@ bash scripts/ensure-xcworkspace.sh
 
 For CI: unsigned Debug builds use `CODE_SIGNING_ALLOWED=NO`. Local Debug builds should pass `-quiet`, disable signing, and redirect full output to `.codex-logs/`. Release builds require signing identities that don't yet exist — SmartX is not ready for signed/notarized releases.
 
+### Expected log locations
+
+Wrapper scripts write full output to these paths (do not commit `.codex-logs/`):
+
+```text
+.codex-logs/xcodebuild-debug.log      # Debug build
+.codex-logs/xcode-test-focused.log    # Focused test run
+.codex-logs/release-check.log         # Release / signing checks
+.codex-logs/script-lint.log           # Shell-script linting
+.codex-logs/project-diagnose.log      # Project diagnostics
+```
+
+When a build or test fails, read only the region around the first relevant error — don't dump the full log into the response.
+
 ## High-level architecture
 
 ### Three-tier runtime model
 
 1. **macOS AppKit shell** (`ClashX/`) — menu-bar app, settings windows, connection dashboard, Cocoa UI. Written in Swift with some ObjC bridging.
-2. **Embedded Go core** (`ClashX/goClash/`) — Vernesong mihomo fork, compiled as a C static archive (`goClash.a`) via `-buildmode=c-archive`. The Go module declares `github.com/metacubex/mihomo` but uses a `replace` directive to point to `github.com/vernesong/mihomo`. Exported C symbols (`initClashCore`, `run`, `clashUpdateConfig`, `clash_setLightGBMOptions`, etc.) are called from Swift.
+2. **Embedded Go core** (`ClashX/goClash/`) — Vernesong mihomo fork, compiled as a C static archive (`goClash.a`) via `-buildmode=c-archive`. The Go module declares `github.com/metacubex/mihomo` but uses a `replace` directive to point to `github.com/vernesong/mihomo`. Exported C symbols (`initClashCore`, `run`, `clashUpdateConfig`, `clash_setLightGBMOptions`, etc.) are called from Swift. A clone of the upstream Smart core source lives at `../mihomo` (adjacent to the repo root) for local coding reference only — it is not built from there; the embedded archive uses the vendored copy under `ClashX/goClash/`.
 3. **Privileged helper** (`ProxyConfigHelper/`) — separate process for system proxy enable/disable only. Installed via SMJobBless (or legacy install path). Does NOT do TUN, DNS hijack, route manipulation, or shell execution.
 
 ### Dual controller mode
@@ -59,17 +73,21 @@ SmartX supports both **embedded-core mode** (direct Go bridge calls) and **exter
 - **`ConfigManager`** — active config selection, switching, built-in vs external controller mode. Now also has a lightweight profile inventory classifying configs as Local/Remote.
 - **`PrivilegedHelperManager`** — helper installation, XPC connection, trust validation. Debug builds allow empty client requirement; Release builds reject it fail-closed.
 - **`RemoteConfigManager`** — remote config download, validation, update. Validates filenames with strict allowlisting; falls back to SHA256-based names for invalid suggestions.
-- **`TunLifecycleCoordinator`** — guarded TUN toggle lifecycle (external-controller only). Embedded-core TUN remains explicitly unsupported.
+- **`TunLifecycleCoordinator`** — guarded TUN toggle lifecycle (external-controller only). Delegates to `TunPreflightPlanner` for operation-aware validation before enable. Embedded-core TUN remains explicitly unsupported.
+- **`TunPreflightPlanner`** — builds `TunPreflightReport` with blocking validation, warnings, and recovery suggestions for TUN operations. Distinguishes passive snapshots (read-only, warnings only) from guarded enable requests (blocking validation). Integrates `TunConfigValidator`, `DNSConfigValidator`, and `HelperDiagnosticsProbe`.
+- **`HelperDiagnosticsProbe`** — classifies helper trust state by inspecting bundled helper metadata (code-signing requirement, install status, debug bypass). Produces `HelperStatus` with trust state, diagnostic messages, and recovery suggestions. Used by the TUN preflight pipeline and available for standalone diagnostics.
 - **`CoreCapabilityProbe`** — probes `/version`, `/configs`, `/providers/proxies`, `/providers/rules`, `/memory` for capability detection. Mutating endpoints stay `unknown`/`unsupported` until user-triggered.
 - **`ProfileArtifactManager`** — writes source-copy artifacts on successful reload to `~/.config/clash/.smartx/profiles/`. These are NOT generated effective configs — they're loaded source copies.
 - **`SmartXManagedOverrideManager`** — persists LightGBM overrides to `.smartx/overrides/smartx-managed.json`. Groundwork only, not a full config generator.
+- **`EffectiveConfigGenerator`** — intentionally narrow groundwork for generating effective configs from profile source + managed overrides. Currently reports limitation explicitly; SmartX does not yet have a safe YAML parse-emit path for full effective config generation.
 
 ### Key models (`ClashX/Models/`)
 
 - **`ClashConfig`** — partial mihomo config model. TUN model covers ~12 fields (subset of full mihomo TUN surface). DNS model is read-only structured decode.
 - **`ClashProxy`** — recognizes newer types: Smart, Wireguard, Hysteria, Hysteria2, Tuic, Vless, Masque, etc.
 - **`ClashConnection`** — includes Smart metadata: `smartBlock`, `smartTarget`, GeoIP arrays, ASN strings.
-- **`HelperCommandContract`** — typed model defining reserved future TUN commands (`tunPreflight`, `tunEnable`, `tunDisable`, etc.). Currently diagnostic-only; no helper-backed TUN execution exists.
+- **`HelperCommandContract`** — typed model defining all helper commands across three categories (`systemProxy`, `helperDiagnostics`, `tunReserved`). Includes structured error classification (`classifyReplyError`) mapping helper reply strings to `HelperCommandErrorCode`. TUN commands are reserved (diagnostic-only); no helper-backed TUN execution exists.
+- **`HelperStatus`** — helper trust state model (`unknown` → `verified`), produced by `HelperDiagnosticsProbe`. Includes diagnostic messages and recovery suggestions. Used across the TUN preflight pipeline and available for standalone diagnostics.
 - **`TunLifecycleDiagnostics`** — distinguishes passive snapshots, guarded enable requests, and guarded disable requests. Blocking validation applies only to enable; disable keeps validation warnings as warnings.
 
 ### API domain split (in progress)
@@ -79,6 +97,17 @@ SmartX supports both **embedded-core mode** (direct Go bridge calls) and **exter
 
 `ApiRequest` remains the legacy facade. New endpoint work should use domain clients and `ControllerEndpointBuilder` (in `ClashX/General/Utils/`) instead of raw string concatenation.
 
+### TUN preflight pipeline
+
+TUN operations flow through a multi-stage validation pipeline before any state change:
+
+1. **`TunLifecycleCoordinator`** receives the user request (toggle enable/disable, or passive snapshot).
+2. **`TunPreflightPlanner.buildReport()`** assembles a `TunPreflightReport` by checking: controller runtime mode (embedded-core → unsupported), config availability, `TunConfigValidator`/`DNSConfigValidator` results, helper trust state (via `HelperDiagnosticsProbe`), and config-patch endpoint availability.
+3. **Blocking vs. warning**: Passive snapshots and disable requests treat all issues as warnings. Enable requests treat validation errors as blockers — the operation is refused with recovery text.
+4. **`TunPreflightReport`** is the single output: `canAttemptRequestedOperation`, `blockers[]`, `warnings[]`, `helperTrustState`, `verificationScope`, and `recoverySuggestions`.
+
+The helper does NOT execute TUN commands — all TUN commands in `HelperCommandContract` remain `reserved`. The pipeline validates what *would* be needed if helper-backed TUN were implemented, but currently stops at the diagnostics boundary.
+
 ### Config paths and security
 
 All configs live under `~/.config/clash/`. `SafeConfigName` enforces strict validation before file path construction — no separators, no traversal, no hidden basenames, alphanumeric + ` _-.` only. SmartX artifacts live under `~/.config/clash/.smartx/` (profiles, overrides, diagnostics).
@@ -86,12 +115,21 @@ All configs live under `~/.config/clash/`. `SafeConfigName` enforces strict vali
 ### UI surfaces
 
 - **Settings → Core** (`CoreSettingViewController`) — status/control surface. Must degrade gracefully when core is stopped, `/configs` unavailable, or endpoints unsupported. TUN status reflects config only, not macOS TUN routing reality.
+- **Settings → TUN Config Editor** (`TunConfigEditorViewController`) — structured editor for macOS-relevant mihomo TUN fields (device, stack, DNS hijack, auto-route, strict route, MTU, UDP timeout, route addresses). Provides live validation and apply/reset.
+- **Settings → DNS Config Editor** (`DNSConfigEditorViewController`) — structured editor for macOS-relevant mihomo DNS fields (enable, enhanced mode, listen, nameservers, fallback, fake-IP range/filter, respect-rules, use-hosts). Provides live validation and apply/reset.
 - **Smart Dashboard** (`SmartDashboardViewController`) — proxy group rankings, Smart weights, cache flush, LightGBM controls.
 - **Diagnostics Dashboard** (`DiagnosticsDashboardViewController`) — memory snapshot, DNS query, cache flush, restart, GC, log viewer, diagnostics bundle export. Already too large; decomposition planned (Phase 4 roadmap).
 
 ### Test structure
 
-Tests live in `Tests/SecurityHarness/` as smoke-level Swift scripts. They validate endpoint building, config validation, redaction, artifact metadata, capability cache identity, TUN lifecycle diagnostics, and route/DNS runtime probes. These are transitional smoke coverage, not high-coverage tests. XCTest targets exist but are minimal.
+Tests live in `Tests/SecurityHarness/` as smoke-level Swift scripts. They validate endpoint building, config validation, redaction, artifact metadata, capability cache identity, TUN lifecycle diagnostics, helper command contract error classification, and route/DNS runtime probes. These are transitional smoke coverage, not high-coverage tests. XCTest targets exist but are minimal.
+
+### What to verify by change type
+- **UI-only changes**: build the app target and summarize the affected UI path.
+- **Profile/config/parsing changes**: run focused tests for the changed component.
+- **Process lifecycle changes**: verify start, stop, restart, crash recovery, and stale process handling.
+- **Release-related changes**: run the release check script and confirm bundle ID, version metadata, signing settings, and update metadata remain consistent.
+- If tests are unavailable, explain the narrow manual verification path instead of inventing broad test coverage.
 
 ## Critical rules
 
@@ -100,6 +138,12 @@ Tests live in `Tests/SecurityHarness/` as smoke-level Swift scripts. They valida
 - Existing ObjC, Swift, and project conventions. Match surrounding code style.
 - Small focused patches over broad refactors. Don't rewrite large files for small changes.
 - Don't rename public symbols, files, schemes, bundle IDs, or user-facing pref keys unless the task explicitly requires migration.
+
+### Token discipline
+- Prefer `rg`, `git grep`, and targeted file reads over broad directory dumps.
+- When a command succeeds, report the success line and log path — don't paste the full output.
+- When a command fails, report the failure line, the log path, and the smallest useful diagnostic excerpt.
+- Store long logs under `.codex-logs/` and report only the relevant summary.
 
 ### High-risk areas
 Proxy configuration, process lifecycle, profile migration, auto-start, privileged helper behavior, update logic, signing/notarization, credential handling. Never print secrets, tokens, proxy passwords, or signing identities.

@@ -184,4 +184,18 @@ enum HelperCommandContract {
         descriptor(for: command).category == .tunReserved &&
             descriptor(for: command).availability == .reserved
     }
+
+    /// Classifies a structured error prefix from helper reply strings.
+    /// Returns the matching `HelperCommandErrorCode` for known prefixes
+    /// ("EINVAL:", "EAUTH:", etc.), or `.unknown` for unrecognized or nil replies.
+    static func classifyReplyError(_ reply: String?) -> HelperCommandErrorCode {
+        guard let reply, !reply.isEmpty else { return .unknown }
+        if reply.hasPrefix("EINVAL:") { return .invalidInput }
+        if reply.hasPrefix("EAUTH:") { return .unauthorized }
+        if reply.hasPrefix("EUNSUPPORTED:") { return .unsupported }
+        if reply.hasPrefix("ETIMEOUT:") { return .timeout }
+        if reply.hasPrefix("EFORBIDDEN:") { return .forbidden }
+        if reply.hasPrefix("ENOTINSTALLED:") { return .notInstalled }
+        return .unknown
+    }
 }

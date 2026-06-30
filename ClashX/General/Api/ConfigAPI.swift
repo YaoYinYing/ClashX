@@ -55,4 +55,13 @@ enum ConfigAPI {
             }
         }
     }
+
+    /// Patches the full TUN block with the given parameters dictionary.
+    /// The caller is responsible for building a valid "tun" parameter containing all desired fields.
+    static func patchTunConfig(_ tunParameters: Parameters,
+                               completeHandler: @escaping (ControllerEndpointResult) -> Void) {
+        patchConfig(parameters: ["tun": tunParameters],
+                    defaultMessage: NSLocalizedString("Failed to patch TUN configuration.", comment: ""),
+                    completeHandler: completeHandler)
+    }
 }

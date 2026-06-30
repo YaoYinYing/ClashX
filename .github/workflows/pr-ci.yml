@@ -206,7 +206,17 @@ jobs:
             -o /tmp/helper-command-contract-smoke
           /tmp/helper-command-contract-smoke | tee .ci-logs/helper-command-contract-smoke.log
 
-      - name: TUN lifecycle diagnostics smoke harness
+      - name: Helper safety hardening smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/Models/HelperCommandContract.swift \
+            ClashX/General/Utils/HelperCommandRegistry.swift \
+            Tests/SecurityHarness/helper_safety_hardening_smoke.swift \
+            -o /tmp/helper-safety-hardening-smoke
+          /tmp/helper-safety-hardening-smoke | tee .ci-logs/helper-safety-hardening-smoke.log
+
+      - name: TUN lifecyle diagnostics smoke harness
         run: |
           set -o pipefail
           swiftc -module-cache-path /private/tmp/swift-module-cache \
@@ -476,6 +486,16 @@ jobs:
             Tests/SecurityHarness/helper_command_contract_smoke.swift \
             -o /tmp/helper-command-contract-smoke
           /tmp/helper-command-contract-smoke | tee .ci-logs/helper-command-contract-smoke.log
+
+      - name: Helper safety hardening smoke harness
+        run: |
+          set -o pipefail
+          swiftc -module-cache-path /private/tmp/swift-module-cache \
+            ClashX/Models/HelperCommandContract.swift \
+            ClashX/General/Utils/HelperCommandRegistry.swift \
+            Tests/SecurityHarness/helper_safety_hardening_smoke.swift \
+            -o /tmp/helper-safety-hardening-smoke
+          /tmp/helper-safety-hardening-smoke | tee .ci-logs/helper-safety-hardening-smoke.log
 
       - name: TUN lifecycle diagnostics smoke harness
         run: |

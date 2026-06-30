@@ -86,7 +86,7 @@ run_swiftc_harness() {
 }
 
 has_xcode_test_target() {
-    rg -q "name = .*Tests;|productType = \"com.apple.product-type.bundle.unit-test\"" \
+    grep -q "name = .*Tests;\|productType = \"com.apple.product-type.bundle.unit-test\"" \
         "$ROOT_DIR/ClashX.xcodeproj/project.pbxproj"
 }
 
@@ -135,6 +135,10 @@ run_swiftc_harness "helper-command-contract-smoke" "/tmp/helper-command-contract
     ClashX/Models/HelperCommandContract.swift \
     ClashX/General/Utils/HelperCommandRegistry.swift \
     Tests/SecurityHarness/helper_command_contract_smoke.swift
+run_swiftc_harness "helper-safety-hardening-smoke" "/tmp/helper-safety-hardening-smoke" \
+    ClashX/Models/HelperCommandContract.swift \
+    ClashX/General/Utils/HelperCommandRegistry.swift \
+    Tests/SecurityHarness/helper_safety_hardening_smoke.swift
 run_swiftc_harness "tun-lifecycle-diagnostics-smoke" "/tmp/tun-lifecycle-diagnostics-smoke" \
     ClashX/General/Utils/ConfigValidationIssue.swift \
     ClashX/General/Utils/TunConfigValidator.swift \

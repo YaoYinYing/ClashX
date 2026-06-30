@@ -148,24 +148,42 @@ class PrivilegedHelperManager {
     }
 
     func helper(failture: (() -> Void)? = nil) -> ProxyConfigRemoteProcessProtocol? {
+        // Reuse an existing live connection when available.
+        if let conn = connection, let existingHelper = _helper {
+            return existingHelper
+        }
         Logger.log("opening privileged XPC connection to \(PrivilegedHelperManager.machServiceName)", level: .debug)
-        connection = NSXPCConnection(machServiceName: PrivilegedHelperManager.machServiceName, options: NSXPCConnection.Options.privileged)
-        connection?.remoteObjectInterface = NSXPCInterface(with: ProxyConfigRemoteProcessProtocol.self)
-        connection?.invalidationHandler = {
+        let conn = NSXPCConnection(machServiceName: PrivilegedHelperManager.machServiceName, options: NSXPCConnection.Options.privileged)
+        conn.remoteObjectInterface = NSXPCInterface(with: ProxyConfigRemoteProcessProtocol.self)
+        conn.invalidationHandler = { [weak self] in
             Logger.log("privileged helper XPC connection invalidated", level: .warning)
+            self?.connection = nil
+            self?._helper = nil
         }
-        connection?.interruptionHandler = {
+        conn.interruptionHandler = { [weak self] in
             Logger.log("privileged helper XPC connection interrupted", level: .warning)
+            self?.connection = nil
+            self?._helper = nil
         }
-        connection?.resume()
-        guard let helper = connection?.remoteObjectProxyWithErrorHandler({ error in
+        conn.resume()
+        guard let helper = conn.remoteObjectProxyWithErrorHandler({ error in
             Logger.log("privileged helper remote proxy error: \(error)", level: .error)
             failture?()
         }) as? ProxyConfigRemoteProcessProtocol else {
             Logger.log("failed to create privileged helper remote proxy", level: .error)
             return nil
         }
+        connection = conn
+        _helper = helper
         return helper
+    }
+
+    static let xpcConnectionTimeout: TimeInterval = 30.0
+
+    /// Parses a structured error prefix from helper reply strings.
+    /// Delegates to HelperCommandContract.classifyReplyError for the canonical mapping.
+    static func classifyHelperError(_ reply: String?) -> HelperCommandErrorCode {
+        HelperCommandContract.classifyReplyError(reply)
     }
 
     var timer: Timer?

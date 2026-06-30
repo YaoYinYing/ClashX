@@ -42,11 +42,17 @@ class CoreSettingViewController: NSViewController {
 
     private let tunStatusLabel = CoreSettingViewController.makeWrapLabel()
     private let tunDetailLabel = CoreSettingViewController.makeWrapLabel()
+    private let tunVerificationLabel = CoreSettingViewController.makeSecondaryWrapLabel()
+    private let tunWarningLabel = CoreSettingViewController.makeSecondaryWrapLabel()
     private let tunNoteLabel = CoreSettingViewController.makeSecondaryWrapLabel()
     private let tunEnabledButton = NSButton(checkboxWithTitle: NSLocalizedString("Enable TUN", comment: ""), target: nil, action: nil)
+    private let tunConfigureButton = NSButton(title: NSLocalizedString("Configure TUN...", comment: ""), target: nil, action: nil)
+    private let tunRefreshButton = NSButton(title: NSLocalizedString("Refresh TUN State", comment: ""), target: nil, action: nil)
     private let dnsStatusLabel = CoreSettingViewController.makeWrapLabel()
     private let dnsDetailLabel = CoreSettingViewController.makeWrapLabel()
+    private let dnsWarningLabel = CoreSettingViewController.makeSecondaryWrapLabel()
     private let dnsNoteLabel = CoreSettingViewController.makeSecondaryWrapLabel()
+    private let dnsConfigureButton = NSButton(title: NSLocalizedString("Configure DNS...", comment: ""), target: nil, action: nil)
 
     private let modelStatusLabel = CoreSettingViewController.makeWrapLabel()
     private let modelModifiedLabel = CoreSettingViewController.makeWrapLabel()
@@ -169,17 +175,40 @@ class CoreSettingViewController: NSViewController {
 
         tunEnabledButton.target = self
         tunEnabledButton.action = #selector(actionToggleTun)
+        tunConfigureButton.target = self
+        tunConfigureButton.action = #selector(actionOpenTunConfigEditor)
+        tunConfigureButton.bezelStyle = .rounded
+        tunRefreshButton.target = self
+        tunRefreshButton.action = #selector(actionRefreshTunState)
+        tunRefreshButton.bezelStyle = .rounded
+
+        let tunButtons = NSStackView(views: [tunEnabledButton, tunConfigureButton, tunRefreshButton])
+        tunButtons.orientation = .horizontal
+        tunButtons.spacing = 12
+
         addFullWidthArrangedSubview(makeSection(title: NSLocalizedString("TUN Status", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("State", comment: ""), view: tunStatusLabel),
             labeledRow(title: NSLocalizedString("Details", comment: ""), view: tunDetailLabel),
+            tunVerificationLabel,
+            tunWarningLabel,
             tunNoteLabel,
-            tunEnabledButton
+            tunButtons
         ]))
+
+        dnsConfigureButton.target = self
+        dnsConfigureButton.action = #selector(actionOpenDNSConfigEditor)
+        dnsConfigureButton.bezelStyle = .rounded
+
+        let dnsButtons = NSStackView(views: [dnsConfigureButton])
+        dnsButtons.orientation = .horizontal
+        dnsButtons.spacing = 12
 
         addFullWidthArrangedSubview(makeSection(title: NSLocalizedString("DNS Status", comment: ""), rows: [
             labeledRow(title: NSLocalizedString("State", comment: ""), view: dnsStatusLabel),
             labeledRow(title: NSLocalizedString("Details", comment: ""), view: dnsDetailLabel),
-            dnsNoteLabel
+            dnsWarningLabel,
+            dnsNoteLabel,
+            dnsButtons
         ]))
 
         modelOverrideButton.target = self
@@ -316,12 +345,18 @@ class CoreSettingViewController: NSViewController {
 
         tunStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
         tunDetailLabel.stringValue = NSLocalizedString("Current mihomo config has not been loaded yet.", comment: "")
+        tunVerificationLabel.stringValue = ""
+        tunWarningLabel.stringValue = ""
         tunNoteLabel.stringValue = tunCapabilityNoteText(config: nil)
         tunEnabledButton.state = .off
         tunEnabledButton.isEnabled = false
+        tunConfigureButton.isEnabled = false
+        tunRefreshButton.isEnabled = false
         dnsStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
         dnsDetailLabel.stringValue = NSLocalizedString("Current mihomo DNS config has not been loaded yet.", comment: "")
+        dnsWarningLabel.stringValue = ""
         dnsNoteLabel.stringValue = dnsCapabilityNoteText(config: nil)
+        dnsConfigureButton.isEnabled = false
 
         modelStatusLabel.stringValue = NSLocalizedString("missing or not checked", comment: "")
         modelModifiedLabel.stringValue = NSLocalizedString("not checked", comment: "")
@@ -381,7 +416,7 @@ class CoreSettingViewController: NSViewController {
         }
     }
 
-    private func refreshConfigStatus() {
+    func refreshConfigStatus() {
         let fallbackConfig = ConfigManager.shared.currentConfig
         if let fallbackConfig {
             applyConfig(fallbackConfig, source: NSLocalizedString("app state", comment: ""), detail: NSLocalizedString("Using the last config known by SmartX.", comment: ""))
@@ -493,19 +528,71 @@ class CoreSettingViewController: NSViewController {
             tunDetailLabel.stringValue = detail ?? NSLocalizedString("No tun section was found in the current mihomo config.", comment: "")
         }
 
-        tunNoteLabel.stringValue = tunCapabilityNoteText(config: config)
-        if case .guardedUpdateAvailable = tunCapability, ConfigManager.shared.isRunning, tun != nil {
-            tunEnabledButton.isEnabled = true
-        } else {
-            tunEnabledButton.isEnabled = false
+        // Populate verification, warnings, and note separately for clarity.
+        let verificationText = buildTunVerificationText(config: config)
+        tunVerificationLabel.stringValue = verificationText
+        tunVerificationLabel.textColor = verificationText.contains("unverified") || verificationText.contains("not checked")
+            ? .systemOrange : .secondaryLabelColor
+
+        let validationResult = TunConfigValidator.validate(config?.tun)
+        let tunWarnings = validationResult.warnings.map { "⚠ \($0.message)" } + validationResult.informational.map { "ℹ \($0.message)" }
+        tunWarningLabel.stringValue = tunWarnings.joined(separator: "\n")
+        tunWarningLabel.textColor = .systemOrange
+
+        let blockingErrors = validationResult.blockingErrors
+        if !blockingErrors.isEmpty {
+            tunWarningLabel.stringValue = (["🚫 " + NSLocalizedString("Blocking issues:", comment: "")] + blockingErrors.map(\.message)).joined(separator: "\n")
+            tunWarningLabel.textColor = .systemRed
         }
+
+        tunNoteLabel.stringValue = tunCapabilityNoteText(config: config)
+        tunNoteLabel.textColor = .secondaryLabelColor
+
+        let canToggle = ConfigManager.shared.isRunning && tun != nil && !Settings.isUsingEmbeddedCore
+        tunEnabledButton.isEnabled = canToggle
+        tunConfigureButton.isEnabled = ConfigManager.shared.isRunning
+        tunRefreshButton.isEnabled = ConfigManager.shared.isRunning
+
+        // Dynamically label the configure button to guide the user.
+        if tun == nil {
+            tunConfigureButton.title = NSLocalizedString("Create TUN Section...", comment: "")
+        } else {
+            tunConfigureButton.title = NSLocalizedString("Configure TUN...", comment: "")
+        }
+    }
+
+    private func buildTunVerificationText(config: ClashConfig?) -> String {
+        guard let enabled = config?.tun?.enable else {
+            return NSLocalizedString("TUN verification requires a tun.enable value from the controller config.", comment: "")
+        }
+        let interfaceEvidence = TunRuntimeInterfaceProbe.currentEvidence()
+        let routeEvidence = TunRuntimeRouteProbe.currentEvidence(tunLikeInterfaceNames: interfaceEvidence.tunLikeInterfaceNames)
+        let dnsEvidence = TunRuntimeDNSProbe.currentEvidence()
+
+        var lines: [String] = []
+        if interfaceEvidence.evidenceState != .notChecked {
+            lines.append("🔌 \(interfaceEvidence.message)")
+        }
+        if routeEvidence.evidenceState != .notChecked {
+            lines.append("🛜 \(routeEvidence.message)")
+        }
+        if dnsEvidence.evidenceState != .notChecked {
+            lines.append("📡 \(dnsEvidence.message)")
+        }
+        if lines.isEmpty {
+            lines.append(NSLocalizedString("Runtime verification evidence was not checked.", comment: ""))
+        }
+        return lines.joined(separator: "\n")
     }
 
     private func refreshDNSInfo(using config: ClashConfig?) {
         guard let dns = config?.dns else {
             dnsStatusLabel.stringValue = NSLocalizedString("unavailable", comment: "")
             dnsDetailLabel.stringValue = NSLocalizedString("No DNS section was found in the current mihomo config.", comment: "")
+            dnsWarningLabel.stringValue = ""
             dnsNoteLabel.stringValue = dnsCapabilityNoteText(config: config)
+            dnsConfigureButton.isEnabled = ConfigManager.shared.isRunning
+            dnsConfigureButton.title = NSLocalizedString("Create DNS Section...", comment: "")
             return
         }
 
@@ -532,7 +619,21 @@ class CoreSettingViewController: NSViewController {
         dnsDetailLabel.stringValue = detailParts.isEmpty
             ? NSLocalizedString("DNS section is present but no extra fields were reported.", comment: "")
             : detailParts.joined(separator: "  ")
+
+        let dnsValidation = DNSConfigValidator.validate(dns)
+        let dnsIssues = dnsValidation.issues.map { issue in
+            switch issue.severity {
+            case .blocking: return "🚫 \(issue.message)"
+            case .warning: return "⚠ \(issue.message)"
+            case .info: return "ℹ \(issue.message)"
+            }
+        }
+        dnsWarningLabel.stringValue = dnsIssues.joined(separator: "\n")
+        dnsWarningLabel.textColor = dnsValidation.issues.contains(where: { $0.severity == .blocking }) ? .systemRed : .systemOrange
+
         dnsNoteLabel.stringValue = dnsCapabilityNoteText(config: config)
+        dnsConfigureButton.isEnabled = ConfigManager.shared.isRunning
+        dnsConfigureButton.title = NSLocalizedString("Configure DNS...", comment: "")
     }
 
     private func makeTunCapability(config: ClashConfig?, source: String?) -> TunCapability {
@@ -609,6 +710,48 @@ class CoreSettingViewController: NSViewController {
         let state = LightGBMSettingsViewModel.currentState(isCoreRunning: ConfigManager.shared.isRunning,
                                                            capabilityAvailability: CapabilityCache.shared.availability(for: .lightGBMUpgrade))
         applyModelState(state)
+    }
+
+    @objc private func actionOpenTunConfigEditor() {
+        let editor = TunConfigEditorViewController()
+        presentAsSheet(editor)
+    }
+
+    @objc private func actionOpenDNSConfigEditor() {
+        let editor = DNSConfigEditorViewController()
+        presentAsSheet(editor)
+    }
+
+    @objc private func actionRefreshTunState() {
+        tunRefreshButton.isEnabled = false
+        tunRefreshButton.title = NSLocalizedString("Refreshing...", comment: "")
+        Logger.log("[Core Settings] manual TUN state refresh requested", level: .debug)
+
+        // Re-read config from controller to get fresh TUN state.
+        if ApiRequest.useDirectApi(), let cached = ConfigManager.shared.currentConfig {
+            applyConfig(cached, source: NSLocalizedString("app state (refreshed)", comment: ""), detail: NSLocalizedString("Re-read from embedded core cache.", comment: ""))
+            tunRefreshButton.isEnabled = true
+            tunRefreshButton.title = NSLocalizedString("Refresh TUN State", comment: "")
+            return
+        }
+
+        requestRemoteConfig { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.tunRefreshButton.isEnabled = true
+                self.tunRefreshButton.title = NSLocalizedString("Refresh TUN State", comment: "")
+                switch result {
+                case let .success(config):
+                    self.applyConfig(config, source: "/configs (refreshed)", detail: NSLocalizedString("Manually refreshed from controller.", comment: ""))
+                    Logger.log("[Core Settings] manual TUN refresh succeeded", level: .debug)
+                case let .failure(error):
+                    self.tunStatusLabel.stringValue = NSLocalizedString("refresh failed", comment: "")
+                    self.tunVerificationLabel.stringValue = String(format: NSLocalizedString("Refresh failed: %@", comment: ""), error.localizedDescription)
+                    self.tunVerificationLabel.textColor = .systemRed
+                    Logger.log("[Core Settings] manual TUN refresh failed: \(error.localizedDescription)", level: .warning)
+                }
+            }
+        }
     }
 
     @objc private func actionToggleTun() {

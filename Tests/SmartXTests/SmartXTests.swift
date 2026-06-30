@@ -269,3 +269,127 @@ final class TunLifecycleDiagnosticsTests: XCTestCase {
         XCTAssertEqual(decoded.outcome, .controllerStateMatches)
     }
 }
+
+// MARK: - Config workspace (Phase 9)
+
+final class ConfigWorkspaceTests: XCTestCase {
+    func test_pipeline_ordersActiveLayers() {
+        let base = ConfigLayer(name: "base", type: .base,
+                               source: ConfigSource(type: .local, location: "/tmp/base.yaml",
+                                                    remoteURL: nil, displayName: "Base",
+                                                    validationState: .valid, lastUpdatedAt: nil),
+                               enabled: true, order: 0,
+                               mergeOperations: nil, scriptIdentifier: nil)
+        let merge = ConfigLayer(name: "merge", type: .merge,
+                                source: ConfigSource(type: .local, location: "/tmp/merge.yaml",
+                                                     remoteURL: nil, displayName: "Merge",
+                                                     validationState: .valid, lastUpdatedAt: nil),
+                                enabled: true, order: 1,
+                                mergeOperations: [
+                                    ConfigMergeOperation(type: .appendRules, target: nil,
+                                                         value: "DOMAIN-SUFFIX,example.com", description: "extra rule")
+                                ], scriptIdentifier: nil)
+        let pipeline = ConfigPipeline(layers: [base, merge],
+                                      activeLayerNames: ["base", "merge"],
+                                      generatedAt: Date())
+        XCTAssertEqual(pipeline.orderedActiveLayers.count, 2)
+        XCTAssertEqual(pipeline.orderedActiveLayers.first?.name, "base")
+        XCTAssertTrue(pipeline.hasOverrides)
+    }
+
+    func test_pipeline_noOverrides_whenNoMergeOrScript() {
+        let base = ConfigLayer(name: "base", type: .base,
+                               source: ConfigSource(type: .remote, location: "https://example.com/config.yaml",
+                                                    remoteURL: "https://example.com/config.yaml",
+                                                    displayName: "Remote", validationState: .valid,
+                                                    lastUpdatedAt: nil),
+                               enabled: true, order: 0,
+                               mergeOperations: nil, scriptIdentifier: nil)
+        let pipeline = ConfigPipeline(layers: [base], activeLayerNames: ["base"], generatedAt: Date())
+        XCTAssertFalse(pipeline.hasOverrides)
+    }
+
+    func test_workspace_validate_detectsDuplicateOrders() {
+        let layer1 = ConfigLayer(name: "a", type: .base,
+                                 source: ConfigSource(type: .local, location: "/tmp/a.yaml",
+                                                      remoteURL: nil, displayName: "A",
+                                                      validationState: .valid, lastUpdatedAt: nil),
+                                 enabled: true, order: 0,
+                                 mergeOperations: nil, scriptIdentifier: nil)
+        let layer2 = ConfigLayer(name: "b", type: .merge,
+                                 source: ConfigSource(type: .local, location: "/tmp/b.yaml",
+                                                      remoteURL: nil, displayName: "B",
+                                                      validationState: .valid, lastUpdatedAt: nil),
+                                 enabled: true, order: 0,
+                                 mergeOperations: nil, scriptIdentifier: nil)
+        let pipeline = ConfigPipeline(layers: [layer1, layer2],
+                                      activeLayerNames: ["a", "b"],
+                                      generatedAt: Date())
+        let ws = ConfigWorkspace(layers: [layer1, layer2],
+                                 artifacts: [],
+                                 activePipeline: pipeline,
+                                 lastKnownGoodPipeline: nil,
+                                 workspaceRoot: URL(fileURLWithPath: "/tmp/.smartx/workspace"))
+        let issues = ws.validate()
+        XCTAssertTrue(issues.contains { $0.contains("duplicate order") },
+                      "Should detect duplicate order values")
+    }
+
+    func test_workspace_validate_passesCleanPipeline() {
+        let base = ConfigLayer(name: "base", type: .base,
+                               source: ConfigSource(type: .local, location: "/tmp/base.yaml",
+                                                    remoteURL: nil, displayName: "Base",
+                                                    validationState: .valid, lastUpdatedAt: nil),
+                               enabled: true, order: 0,
+                               mergeOperations: nil, scriptIdentifier: nil)
+        let pipeline = ConfigPipeline(layers: [base], activeLayerNames: ["base"], generatedAt: Date())
+        let ws = ConfigWorkspace(layers: [base],
+                                 artifacts: [],
+                                 activePipeline: pipeline,
+                                 lastKnownGoodPipeline: nil,
+                                 workspaceRoot: URL(fileURLWithPath: "/tmp/.smartx/workspace"))
+        XCTAssertTrue(ws.validate().isEmpty, "Clean pipeline should have no validation issues")
+    }
+
+    func test_mergeOperation_codableRoundtrip() throws {
+        let op = ConfigMergeOperation(type: .prependRules, target: "rules",
+                                      value: "DOMAIN-SUFFIX,example.com",
+                                      description: "Add rule for example.com")
+        let data = try JSONEncoder().encode(op)
+        let decoded = try JSONDecoder().decode(ConfigMergeOperation.self, from: data)
+        XCTAssertEqual(decoded.type, .prependRules)
+        XCTAssertEqual(decoded.value, "DOMAIN-SUFFIX,example.com")
+    }
+
+    func test_artifact_allTypes() {
+        let types: [ConfigArtifactType] = [.sourceCopy, .generatedEffective, .lastKnownGood, .mergePreview]
+        let artifacts = types.map {
+            ConfigArtifact(type: $0, localURL: URL(fileURLWithPath: "/tmp/\($0.rawValue).yaml"),
+                           metadataURL: URL(fileURLWithPath: "/tmp/\($0.rawValue).json"),
+                           pipeline: nil, provenance: "test", createdAt: Date(), isValid: true)
+        }
+        XCTAssertEqual(artifacts.count, 4)
+        let effective = artifacts.filter { $0.type == .generatedEffective }
+        XCTAssertEqual(effective.count, 1)
+    }
+
+    func test_codableRoundtrip() throws {
+        let ws = ConfigWorkspace(
+            layers: [],
+            artifacts: [
+                ConfigArtifact(type: .lastKnownGood,
+                               localURL: URL(fileURLWithPath: "/tmp/lkg.yaml"),
+                               metadataURL: URL(fileURLWithPath: "/tmp/lkg.json"),
+                               pipeline: nil, provenance: "source-copy",
+                               createdAt: Date(), isValid: true)
+            ],
+            activePipeline: nil,
+            lastKnownGoodPipeline: nil,
+            workspaceRoot: URL(fileURLWithPath: "/tmp/.smartx/workspace")
+        )
+        let data = try JSONEncoder().encode(ws)
+        let decoded = try JSONDecoder().decode(ConfigWorkspace.self, from: data)
+        XCTAssertEqual(decoded.artifacts.count, 1)
+        XCTAssertEqual(decoded.artifacts.first?.type, .lastKnownGood)
+    }
+}

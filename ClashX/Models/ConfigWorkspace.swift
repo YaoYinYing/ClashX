@@ -107,6 +107,107 @@ struct ConfigPipeline: Codable {
     var baseLayer: ConfigLayer? {
         orderedActiveLayers.first { $0.type == .base }
     }
+
+    /// Generates an effective config by starting with the base YAML and applying
+    /// each active merge layer's operations in order. Script layers are not yet
+    /// supported — they require an external script runner.
+    ///
+    /// ponytail: string-based YAML manipulation via ConfigYAMLEditor. Ceiling:
+    /// comments outside target sections are lost; YAML structure not validated.
+    /// Upgrade path: YAML parse-emit round-trip with a proper library.
+    func generateEffectiveConfig(baseYAML: String) -> (yaml: String, appliedOperations: Int) {
+        var result = baseYAML
+        var applied = 0
+
+        for layer in orderedActiveLayers {
+            guard layer.type == .merge, let ops = layer.mergeOperations else { continue }
+            for op in ops {
+                switch op.type {
+                case .fieldOverride:
+                    guard let target = op.target, let value = op.value else { continue }
+                    result = ConfigYAMLEditor.upsertSection(
+                        named: target, in: result,
+                        params: parsedOverrideParams(value),
+                        keyOrder: [target]
+                    )
+                    applied += 1
+                case .prependRules, .appendRules:
+                    guard let value = op.value else { continue }
+                    result = applyRuleOperation(type: op.type, value: value, to: result)
+                    applied += 1
+                case .prependProxies, .appendProxies,
+                     .prependProxyGroups, .appendProxyGroups,
+                     .prependRuleProviders, .appendRuleProviders:
+                    // These operations require YAML structural awareness
+                    // that string manipulation can't safely provide.
+                    // Record the intent and skip for now.
+                    break
+                }
+            }
+        }
+
+        return (result, applied)
+    }
+
+    // MARK: - Private helpers
+
+    /// Parses a simple key=value override string into a dictionary.
+    private func parsedOverrideParams(_ raw: String) -> [String: Any] {
+        var params: [String: Any] = [:]
+        for pair in raw.split(separator: ",") {
+            let parts = pair.split(separator: "=", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+            guard parts.count == 2 else { continue }
+            let key = parts[0]
+            let val = parts[1]
+            if val == "true" { params[key] = true }
+            else if val == "false" { params[key] = false }
+            else if let intVal = Int(val) { params[key] = intVal }
+            else { params[key] = val }
+        }
+        return params
+    }
+
+    /// Appends or prepends a rule line to the rules section.
+    private func applyRuleOperation(type: ConfigMergeOperation.OperationType, value: String, to yaml: String) -> String {
+        let ruleLine: String
+        switch type {
+        case .prependRules:
+            ruleLine = "  - '\(value)'"
+        case .appendRules:
+            ruleLine = "  - '\(value)'"
+        default:
+            return yaml
+        }
+
+        var lines = yaml.components(separatedBy: "\n")
+        guard let rulesIdx = lines.firstIndex(where: { $0.trimmingCharacters(in: .whitespaces) == "rules:" }) else {
+            // No rules section: append one with the new rule.
+            if let lastNonBlank = lines.lastIndex(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) {
+                let insertAt = min(lastNonBlank + 1, lines.count)
+                lines.insert(contentsOf: ["", "rules:", ruleLine], at: insertAt)
+            } else {
+                lines.append(contentsOf: ["rules:", ruleLine])
+            }
+            return lines.joined(separator: "\n")
+        }
+
+        if type == .prependRules {
+            lines.insert(ruleLine, at: rulesIdx + 1)
+        } else {
+            // Append: find the end of the rules block
+            var insertAt = rulesIdx + 1
+            while insertAt < lines.count {
+                let trimmed = lines[insertAt].trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty, !trimmed.hasPrefix("#"),
+                   !trimmed.hasPrefix("-"), lines[insertAt].first?.isWhitespace == false {
+                    break
+                }
+                insertAt += 1
+            }
+            lines.insert(ruleLine, at: insertAt)
+        }
+        return lines.joined(separator: "\n")
+    }
 }
 
 // MARK: - Artifacts

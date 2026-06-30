@@ -366,71 +366,14 @@ final class DNSConfigEditorViewController: NSViewController {
         }
     }
 
+    /// Inserts or updates the `dns:` block in a YAML string. Delegates to ConfigYAMLEditor.
     private func upsertDNSSection(in yaml: String, dnsParams: [String: Any]) -> String {
-        let dnsYaml = renderDNSYAML(dnsParams)
-        var lines = yaml.components(separatedBy: "\n")
-        var dnsStart: Int?
-        var dnsEnd: Int?
-
-        for (idx, line) in lines.enumerated() {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed == "dns:" || trimmed.hasPrefix("dns:") {
-                dnsStart = idx
-                continue
-            }
-            if dnsStart != nil, dnsEnd == nil {
-                if !trimmed.isEmpty, !trimmed.hasPrefix("#"),
-                   line.first?.isWhitespace == false {
-                    dnsEnd = idx
-                    break
-                }
-            }
-        }
-
-        if let start = dnsStart {
-            let end = dnsEnd ?? lines.count
-            lines.replaceSubrange(start ..< end, with: [dnsYaml])
-        } else {
-            if let lastNonBlank = lines.lastIndex(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) {
-                let insertAt = min(lastNonBlank + 1, lines.count)
-                if insertAt < lines.count, lines[insertAt].trimmingCharacters(in: .whitespaces).isEmpty {
-                    lines.insert(dnsYaml, at: insertAt)
-                } else {
-                    lines.append("")
-                    lines.append(dnsYaml)
-                }
-            } else {
-                lines.append(dnsYaml)
-            }
-        }
-
-        return lines.joined(separator: "\n")
-    }
-
-    private func renderDNSYAML(_ params: [String: Any]) -> String {
-        var result = "dns:"
-        let keyOrder = ["enable", "enhanced-mode", "listen", "nameserver", "fallback",
-                        "direct-nameserver", "respect-rules", "use-hosts",
-                        "use-system-hosts", "prefer-h3",
-                        "fake-ip-range", "fake-ip-filter", "fake-ip-filter-mode"]
-        for key in keyOrder {
-            guard let value = params[key] else { continue }
-            switch value {
-            case let b as Bool:
-                result += "\n  \(key): \(b ? "true" : "false")"
-            case let s as String:
-                result += "\n  \(key): \"\(s)\""
-            case let arr as [String]:
-                if arr.isEmpty { continue }
-                result += "\n  \(key):"
-                for item in arr {
-                    result += "\n    - \"\(item)\""
-                }
-            default:
-                break
-            }
-        }
-        return result
+        ConfigYAMLEditor.upsertSection(named: "dns", in: yaml, params: dnsParams, keyOrder: [
+            "enable", "enhanced-mode", "listen", "nameserver", "fallback",
+            "direct-nameserver", "respect-rules", "use-hosts",
+            "use-system-hosts", "prefer-h3",
+            "fake-ip-range", "fake-ip-filter", "fake-ip-filter-mode"
+        ])
     }
 
     @objc private func actionReset() {

@@ -393,3 +393,60 @@ final class ConfigWorkspaceTests: XCTestCase {
         XCTAssertEqual(decoded.artifacts.first?.type, .lastKnownGood)
     }
 }
+
+// MARK: - Config YAML editor (Phase 9)
+
+final class ConfigYAMLEditorTests: XCTestCase {
+    func test_renderSection_boolValues() {
+        let result = ConfigYAMLEditor.renderSection(named: "test",
+                                                    params: ["enabled": true, "verbose": false],
+                                                    keyOrder: ["enabled", "verbose"])
+        XCTAssertTrue(result.contains("enabled: true"))
+        XCTAssertTrue(result.contains("verbose: false"))
+    }
+
+    func test_renderSection_stringValues() {
+        let result = ConfigYAMLEditor.renderSection(named: "dns",
+                                                    params: ["listen": ":53"],
+                                                    keyOrder: ["listen"])
+        XCTAssertTrue(result.contains("dns:"))
+        XCTAssertTrue(result.contains("listen: \":53\""))
+    }
+
+    func test_renderSection_arrayValues() {
+        let result = ConfigYAMLEditor.renderSection(named: "tun",
+                                                    params: ["route-address": ["0.0.0.0/0", "::/0"]],
+                                                    keyOrder: ["route-address"])
+        XCTAssertTrue(result.contains("route-address:"))
+        XCTAssertTrue(result.contains("- \"0.0.0.0/0\""))
+        XCTAssertTrue(result.contains("- \"::/0\""))
+    }
+
+    func test_renderSection_skipsEmptyArrays() {
+        let result = ConfigYAMLEditor.renderSection(named: "dns",
+                                                    params: ["nameserver": [String]()],
+                                                    keyOrder: ["nameserver"])
+        XCTAssertFalse(result.contains("nameserver:"),
+                       "Empty arrays should not produce YAML entries")
+    }
+
+    func test_upsertSection_replacesExisting() {
+        let original = "dns:\n  enable: false\n\nproxies:\n  - name: Proxy1\n"
+        let result = ConfigYAMLEditor.upsertSection(named: "dns", in: original,
+                                                    params: ["enable": true],
+                                                    keyOrder: ["enable"])
+        XCTAssertTrue(result.contains("enable: true"))
+        XCTAssertFalse(result.contains("enable: false"))
+        XCTAssertTrue(result.contains("proxies:"),
+                      "Sections after the replaced section should be preserved")
+    }
+
+    func test_upsertSection_appendsWhenMissing() {
+        let original = "proxies:\n  - name: Proxy1\n"
+        let result = ConfigYAMLEditor.upsertSection(named: "dns", in: original,
+                                                    params: ["enable": true],
+                                                    keyOrder: ["enable"])
+        XCTAssertTrue(result.contains("dns:"))
+        XCTAssertTrue(result.contains("proxies:"))
+    }
+}

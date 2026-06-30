@@ -262,11 +262,11 @@ fi
 {
     echo
     echo "PASS count: ${#passes[@]}"
-    printf '  %s\n' "${passes[@]}"
+    for p in "${passes[@]}"; do printf '  %s\n' "$p"; done
     echo "SKIP count: ${#skips[@]}"
-    printf '  %s\n' "${skips[@]}"
+    for s in "${skips[@]}"; do printf '  %s\n' "$s"; done
     echo "FAIL count: ${#failures[@]}"
-    printf '  %s\n' "${failures[@]}"
+    for f in "${failures[@]}"; do printf '  %s\n' "$f"; done
 } >> "$LOG_FILE"
 
 if [[ "${#failures[@]}" -eq 0 ]]; then

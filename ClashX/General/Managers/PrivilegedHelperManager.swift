@@ -51,8 +51,11 @@ class PrivilegedHelperManager {
                         alert.addButton(withTitle: NSLocalizedString("Reset Daemon", comment: ""))
                         if alert.runModal() == .alertFirstButtonReturn {
                             SMAppService.openSystemSettingsLoginItems()
-                        } else {
-                            self.removeInstallHelper()
+                        } else if !self.removeInstallHelper() {
+                            let blockedAlert = NSAlert()
+                            blockedAlert.messageText = NSLocalizedString("Reset Daemon Unavailable", comment: "")
+                            blockedAlert.informativeText = NSLocalizedString("Helper reset requires a Debug build. Release builds cannot execute privileged shell scripts.", comment: "")
+                            blockedAlert.runModal()
                         }
                     }
                 }

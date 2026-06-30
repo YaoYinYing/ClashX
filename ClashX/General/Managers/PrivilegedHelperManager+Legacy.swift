@@ -116,10 +116,12 @@ extension PrivilegedHelperManager {
         runScriptWithRootPermission(script: script)
     }
 
-    func removeInstallHelper() {
+    /// Returns false when blocked by build configuration (e.g. Release).
+    @discardableResult
+    func removeInstallHelper() -> Bool {
         guard Self.legacyInstallAllowed else {
-            Logger.log("removeInstallHelper blocked at compile time (not DEBUG)", level: .error)
-            return
+            Logger.log("removeInstallHelper blocked at compile time (not DEBUG). Reset Daemon requires a Debug build.", level: .error)
+            return false
         }
         defer {
             resetConnection()
@@ -133,5 +135,6 @@ extension PrivilegedHelperManager {
         """
 
         runScriptWithRootPermission(script: script)
+        return true
     }
 }

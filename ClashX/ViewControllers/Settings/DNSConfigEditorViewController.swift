@@ -343,17 +343,22 @@ final class DNSConfigEditorViewController: NSViewController {
                 return
             }
 
+            let backupPath = configPath + ".smartx-backup"
             do {
                 let originalYaml = try String(contentsOfFile: configPath, encoding: .utf8)
                 let updatedYaml = self.upsertDNSSection(in: originalYaml, dnsParams: dnsParams)
+                // ponytail: backup before write — survives crash between write and reload
+                try originalYaml.write(toFile: backupPath, atomically: true, encoding: .utf8)
                 try updatedYaml.write(toFile: configPath, atomically: true, encoding: .utf8)
 
                 ApiRequest.requestConfigUpdate(configPath: configPath) { errorMessage in
                     DispatchQueue.main.async {
                         if let errorMessage {
                             try? originalYaml.write(toFile: configPath, atomically: true, encoding: .utf8)
+                            try? FileManager.default.removeItem(atPath: backupPath)
                             completion(false, errorMessage)
                         } else {
+                            try? FileManager.default.removeItem(atPath: backupPath)
                             completion(true, nil)
                         }
                     }

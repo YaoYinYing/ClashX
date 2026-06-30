@@ -87,6 +87,22 @@ jobs:
             -scheme ClashX \
             | tee .ci-logs/spm-resolve.log
 
+      - name: Verify Go module integrity
+        run: |
+          set -o pipefail
+          cd ClashX/goClash
+          go mod verify | tee ../../.ci-logs/go-mod-verify.log
+          if ! grep -q 'replace github.com/metacubex/mihomo' go.mod; then
+            echo "ERROR: missing replace directive for Vernesong Smart fork"
+            exit 1
+          fi
+          if ! grep -q "go 1.21" go.mod; then
+            echo "ERROR: go.mod Go version mismatch"
+            exit 1
+          fi
+          echo "Go module integrity verified" | tee ../../.ci-logs/go-mod-check.log
+          cd ../..
+
       - name: Verify helper Release requirement is fail-closed
         run: |
           set -o pipefail
@@ -384,6 +400,14 @@ jobs:
             bash install_dependency.sh
             echo "::endgroup::"
           } | tee .ci-logs/install-dependency.log
+
+      - name: Verify Go module integrity
+        run: |
+          set -o pipefail
+          cd ClashX/goClash
+          go mod verify | tee ../../.ci-logs/go-mod-verify.log
+          grep -q 'replace github.com/metacubex/mihomo' go.mod || { echo "ERROR: missing replace directive"; exit 1; }
+          cd ../..
 
       - name: Resolve Swift package dependencies
         run: |

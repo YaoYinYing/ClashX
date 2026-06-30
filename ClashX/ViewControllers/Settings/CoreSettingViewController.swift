@@ -548,7 +548,7 @@ class CoreSettingViewController: NSViewController {
         tunNoteLabel.stringValue = tunCapabilityNoteText(config: config)
         tunNoteLabel.textColor = .secondaryLabelColor
 
-        let canToggle = ConfigManager.shared.isRunning && tun != nil && !Settings.isUsingEmbeddedCore
+        let canToggle = ConfigManager.shared.isRunning && tun != nil
         tunEnabledButton.isEnabled = canToggle
         tunConfigureButton.isEnabled = ConfigManager.shared.isRunning
         tunRefreshButton.isEnabled = ConfigManager.shared.isRunning
@@ -637,10 +637,6 @@ class CoreSettingViewController: NSViewController {
     }
 
     private func makeTunCapability(config: ClashConfig?, source: String?) -> TunCapability {
-        if Settings.isUsingEmbeddedCore {
-            return .unsupported(NSLocalizedString("Embedded core TUN cannot be enabled from SmartX yet. It requires a privileged core startup path or another TUN-capable architecture.", comment: ""))
-        }
-
         guard ConfigManager.shared.isRunning else {
             return .unsupported(NSLocalizedString("The external controller is not connected, so SmartX cannot verify whether TUN updates are supported yet.", comment: ""))
         }
@@ -649,11 +645,11 @@ class CoreSettingViewController: NSViewController {
             return .unsupported(NSLocalizedString("The current controller config does not expose a tun section, so SmartX keeps TUN disabled.", comment: ""))
         }
 
-        if source == "/configs" {
-            return .guardedUpdateAvailable(NSLocalizedString("External controller exposes a tun section through /configs. SmartX can attempt a guarded TUN update and then refresh the UI from the controller if verification fails.", comment: ""))
-        }
-
-        return .unsupported(NSLocalizedString("External controller TUN support is not verified yet. SmartX keeps it disabled until the controller reports config state reliably.", comment: ""))
+        // ponytail: removed source == "/configs" gate — the coordinator
+        // already checks configPatchAvailability. If we have a tun section
+        // from any source (HTTP, app state, cache), the toggle should be
+        // available and let the coordinator decide.
+        return .guardedUpdateAvailable(NSLocalizedString("External controller exposes a tun section. SmartX can attempt a guarded TUN update with preflight validation.", comment: ""))
     }
 
     private func tunCapabilityNoteText(config: ClashConfig?) -> String {

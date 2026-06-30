@@ -75,9 +75,13 @@ final class TunLifecycleCoordinator {
             return
         }
 
-        guard !Settings.isUsingEmbeddedCore else {
-            completion(.unsupported(message: initialReport.userMessage,
-                                    previousState: fallbackPreviousState))
+        if Settings.isUsingEmbeddedCore {
+            // ponytail: embedded core TUN — write tun.enable to config file
+            // and reload via Go bridge. Same path as TUN/DNS config editors.
+            applyEmbeddedTunToggle(enabled: enabled,
+                                   preflightReport: initialReport,
+                                   previousState: fallbackPreviousState,
+                                   completion: completion)
             return
         }
 
@@ -194,12 +198,92 @@ final class TunLifecycleCoordinator {
                 case .controllerStateMatches:
                     completion(.success(message: report.message, previousState: previousState))
                 case .controllerStateMismatch, .failed:
-                    completion(.failed(message: report.message, previousState: previousState))
+                    // ponytail: attempt automatic rollback when verification fails.
+                    // If the controller accepted the patch but reports the wrong
+                    // state, restore previous TUN setting before reporting failure.
+                    self.rollbackTunState(previousEnabled: previousState.enabled,
+                                          preflightReport: preflightReport,
+                                          failureMessage: report.message,
+                                          previousState: previousState,
+                                          completion: completion)
                 case .requestedButUnverified:
                     completion(.requestedButUnverified(message: report.message, previousState: previousState))
                 case .notAttempted:
                     completion(.failed(message: report.message, previousState: previousState))
                 }
+            }
+        }
+    }
+
+    /// Attempts to restore the previous TUN state after a failed verification.
+    /// Reports failure even if rollback succeeds — the original operation did not
+    /// complete correctly. If rollback also fails, the message includes both errors.
+    private func rollbackTunState(previousEnabled: Bool,
+                                  preflightReport: TunPreflightReport,
+                                  failureMessage: String,
+                                  previousState: TunLifecycleUIState,
+                                  completion: @escaping (TunLifecycleResult) -> Void) {
+        ApiRequest.updateTunResult(enable: previousEnabled) { rollbackResult in
+            switch rollbackResult {
+            case .success:
+                let recoveryMessage = [failureMessage,
+                                       NSLocalizedString("TUN state was automatically restored to its previous value.", comment: "")].joined(separator: " ")
+                completion(.failed(message: recoveryMessage, previousState: previousState))
+            case .unsupported, .unauthorized, .failed:
+                let recoveryMessage = [failureMessage,
+                                       NSLocalizedString("SmartX also could not restore the previous TUN state.", comment: "")].joined(separator: " ")
+                completion(.failed(message: recoveryMessage, previousState: previousState))
+            }
+        }
+    }
+
+    /// Writes tun.enable into the active YAML config file and reloads via
+    /// the Go bridge. Used for embedded-core mode where there is no HTTP
+    /// controller to PATCH.
+    ///
+    /// ponytail: string-based YAML upsert via ConfigYAMLEditor — same pattern
+    /// as TunConfigEditorViewController. Ceiling: comments in the tun block
+    /// are lost. Upgrade path: YAML parse-emit when Phase 9 pipeline lands.
+    private func applyEmbeddedTunToggle(enabled: Bool,
+                                        preflightReport: TunPreflightReport,
+                                        previousState: TunLifecycleUIState,
+                                        completion: @escaping (TunLifecycleResult) -> Void) {
+        let configName = ConfigManager.selectConfigName
+        ConfigManager.getConfigPath(configName: configName) { [self] result in
+            let configPath: String
+            switch result {
+            case let .success(path):
+                configPath = path
+            case let .failure(error):
+                completion(.failed(message: error.localizedDescription,
+                                   previousState: previousState))
+                return
+            }
+
+            do {
+                let originalYaml = try String(contentsOfFile: configPath, encoding: .utf8)
+                let updatedYaml = ConfigYAMLEditor.upsertSection(
+                    named: "tun", in: originalYaml,
+                    params: ["enable": enabled],
+                    keyOrder: ["enable"]
+                )
+                try updatedYaml.write(toFile: configPath, atomically: true, encoding: .utf8)
+
+                ApiRequest.requestConfigUpdate(configPath: configPath) { errorMessage in
+                    DispatchQueue.main.async {
+                        if let errorMessage {
+                            try? originalYaml.write(toFile: configPath, atomically: true, encoding: .utf8)
+                            completion(.failed(message: errorMessage, previousState: previousState))
+                        } else {
+                            let message = enabled
+                                ? NSLocalizedString("TUN enabled via embedded core config update.", comment: "")
+                                : NSLocalizedString("TUN disabled via embedded core config update.", comment: "")
+                            completion(.success(message: message, previousState: previousState))
+                        }
+                    }
+                }
+            } catch {
+                completion(.failed(message: error.localizedDescription, previousState: previousState))
             }
         }
     }

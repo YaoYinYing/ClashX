@@ -450,3 +450,24 @@ final class ConfigYAMLEditorTests: XCTestCase {
         XCTAssertTrue(result.contains("proxies:"))
     }
 }
+
+// ponytail: one test — fieldOverride is the primary use case (TUN/DNS editors).
+// Add rule/prepend tests when those operations get editor UI.
+
+final class ConfigPipelineExecutionTests: XCTestCase {
+    func test_fieldOverride_appliesChange() {
+        let merge = ConfigLayer(name: "o", type: .merge,
+                                source: ConfigSource(type: .local, location: "/tmp/o.yaml",
+                                                     remoteURL: nil, displayName: "O",
+                                                     validationState: .valid, lastUpdatedAt: nil),
+                                enabled: true, order: 1,
+                                mergeOperations: [ConfigMergeOperation(type: .fieldOverride,
+                                                                       target: "tun", value: "enable=true",
+                                                                       description: "Enable")],
+                                scriptIdentifier: nil)
+        let p = ConfigPipeline(layers: [merge], activeLayerNames: ["o"], generatedAt: Date())
+        let result = p.generateEffectiveConfig(baseYAML: "tun:\n  enable: false\n")
+        XCTAssertTrue(result.contains("enable: true"))
+        XCTAssertFalse(result.contains("enable: false"))
+    }
+}

@@ -27,6 +27,8 @@ enum SmartXRedactor {
         if components.queryItems != nil {
             components.queryItems = redactedQueryItems(components.queryItems)
         }
+        // ponytail: redact path segments that look like tokens (base64, hex32+, UUID)
+        components.path = redactTokenPathSegments(components.path)
         return components.string ?? "<redacted-url>"
     }
 
@@ -130,5 +132,21 @@ enum SmartXRedactor {
             }
         }
         return result
+    }
+
+    /// Redacts path segments that look like subscription tokens or API keys.
+    /// Matches: base64 (≥20 chars), hex (≥32 chars), UUIDs, and segments
+    /// containing mixed alphanumeric with hyphens/underscores ≥32 chars.
+    private static func redactTokenPathSegments(_ path: String) -> String {
+        let segments = path.split(separator: "/", omittingEmptySubsequences: false)
+        let tokenish: (String) -> Bool = { seg in
+            let s = String(seg)
+            guard s.count >= 20 else { return false }
+            if s.range(of: #"^[A-Za-z0-9+/=_-]{32,}$"#, options: .regularExpression) != nil { return true }
+            if s.range(of: #"^[A-Fa-f0-9]{32,}$"#, options: .regularExpression) != nil { return true }
+            if UUID(uuidString: s) != nil { return true }
+            return false
+        }
+        return segments.map { tokenish(String($0)) ? "<redacted>" : String($0) }.joined(separator: "/")
     }
 }

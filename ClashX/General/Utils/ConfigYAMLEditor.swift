@@ -59,6 +59,25 @@ enum ConfigYAMLEditor {
         return lines.joined(separator: "\n")
     }
 
+    /// Escapes special characters in a YAML double-quoted string value.
+    /// Replaces backslash, double-quote, newline, carriage return, and tab
+    /// with their escaped equivalents to prevent YAML injection or corruption.
+    private static func escapeYAMLString(_ s: String) -> String {
+        var result = ""
+        result.reserveCapacity(s.utf8.count)
+        for c in s {
+            switch c {
+            case "\\": result += "\\\\"
+            case "\"": result += "\\\""
+            case "\n": result += "\\n"
+            case "\r": result += "\\r"
+            case "\t": result += "\\t"
+            default: result.append(c)
+            }
+        }
+        return result
+    }
+
     /// Renders a parameter dictionary as a YAML section block.
     static func renderSection(named sectionKey: String,
                               params: [String: Any],
@@ -70,12 +89,12 @@ enum ConfigYAMLEditor {
             case let b as Bool:
                 result += "\n  \(key): \(b ? "true" : "false")"
             case let s as String:
-                result += "\n  \(key): \"\(s)\""
+                result += "\n  \(key): \"\(escapeYAMLString(s))\""
             case let arr as [String]:
                 if arr.isEmpty { continue }
                 result += "\n  \(key):"
                 for item in arr {
-                    result += "\n    - \"\(item)\""
+                    result += "\n    - \"\(escapeYAMLString(item))\""
                 }
             case let n as Int:
                 result += "\n  \(key): \(n)"

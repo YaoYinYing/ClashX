@@ -625,16 +625,20 @@ class DiagnosticsDashboardViewController: NSViewController {
         var succeeded = [String]()
         var failed = [String]()
         let timestamp = DateFormatter.simple.string(from: Date())
+        // ponytail: serial queue protects concurrent appends from Alamofire callbacks
+        let healthQueue = DispatchQueue(label: "com.smartx.provider.health")
 
         for provider in httpProxyProviderNames {
             group.enter()
             ApiRequest.healthCheckProvider(proxy: provider) { success in
-                if success {
-                    succeeded.append(provider)
-                } else {
-                    failed.append(provider)
+                healthQueue.async {
+                    if success {
+                        succeeded.append(provider)
+                    } else {
+                        failed.append(provider)
+                    }
+                    group.leave()
                 }
-                group.leave()
             }
         }
 
@@ -703,9 +707,10 @@ class DiagnosticsDashboardViewController: NSViewController {
         let handleSave: (NSApplication.ModalResponse) -> Void = { [weak self] response in
             guard let self, response == .OK, let url = savePanel.url else { return }
             do {
-                let exportText = self.logViewModel.snapshot?.renderedOutput(redactFilePath: true) ?? self.logViewModel.output
+                let rawText = self.logViewModel.snapshot?.renderedOutput(redactFilePath: true) ?? self.logViewModel.output
+                let exportText = SmartXRedactor.sanitizeText(rawText)
                 try exportText.write(to: url, atomically: true, encoding: .utf8)
-                self.setStatus(NSLocalizedString("Filtered log output was exported successfully.", comment: ""))
+                self.setStatus(NSLocalizedString("Sanitized log output was exported successfully.", comment: ""))
             } catch {
                 self.setStatus(String(format: NSLocalizedString("Failed to export filtered log output: %@", comment: ""), error.localizedDescription))
             }

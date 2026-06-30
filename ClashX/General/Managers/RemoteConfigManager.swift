@@ -105,10 +105,10 @@ class RemoteConfigManager {
             group.enter()
             RemoteConfigManager.updateConfig(config: config) {
                 [weak config] error in
+                defer { group.leave() }
                 guard let config = config else { return }
 
                 config.updating = false
-                group.leave()
                 if error == nil {
                     config.updateTime = Date()
                     config.validationState = .valid
@@ -151,7 +151,8 @@ class RemoteConfigManager {
     static func getRemoteConfigData(config: RemoteConfigModel, complete: @escaping ((String?, String?) -> Void)) {
         guard var urlRequest = try? URLRequest(url: config.url, method: .get) else {
             assertionFailure()
-            Logger.log("[getRemoteConfigData] url incorrect,\(config.name) \(config.url)")
+            let redacted = SmartXRedactor.redactURLString(config.url) ?? "<redacted>"
+            Logger.log("[getRemoteConfigData] url incorrect,\(config.name) \(redacted)")
             complete(nil, nil)
             return
         }

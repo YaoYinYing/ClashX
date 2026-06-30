@@ -632,6 +632,27 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" ".ci-artifacts/SmartX-${ARTIFACT_SUFFIX}-${GITHUB_SHA}.app.zip"
           cp -R .ci-logs .ci-artifacts/logs
 
+      - name: Verify helper binary embedded plist
+        run: |
+          set -o pipefail
+          HELPER_PATH="${DERIVED_DATA_PATH}/Build/Products/${BUILD_CONFIGURATION}/com.west2online.ClashX.ProxyConfigHelper"
+          echo "Checking helper binary: ${HELPER_PATH}"
+          if [ ! -f "$HELPER_PATH" ]; then
+            echo "Helper binary not found — SMJobBless check skipped"
+            exit 0
+          fi
+          EMBEDDED=$(plutil -p "${HELPER_PATH}/Contents/Info.plist" 2>/dev/null || plutil -extract __TEXT,__info_plist raw "$HELPER_PATH" 2>/dev/null || echo "")
+          if [ -z "$EMBEDDED" ]; then
+            echo "WARNING: could not extract embedded plist from helper binary"
+            exit 0
+          fi
+          echo "$EMBEDDED" | tee .ci-logs/helper-embedded-plist.log
+          if ! echo "$EMBEDDED" | grep -q "AllowedClientCodeSigningRequirement"; then
+            echo "ERROR: helper binary missing AllowedClientCodeSigningRequirement"
+            exit 1
+          fi
+          echo "Helper binary plist verification passed"
+
       - name: Upload unsigned PR artifacts for manual testing
         if: always()
         uses: actions/upload-artifact@v5

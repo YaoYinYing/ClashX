@@ -45,7 +45,7 @@ class CoreSettingViewController: NSViewController {
     private let tunVerificationLabel = CoreSettingViewController.makeSecondaryWrapLabel()
     private let tunWarningLabel = CoreSettingViewController.makeSecondaryWrapLabel()
     private let tunNoteLabel = CoreSettingViewController.makeSecondaryWrapLabel()
-    private let tunEnabledButton = NSButton(checkboxWithTitle: NSLocalizedString("Enable TUN", comment: ""), target: nil, action: nil)
+    private let tunEnabledButton = NSButton(checkboxWithTitle: NSLocalizedString("TUN Enabled (config)", comment: ""), target: nil, action: nil)
     private let tunConfigureButton = NSButton(title: NSLocalizedString("Configure TUN...", comment: ""), target: nil, action: nil)
     private let tunRefreshButton = NSButton(title: NSLocalizedString("Refresh TUN State", comment: ""), target: nil, action: nil)
     private let dnsStatusLabel = CoreSettingViewController.makeWrapLabel()

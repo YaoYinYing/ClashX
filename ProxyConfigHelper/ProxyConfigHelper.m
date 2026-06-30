@@ -102,17 +102,24 @@ static NSString * const kHelperLogPrefix = @"[ProxyConfigHelper]";
     NSString *requirement = [self allowedClientRequirement];
 #if DEBUG
     if (requirement.length == 0) {
-        // ponytail: verify bundle ID even when signing requirement is empty.
-        // Prevents arbitrary local processes from connecting to the privileged
-        // helper when installed via the legacy Debug path.
+        // ponytail: Debug-only bypass with defense-in-depth. Verify both
+        // bundle ID AND executable path to make spoofing substantially harder
+        // than a single bundle-ID check. A malicious process would need to
+        // place itself inside the actual app bundle.
         NSString *bundleID = remoteApp.bundleIdentifier;
+        NSURL *executableURL = remoteApp.executableURL;
         if (![bundleID isEqualToString:@"com.doodlenet.ClashX"]) {
-            NSLog(@"%@ rejecting pid=%d in Debug: empty requirement but bundle ID '%@' does not match expected 'com.doodlenet.ClashX'",
+            NSLog(@"%@ rejecting pid=%d in Debug: bundle ID '%@' != expected",
                   kHelperLogPrefix, pid, bundleID ?: @"(nil)");
             return NO;
         }
-        NSLog(@"%@ allowing pid=%d in Debug because %@ is empty and bundle ID matches",
-              kHelperLogPrefix, pid, kAllowedClientRequirementInfoKey);
+        if (!executableURL || ![executableURL.path containsString:@"/SmartX.app/Contents/MacOS/SmartX"]) {
+            NSLog(@"%@ rejecting pid=%d in Debug: executable path '%@' not in expected app bundle",
+                  kHelperLogPrefix, pid, executableURL.path ?: @"(nil)");
+            return NO;
+        }
+        NSLog(@"%@ allowing pid=%d in Debug: empty requirement, bundle ID + path verified",
+              kHelperLogPrefix, pid);
         return YES;
     }
 #else

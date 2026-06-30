@@ -260,6 +260,7 @@ if [[ "${#project_args[@]}" -gt 0 ]]; then
 fi
 
 {
+    set +u  # ponytail: CI bash treats empty arrays as unbound with set -u
     echo
     echo "PASS count: ${#passes[@]}"
     for p in "${passes[@]}"; do printf '  %s\n' "$p"; done
@@ -267,6 +268,7 @@ fi
     for s in "${skips[@]}"; do printf '  %s\n' "$s"; done
     echo "FAIL count: ${#failures[@]}"
     for f in "${failures[@]}"; do printf '  %s\n' "$f"; done
+    set -u
 } >> "$LOG_FILE"
 
 if [[ "${#failures[@]}" -eq 0 ]]; then

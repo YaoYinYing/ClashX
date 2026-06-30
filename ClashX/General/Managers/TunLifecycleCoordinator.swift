@@ -194,12 +194,41 @@ final class TunLifecycleCoordinator {
                 case .controllerStateMatches:
                     completion(.success(message: report.message, previousState: previousState))
                 case .controllerStateMismatch, .failed:
-                    completion(.failed(message: report.message, previousState: previousState))
+                    // ponytail: attempt automatic rollback when verification fails.
+                    // If the controller accepted the patch but reports the wrong
+                    // state, restore previous TUN setting before reporting failure.
+                    self.rollbackTunState(previousEnabled: previousState.enabled,
+                                          preflightReport: preflightReport,
+                                          failureMessage: report.message,
+                                          previousState: previousState,
+                                          completion: completion)
                 case .requestedButUnverified:
                     completion(.requestedButUnverified(message: report.message, previousState: previousState))
                 case .notAttempted:
                     completion(.failed(message: report.message, previousState: previousState))
                 }
+            }
+        }
+    }
+
+    /// Attempts to restore the previous TUN state after a failed verification.
+    /// Reports failure even if rollback succeeds — the original operation did not
+    /// complete correctly. If rollback also fails, the message includes both errors.
+    private func rollbackTunState(previousEnabled: Bool,
+                                  preflightReport: TunPreflightReport,
+                                  failureMessage: String,
+                                  previousState: TunLifecycleUIState,
+                                  completion: @escaping (TunLifecycleResult) -> Void) {
+        ApiRequest.updateTunResult(enable: previousEnabled) { rollbackResult in
+            switch rollbackResult {
+            case .success:
+                let recoveryMessage = [failureMessage,
+                                       NSLocalizedString("TUN state was automatically restored to its previous value.", comment: "")].joined(separator: " ")
+                completion(.failed(message: recoveryMessage, previousState: previousState))
+            case .unsupported, .unauthorized, .failed:
+                let recoveryMessage = [failureMessage,
+                                       NSLocalizedString("SmartX also could not restore the previous TUN state.", comment: "")].joined(separator: " ")
+                completion(.failed(message: recoveryMessage, previousState: previousState))
             }
         }
     }

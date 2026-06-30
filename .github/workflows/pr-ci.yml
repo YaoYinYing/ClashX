@@ -49,274 +49,29 @@ jobs:
       - name: Show toolchain versions
         run: |
           mkdir -p .ci-logs
-          {
-            echo "::group::xcodebuild -version"
-            xcodebuild -version
-            echo "::endgroup::"
-            echo "::group::xcrun --sdk macosx --show-sdk-version"
-            xcrun --sdk macosx --show-sdk-version
-            echo "::endgroup::"
-            echo "::group::swift --version"
-            swift --version
-            echo "::endgroup::"
-            echo "::group::go version"
-            go version
-            echo "::endgroup::"
-            echo "::group::ruby --version"
-            ruby --version
-            echo "::endgroup::"
-            echo "::group::bundle --version"
-            bundle --version
-            echo "::endgroup::"
-          } | tee .ci-logs/tool-versions.log
+          { xcodebuild -version; xcrun --sdk macosx --show-sdk-version; swift --version; go version; ruby --version; bundle --version; } | tee .ci-logs/tool-versions.log
 
       - name: Install dependencies and resources
-        run: |
-          set -o pipefail
-          {
-            echo "::group::install_dependency.sh"
-            bash install_dependency.sh
-            echo "::endgroup::"
-          } | tee .ci-logs/install-dependency.log
+        run: bash install_dependency.sh | tee .ci-logs/install-dependency.log
 
       - name: Resolve Swift package dependencies
-        run: |
-          set -o pipefail
-          xcodebuild -resolvePackageDependencies \
-            -workspace ClashX.xcworkspace \
-            -scheme ClashX \
-            | tee .ci-logs/spm-resolve.log
+        run: xcodebuild -resolvePackageDependencies -workspace ClashX.xcworkspace -scheme ClashX | tee .ci-logs/spm-resolve.log
 
       - name: Verify Go module integrity
         run: |
-          set -o pipefail
           cd ClashX/goClash
           go mod verify | tee ../../.ci-logs/go-mod-verify.log
-          if ! grep -q 'replace github.com/metacubex/mihomo' go.mod; then
-            echo "ERROR: missing replace directive for Vernesong Smart fork"
-            exit 1
-          fi
-          if ! grep -q "go 1.21" go.mod; then
-            echo "ERROR: go.mod Go version mismatch"
-            exit 1
-          fi
-          echo "Go module integrity verified" | tee ../../.ci-logs/go-mod-check.log
+          grep -q 'replace github.com/metacubex/mihomo' go.mod || { echo "ERROR: missing replace directive"; exit 1; }
+          grep -q "go 1.21" go.mod || { echo "ERROR: go.mod Go version mismatch"; exit 1; }
           cd ../..
 
       - name: Verify helper Release requirement is fail-closed
         run: |
-          set -o pipefail
-          xcodebuild \
-            -project ClashX.xcodeproj \
-            -target 'com.west2online.ClashX.ProxyConfigHelper' \
-            -configuration Release \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            -showBuildSettings \
-            | tee .ci-logs/helper-release-build-settings.log
+          xcodebuild -project ClashX.xcodeproj -target 'com.west2online.ClashX.ProxyConfigHelper' -configuration Release CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -showBuildSettings | tee .ci-logs/helper-release-build-settings.log
           python3 scripts/check_helper_requirement.py .ci-logs/helper-release-build-settings.log Release | tee .ci-logs/helper-release-check.log
 
-      - name: Security harness checks
-        run: |
-          set -o pipefail
-          swift -module-cache-path /private/tmp/swift-module-cache \
-            Tests/SecurityHarness/security_harness.swift \
-            | tee .ci-logs/security-harness.log
-
-      - name: Endpoint builder smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ControllerEndpointBuilder.swift \
-            Tests/SecurityHarness/controller_endpoint_builder_smoke.swift \
-            -o /tmp/controller-endpoint-builder-smoke
-          /tmp/controller-endpoint-builder-smoke | tee .ci-logs/controller-endpoint-builder-smoke.log
-
-      - name: Capability identity smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ControllerEndpointBuilder.swift \
-            ClashX/General/Managers/CoreCapability.swift \
-            Tests/SecurityHarness/capability_cache_identity_smoke.swift \
-            -o /tmp/capability-cache-identity-smoke
-          /tmp/capability-cache-identity-smoke | tee .ci-logs/capability-cache-identity-smoke.log
-
-      - name: Config validator smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ConfigValidationIssue.swift \
-            ClashX/General/Utils/TunConfigValidator.swift \
-            ClashX/General/Utils/DNSConfigValidator.swift \
-            Tests/SecurityHarness/config_validator_smoke.swift \
-            -o /tmp/config-validator-smoke
-          /tmp/config-validator-smoke | tee .ci-logs/config-validator-smoke.log
-
-      - name: Diagnostics log reader smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/SmartXRedactor.swift \
-            ClashX/General/Utils/DiagnosticsLogReader.swift \
-            Tests/SecurityHarness/diagnostics_log_reader_smoke.swift \
-            -o /tmp/diagnostics-log-reader-smoke
-          /tmp/diagnostics-log-reader-smoke | tee .ci-logs/diagnostics-log-reader-smoke.log
-
-      - name: Diagnostics artifact formatter smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/SmartXRedactor.swift \
-            ClashX/General/Utils/DiagnosticsArtifactFormatter.swift \
-            Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift \
-            -o /tmp/diagnostics-artifact-formatter-smoke
-          /tmp/diagnostics-artifact-formatter-smoke | tee .ci-logs/diagnostics-artifact-formatter-smoke.log
-
-      - name: Profile artifact metadata smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Managers/ProfileArtifactManager.swift \
-            Tests/SecurityHarness/profile_artifact_metadata_smoke.swift \
-            -o /tmp/profile-artifact-metadata-smoke
-          /tmp/profile-artifact-metadata-smoke | tee .ci-logs/profile-artifact-metadata-smoke.log
-
-      - name: SmartX managed override smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/Models/SmartXManagedOverrideModel.swift \
-            ClashX/General/Managers/SmartXManagedOverrideManager.swift \
-            Tests/SecurityHarness/smartx_managed_override_smoke.swift \
-            -o /tmp/smartx-managed-override-smoke
-          /tmp/smartx-managed-override-smoke | tee .ci-logs/smartx-managed-override-smoke.log
-
-      - name: Effective config generator smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/Models/SmartXManagedOverrideModel.swift \
-            ClashX/General/Managers/EffectiveConfigGenerator.swift \
-            Tests/SecurityHarness/effective_config_generator_smoke.swift \
-            -o /tmp/effective-config-generator-smoke
-          /tmp/effective-config-generator-smoke | tee .ci-logs/effective-config-generator-smoke.log
-
-      - name: Helper status smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/Models/HelperStatus.swift \
-            Tests/SecurityHarness/helper_status_smoke.swift \
-            -o /tmp/helper-status-smoke
-          /tmp/helper-status-smoke | tee .ci-logs/helper-status-smoke.log
-
-      - name: Helper command contract smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/Models/HelperCommandContract.swift \
-            ClashX/General/Utils/HelperCommandRegistry.swift \
-            Tests/SecurityHarness/helper_command_contract_smoke.swift \
-            -o /tmp/helper-command-contract-smoke
-          /tmp/helper-command-contract-smoke | tee .ci-logs/helper-command-contract-smoke.log
-
-      - name: Helper safety hardening smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/Models/HelperCommandContract.swift \
-            ClashX/General/Utils/HelperCommandRegistry.swift \
-            Tests/SecurityHarness/helper_safety_hardening_smoke.swift \
-            -o /tmp/helper-safety-hardening-smoke
-          /tmp/helper-safety-hardening-smoke | tee .ci-logs/helper-safety-hardening-smoke.log
-
-      - name: TUN lifecyle diagnostics smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ConfigValidationIssue.swift \
-            ClashX/General/Utils/TunConfigValidator.swift \
-            ClashX/General/Utils/DNSConfigValidator.swift \
-            ClashX/Models/HelperStatus.swift \
-            ClashX/Models/HelperCommandContract.swift \
-            ClashX/General/Utils/HelperCommandRegistry.swift \
-            ClashX/Models/TunLifecycleDiagnostics.swift \
-            ClashX/General/Managers/TunPreflightPlanner.swift \
-            Tests/SecurityHarness/tun_lifecycle_diagnostics_smoke.swift \
-            -o /tmp/tun-lifecycle-diagnostics-smoke
-          /tmp/tun-lifecycle-diagnostics-smoke | tee .ci-logs/tun-lifecycle-diagnostics-smoke.log
-
-      - name: TUN runtime diagnostics smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ConfigValidationIssue.swift \
-            ClashX/General/Utils/TunConfigValidator.swift \
-            ClashX/General/Utils/DNSConfigValidator.swift \
-            ClashX/Models/HelperStatus.swift \
-            ClashX/Models/HelperCommandContract.swift \
-            ClashX/General/Utils/HelperCommandRegistry.swift \
-            ClashX/Models/TunLifecycleDiagnostics.swift \
-            ClashX/General/Utils/TunRuntimeInterfaceProbe.swift \
-            ClashX/General/Utils/TunRuntimeRouteProbe.swift \
-            ClashX/General/Utils/TunRuntimeDNSProbe.swift \
-            ClashX/General/Managers/TunPreflightPlanner.swift \
-            Tests/SecurityHarness/tun_runtime_diagnostics_smoke.swift \
-            -o /tmp/tun-runtime-diagnostics-smoke
-          /tmp/tun-runtime-diagnostics-smoke | tee .ci-logs/tun-runtime-diagnostics-smoke.log
-
-      - name: TUN route and DNS runtime smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ConfigValidationIssue.swift \
-            ClashX/General/Utils/TunConfigValidator.swift \
-            ClashX/General/Utils/DNSConfigValidator.swift \
-            ClashX/Models/HelperStatus.swift \
-            ClashX/Models/HelperCommandContract.swift \
-            ClashX/General/Utils/HelperCommandRegistry.swift \
-            ClashX/Models/TunLifecycleDiagnostics.swift \
-            ClashX/General/Utils/TunRuntimeInterfaceProbe.swift \
-            ClashX/General/Utils/TunRuntimeRouteProbe.swift \
-            ClashX/General/Utils/TunRuntimeDNSProbe.swift \
-            ClashX/General/Managers/TunPreflightPlanner.swift \
-            Tests/SecurityHarness/tun_route_dns_runtime_smoke.swift \
-            -o /tmp/tun-route-dns-runtime-smoke
-          /tmp/tun-route-dns-runtime-smoke | tee .ci-logs/tun-route-dns-runtime-smoke.log
-
-      - name: Redactor smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/SmartXRedactor.swift \
-            Tests/SecurityHarness/redactor_smoke.swift \
-            -o /tmp/redactor-smoke
-          /tmp/redactor-smoke | tee .ci-logs/redactor-smoke.log
-
-      - name: Remote config decode smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/Models/RemoteConfigModel.swift \
-            Tests/SecurityHarness/remote_config_decode_smoke.swift \
-            -o /tmp/remote-config-decode-smoke
-          /tmp/remote-config-decode-smoke | tee .ci-logs/remote-config-decode-smoke.log
-
-      - name: Run SmartXTests XCTest bundle
-        run: |
-          set -o pipefail
-          xcodebuild test \
-            -workspace ClashX.xcworkspace \
-            -scheme ClashX \
-            -destination 'platform=macOS' \
-            -only-testing:SmartXTests \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            -quiet \
-            | tee .ci-logs/xctest-smartxtests.log
+      - name: Run all tests (smoke harnesses + XCTests)
+        run: bash scripts/codex-test-focused.sh
 
       - name: Upload validation logs on failure
         if: failure()
@@ -336,8 +91,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # The modern lane depends on GitHub-hosted macos-26 and an available Xcode 26.x image.
-          # If 26.3 disappears, move to the nearest supported 26.x runner/Xcode pair instead of deleting this lane.
           - flavor: modern
             display_name: Modern Unsigned Debug Artifact
             runner: macos-26
@@ -385,273 +138,44 @@ jobs:
       - name: Show toolchain versions
         run: |
           mkdir -p .ci-logs
-          {
-            echo "::group::xcodebuild -version"
-            xcodebuild -version
-            echo "::endgroup::"
-            echo "::group::xcrun --sdk macosx --show-sdk-version"
-            xcrun --sdk macosx --show-sdk-version
-            echo "::endgroup::"
-            echo "::group::swift --version"
-            swift --version
-            echo "::endgroup::"
-            echo "::group::go version"
-            go version
-            echo "::endgroup::"
-            echo "::group::ruby --version"
-            ruby --version
-            echo "::endgroup::"
-            echo "::group::bundle --version"
-            bundle --version
-            echo "::endgroup::"
-          } | tee .ci-logs/tool-versions.log
+          { xcodebuild -version; xcrun --sdk macosx --show-sdk-version; swift --version; go version; ruby --version; bundle --version; } | tee .ci-logs/tool-versions.log
 
       - name: Install dependencies and resources
-        run: |
-          set -o pipefail
-          {
-            echo "::group::install_dependency.sh"
-            bash install_dependency.sh
-            echo "::endgroup::"
-          } | tee .ci-logs/install-dependency.log
+        run: bash install_dependency.sh | tee .ci-logs/install-dependency.log
+
+      - name: Resolve Swift package dependencies
+        run: xcodebuild -resolvePackageDependencies -workspace ClashX.xcworkspace -scheme ClashX | tee .ci-logs/spm-resolve.log
 
       - name: Verify Go module integrity
         run: |
-          set -o pipefail
           cd ClashX/goClash
           go mod verify | tee ../../.ci-logs/go-mod-verify.log
           grep -q 'replace github.com/metacubex/mihomo' go.mod || { echo "ERROR: missing replace directive"; exit 1; }
           cd ../..
 
-      - name: Resolve Swift package dependencies
-        run: |
-          set -o pipefail
-          xcodebuild -resolvePackageDependencies \
-            -workspace ClashX.xcworkspace \
-            -scheme ClashX \
-            | tee .ci-logs/spm-resolve.log
-
-      - name: Security harness checks
-        run: |
-          set -o pipefail
-          swift Tests/SecurityHarness/security_harness.swift | tee .ci-logs/security-harness.log
-
-      - name: Endpoint builder smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ControllerEndpointBuilder.swift \
-            Tests/SecurityHarness/controller_endpoint_builder_smoke.swift \
-            -o /tmp/controller-endpoint-builder-smoke
-          /tmp/controller-endpoint-builder-smoke | tee .ci-logs/controller-endpoint-builder-smoke.log
-
-      - name: Capability identity smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ControllerEndpointBuilder.swift \
-            ClashX/General/Managers/CoreCapability.swift \
-            Tests/SecurityHarness/capability_cache_identity_smoke.swift \
-            -o /tmp/capability-cache-identity-smoke
-          /tmp/capability-cache-identity-smoke | tee .ci-logs/capability-cache-identity-smoke.log
-
-      - name: Config validator smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ConfigValidationIssue.swift \
-            ClashX/General/Utils/TunConfigValidator.swift \
-            ClashX/General/Utils/DNSConfigValidator.swift \
-            Tests/SecurityHarness/config_validator_smoke.swift \
-            -o /tmp/config-validator-smoke
-          /tmp/config-validator-smoke | tee .ci-logs/config-validator-smoke.log
-
-      - name: Diagnostics log reader smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/SmartXRedactor.swift \
-            ClashX/General/Utils/DiagnosticsLogReader.swift \
-            Tests/SecurityHarness/diagnostics_log_reader_smoke.swift \
-            -o /tmp/diagnostics-log-reader-smoke
-          /tmp/diagnostics-log-reader-smoke | tee .ci-logs/diagnostics-log-reader-smoke.log
-
-      - name: Diagnostics artifact formatter smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/SmartXRedactor.swift \
-            ClashX/General/Utils/DiagnosticsArtifactFormatter.swift \
-            Tests/SecurityHarness/diagnostics_artifact_formatter_smoke.swift \
-            -o /tmp/diagnostics-artifact-formatter-smoke
-          /tmp/diagnostics-artifact-formatter-smoke | tee .ci-logs/diagnostics-artifact-formatter-smoke.log
-
-      - name: Profile artifact metadata smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Managers/ProfileArtifactManager.swift \
-            Tests/SecurityHarness/profile_artifact_metadata_smoke.swift \
-            -o /tmp/profile-artifact-metadata-smoke
-          /tmp/profile-artifact-metadata-smoke | tee .ci-logs/profile-artifact-metadata-smoke.log
-
-      - name: SmartX managed override smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/Models/SmartXManagedOverrideModel.swift \
-            ClashX/General/Managers/SmartXManagedOverrideManager.swift \
-            Tests/SecurityHarness/smartx_managed_override_smoke.swift \
-            -o /tmp/smartx-managed-override-smoke
-          /tmp/smartx-managed-override-smoke | tee .ci-logs/smartx-managed-override-smoke.log
-
-      - name: Effective config generator smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/Models/SmartXManagedOverrideModel.swift \
-            ClashX/General/Managers/EffectiveConfigGenerator.swift \
-            Tests/SecurityHarness/effective_config_generator_smoke.swift \
-            -o /tmp/effective-config-generator-smoke
-          /tmp/effective-config-generator-smoke | tee .ci-logs/effective-config-generator-smoke.log
-
-      - name: Helper command contract smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/Models/HelperCommandContract.swift \
-            ClashX/General/Utils/HelperCommandRegistry.swift \
-            Tests/SecurityHarness/helper_command_contract_smoke.swift \
-            -o /tmp/helper-command-contract-smoke
-          /tmp/helper-command-contract-smoke | tee .ci-logs/helper-command-contract-smoke.log
-
-      - name: Helper safety hardening smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/Models/HelperCommandContract.swift \
-            ClashX/General/Utils/HelperCommandRegistry.swift \
-            Tests/SecurityHarness/helper_safety_hardening_smoke.swift \
-            -o /tmp/helper-safety-hardening-smoke
-          /tmp/helper-safety-hardening-smoke | tee .ci-logs/helper-safety-hardening-smoke.log
-
-      - name: TUN lifecycle diagnostics smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ConfigValidationIssue.swift \
-            ClashX/General/Utils/TunConfigValidator.swift \
-            ClashX/General/Utils/DNSConfigValidator.swift \
-            ClashX/Models/HelperStatus.swift \
-            ClashX/Models/HelperCommandContract.swift \
-            ClashX/General/Utils/HelperCommandRegistry.swift \
-            ClashX/Models/TunLifecycleDiagnostics.swift \
-            ClashX/General/Managers/TunPreflightPlanner.swift \
-            Tests/SecurityHarness/tun_lifecycle_diagnostics_smoke.swift \
-            -o /tmp/tun-lifecycle-diagnostics-smoke
-          /tmp/tun-lifecycle-diagnostics-smoke | tee .ci-logs/tun-lifecycle-diagnostics-smoke.log
-
-      - name: TUN runtime diagnostics smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ConfigValidationIssue.swift \
-            ClashX/General/Utils/TunConfigValidator.swift \
-            ClashX/General/Utils/DNSConfigValidator.swift \
-            ClashX/Models/HelperStatus.swift \
-            ClashX/Models/HelperCommandContract.swift \
-            ClashX/General/Utils/HelperCommandRegistry.swift \
-            ClashX/Models/TunLifecycleDiagnostics.swift \
-            ClashX/General/Utils/TunRuntimeInterfaceProbe.swift \
-            ClashX/General/Utils/TunRuntimeRouteProbe.swift \
-            ClashX/General/Utils/TunRuntimeDNSProbe.swift \
-            ClashX/General/Managers/TunPreflightPlanner.swift \
-            Tests/SecurityHarness/tun_runtime_diagnostics_smoke.swift \
-            -o /tmp/tun-runtime-diagnostics-smoke
-          /tmp/tun-runtime-diagnostics-smoke | tee .ci-logs/tun-runtime-diagnostics-smoke.log
-
-      - name: TUN route and DNS runtime smoke harness
-        run: |
-          set -o pipefail
-          swiftc -module-cache-path /private/tmp/swift-module-cache \
-            ClashX/General/Utils/ConfigValidationIssue.swift \
-            ClashX/General/Utils/TunConfigValidator.swift \
-            ClashX/General/Utils/DNSConfigValidator.swift \
-            ClashX/Models/HelperStatus.swift \
-            ClashX/Models/HelperCommandContract.swift \
-            ClashX/General/Utils/HelperCommandRegistry.swift \
-            ClashX/Models/TunLifecycleDiagnostics.swift \
-            ClashX/General/Utils/TunRuntimeInterfaceProbe.swift \
-            ClashX/General/Utils/TunRuntimeRouteProbe.swift \
-            ClashX/General/Utils/TunRuntimeDNSProbe.swift \
-            ClashX/General/Managers/TunPreflightPlanner.swift \
-            Tests/SecurityHarness/tun_route_dns_runtime_smoke.swift \
-            -o /tmp/tun-route-dns-runtime-smoke
-          /tmp/tun-route-dns-runtime-smoke | tee .ci-logs/tun-route-dns-runtime-smoke.log
-
-      - name: Run SmartXTests XCTest bundle
-        run: |
-          set -o pipefail
-          xcodebuild test \
-            -workspace ClashX.xcworkspace \
-            -scheme ClashX \
-            -destination 'platform=macOS' \
-            -only-testing:SmartXTests \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            -quiet \
-            | tee .ci-logs/xctest-smartxtests.log
+      - name: Run all tests (smoke harnesses + XCTests)
+        run: bash scripts/codex-test-focused.sh
 
       - name: Build unsigned Debug app
         run: |
-          set -o pipefail
-          xcodebuild \
-            -workspace ClashX.xcworkspace \
-            -scheme ClashX \
-            -configuration "${BUILD_CONFIGURATION}" \
-            -destination 'platform=macOS' \
-            -derivedDataPath "${DERIVED_DATA_PATH}" \
-            MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build | tee .ci-logs/xcodebuild-build.log
-
-      - name: Package unsigned app artifact
-        run: |
-          set -euo pipefail
-          mkdir -p .ci-artifacts
-
-          APP_PATH="${DERIVED_DATA_PATH}/Build/Products/${BUILD_CONFIGURATION}/SmartX.app"
-          if [ ! -d "$APP_PATH" ]; then
-            echo "SmartX.app was not found at $APP_PATH" | tee .ci-artifacts/NO_APP_FOUND.txt
-            exit 1
-          fi
-
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" ".ci-artifacts/SmartX-${ARTIFACT_SUFFIX}-${GITHUB_SHA}.app.zip"
-          cp -R .ci-logs .ci-artifacts/logs
+          xcodebuild -workspace ClashX.xcworkspace -scheme ClashX -configuration "${BUILD_CONFIGURATION}" -destination 'platform=macOS' -derivedDataPath "${DERIVED_DATA_PATH}" MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tee .ci-logs/xcodebuild-build.log
 
       - name: Verify helper binary embedded plist
         run: |
-          set -o pipefail
           HELPER_PATH="${DERIVED_DATA_PATH}/Build/Products/${BUILD_CONFIGURATION}/com.west2online.ClashX.ProxyConfigHelper"
-          echo "Checking helper binary: ${HELPER_PATH}"
-          if [ ! -f "$HELPER_PATH" ]; then
-            echo "Helper binary not found — SMJobBless check skipped"
-            exit 0
-          fi
-          EMBEDDED=$(plutil -p "${HELPER_PATH}/Contents/Info.plist" 2>/dev/null || plutil -extract __TEXT,__info_plist raw "$HELPER_PATH" 2>/dev/null || echo "")
-          if [ -z "$EMBEDDED" ]; then
-            echo "WARNING: could not extract embedded plist from helper binary"
-            exit 0
-          fi
+          if [ ! -f "$HELPER_PATH" ]; then echo "Helper binary not found — skipping plist check"; exit 0; fi
+          EMBEDDED=$(plutil -p "${HELPER_PATH}/Contents/Info.plist" 2>/dev/null || echo "")
+          if [ -z "$EMBEDDED" ]; then echo "WARNING: could not extract embedded plist"; exit 0; fi
           echo "$EMBEDDED" | tee .ci-logs/helper-embedded-plist.log
-          if ! echo "$EMBEDDED" | grep -q "AllowedClientCodeSigningRequirement"; then
-            echo "ERROR: helper binary missing AllowedClientCodeSigningRequirement"
-            exit 1
-          fi
-          echo "Helper binary plist verification passed"
+          echo "$EMBEDDED" | grep -q "AllowedClientCodeSigningRequirement" || { echo "ERROR: helper binary missing AllowedClientCodeSigningRequirement"; exit 1; }
+
+      - name: Package unsigned app artifact
+        run: |
+          mkdir -p .ci-artifacts
+          APP_PATH="${DERIVED_DATA_PATH}/Build/Products/${BUILD_CONFIGURATION}/SmartX.app"
+          if [ ! -d "$APP_PATH" ]; then echo "SmartX.app was not found at $APP_PATH" | tee .ci-artifacts/NO_APP_FOUND.txt; exit 1; fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" ".ci-artifacts/SmartX-${ARTIFACT_SUFFIX}-${GITHUB_SHA}.app.zip"
+          cp -R .ci-logs .ci-artifacts/logs
 
       - name: Upload unsigned PR artifacts for manual testing
         if: always()

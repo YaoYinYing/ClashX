@@ -75,9 +75,13 @@ final class TunLifecycleCoordinator {
             return
         }
 
-        guard !Settings.isUsingEmbeddedCore else {
-            completion(.unsupported(message: initialReport.userMessage,
-                                    previousState: fallbackPreviousState))
+        if Settings.isUsingEmbeddedCore {
+            // ponytail: embedded core TUN — write tun.enable to config file
+            // and reload via Go bridge. Same path as TUN/DNS config editors.
+            applyEmbeddedTunToggle(enabled: enabled,
+                                   preflightReport: initialReport,
+                                   previousState: fallbackPreviousState,
+                                   completion: completion)
             return
         }
 
@@ -229,6 +233,57 @@ final class TunLifecycleCoordinator {
                 let recoveryMessage = [failureMessage,
                                        NSLocalizedString("SmartX also could not restore the previous TUN state.", comment: "")].joined(separator: " ")
                 completion(.failed(message: recoveryMessage, previousState: previousState))
+            }
+        }
+    }
+
+    /// Writes tun.enable into the active YAML config file and reloads via
+    /// the Go bridge. Used for embedded-core mode where there is no HTTP
+    /// controller to PATCH.
+    ///
+    /// ponytail: string-based YAML upsert via ConfigYAMLEditor — same pattern
+    /// as TunConfigEditorViewController. Ceiling: comments in the tun block
+    /// are lost. Upgrade path: YAML parse-emit when Phase 9 pipeline lands.
+    private func applyEmbeddedTunToggle(enabled: Bool,
+                                        preflightReport: TunPreflightReport,
+                                        previousState: TunLifecycleUIState,
+                                        completion: @escaping (TunLifecycleResult) -> Void) {
+        let configName = ConfigManager.selectConfigName
+        ConfigManager.getConfigPath(configName: configName) { [self] result in
+            let configPath: String
+            switch result {
+            case let .success(path):
+                configPath = path
+            case let .failure(error):
+                completion(.failed(message: error.localizedDescription,
+                                   previousState: previousState))
+                return
+            }
+
+            do {
+                let originalYaml = try String(contentsOfFile: configPath, encoding: .utf8)
+                let updatedYaml = ConfigYAMLEditor.upsertSection(
+                    named: "tun", in: originalYaml,
+                    params: ["enable": enabled],
+                    keyOrder: ["enable"]
+                )
+                try updatedYaml.write(toFile: configPath, atomically: true, encoding: .utf8)
+
+                ApiRequest.requestConfigUpdate(configPath: configPath) { errorMessage in
+                    DispatchQueue.main.async {
+                        if let errorMessage {
+                            try? originalYaml.write(toFile: configPath, atomically: true, encoding: .utf8)
+                            completion(.failed(message: errorMessage, previousState: previousState))
+                        } else {
+                            let message = enabled
+                                ? NSLocalizedString("TUN enabled via embedded core config update.", comment: "")
+                                : NSLocalizedString("TUN disabled via embedded core config update.", comment: "")
+                            completion(.success(message: message, previousState: previousState))
+                        }
+                    }
+                }
+            } catch {
+                completion(.failed(message: error.localizedDescription, previousState: previousState))
             }
         }
     }

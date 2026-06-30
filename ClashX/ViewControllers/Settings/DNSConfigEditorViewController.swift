@@ -528,20 +528,20 @@ final class DNSConfigEditorViewController: NSViewController {
     }
 
     private func checkboxRow(checkbox: NSButton, label: String? = nil) -> NSView {
+        // ponytail: use the original checkbox directly so refreshFromCurrentConfig()
+        // and collectInput() stay connected to the same control the user sees.
         if let label {
-            let row = NSView()
-            let titled = NSButton(checkboxWithTitle: label, target: nil, action: nil)
-            titled.state = checkbox.state
-            row.addSubview(titled)
-            titled.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                titled.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: rowTitleWidth + 8),
-                titled.topAnchor.constraint(equalTo: row.topAnchor),
-                titled.bottomAnchor.constraint(equalTo: row.bottomAnchor)
-            ])
-            return row
+            checkbox.title = label
         }
-        return checkbox
+        let row = NSView()
+        row.addSubview(checkbox)
+        checkbox.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            checkbox.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: rowTitleWidth + 8),
+            checkbox.topAnchor.constraint(equalTo: row.topAnchor),
+            checkbox.bottomAnchor.constraint(equalTo: row.bottomAnchor)
+        ])
+        return row
     }
 }
 

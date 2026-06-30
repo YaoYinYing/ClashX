@@ -337,7 +337,10 @@ final class TunConfigEditorViewController: NSViewController {
         }
 
         // External-controller mode: PATCH /configs via HTTP.
-        ConfigAPI.patchTunConfig(patch) { result in
+        // ponytail: buildTunPatch returns ["tun": {...}]; extract the inner
+        // TUN dict so patchTunConfig doesn't double-wrap to {"tun":{"tun":{...}}}.
+        let tunInner = (patch["tun"] as? [String: Any]) ?? patch
+        ConfigAPI.patchTunConfig(tunInner) { result in
             switch result {
             case .success:
                 completion(true, nil)
@@ -533,23 +536,21 @@ final class TunConfigEditorViewController: NSViewController {
     }
 
     private func checkboxRow(checkbox: NSButton, label: String? = nil) -> NSView {
+        // ponytail: use the original checkbox directly so refreshFromCurrentConfig()
+        // and collectInput() stay connected to the same control the user sees.
+        // Set the title on the original to avoid creating a disconnected clone.
         if let label {
-            let titled = NSButton(checkboxWithTitle: label, target: nil, action: nil)
-            titled.state = checkbox.state
-            titled.target = checkbox.target
-            titled.action = checkbox.action
-            // Use a wrapper row for consistent layout
-            let row = NSView()
-            row.addSubview(titled)
-            titled.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                titled.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: rowTitleWidth + 8),
-                titled.topAnchor.constraint(equalTo: row.topAnchor),
-                titled.bottomAnchor.constraint(equalTo: row.bottomAnchor)
-            ])
-            return row
+            checkbox.title = label
         }
-        return checkbox
+        let row = NSView()
+        row.addSubview(checkbox)
+        checkbox.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            checkbox.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: rowTitleWidth + 8),
+            checkbox.topAnchor.constraint(equalTo: row.topAnchor),
+            checkbox.bottomAnchor.constraint(equalTo: row.bottomAnchor)
+        ])
+        return row
     }
 
     private func numberFormatter(min: Int, max: Int) -> NumberFormatter {

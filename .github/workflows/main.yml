@@ -1,5 +1,10 @@
 name: SmartX Unsigned Build
 
+# ⚠️ NOT A RELEASE — this produces UNSIGNED development snapshots.
+# Signing, notarization, and Sparkle update feeds are disabled.
+# Do not distribute these artifacts as production releases.
+# See docs/memory/09-security-signing-and-license.md for release prerequisites.
+
 on:
   push:
     tags:

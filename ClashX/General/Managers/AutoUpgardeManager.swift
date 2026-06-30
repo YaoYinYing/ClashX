@@ -39,6 +39,12 @@ class AutoUpgardeManager: NSObject {
 
     func setupCheckForUpdatesMenuItem(_ item: NSMenuItem) {
         checkForUpdatesMenuItem = item
+        // ponytail: hide Check for Updates when feed URL is placeholder (signing not ready)
+        if current.urlString.contains("invalid.local") {
+            item.isHidden = true
+            Logger.log("Sparkle disabled: feed URL is placeholder (invalid.local)", level: .debug)
+            return
+        }
         checkForUpdatesMenuItem?.target = controller
         checkForUpdatesMenuItem?.action = #selector(SPUStandardUpdaterController.checkForUpdates(_:))
     }

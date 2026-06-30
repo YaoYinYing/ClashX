@@ -110,14 +110,16 @@ enum Paths {
     }
 
     static var successfulReloadArtifactURL: URL {
-        smartXArtifactsDirectoryURL.appendingPathComponent("generated-effective.yaml", isDirectory: false)
+        smartXArtifactsDirectoryURL.appendingPathComponent("successful-reload-artifact.yaml", isDirectory: false)
             .standardizedFileURL
     }
 
-    /// Compatibility alias. This is not a real generated effective config until the profile pipeline lands.
-    /// Do not use this name for new UI or reports; it is a legacy path alias only.
+    /// Compatibility alias — reads old name if new name doesn't exist yet.
     static var generatedEffectiveConfigURL: URL {
-        successfulReloadArtifactURL
+        let newURL = successfulReloadArtifactURL
+        if FileManager.default.fileExists(atPath: newURL.path) { return newURL }
+        let oldURL = smartXArtifactsDirectoryURL.appendingPathComponent("generated-effective.yaml", isDirectory: false).standardizedFileURL
+        return FileManager.default.fileExists(atPath: oldURL.path) ? oldURL : newURL
     }
 
     static var lastKnownGoodConfigURL: URL {
@@ -126,14 +128,16 @@ enum Paths {
     }
 
     static var successfulReloadMetadataURL: URL {
-        smartXArtifactsDirectoryURL.appendingPathComponent("generated-effective.json", isDirectory: false)
+        smartXArtifactsDirectoryURL.appendingPathComponent("successful-reload-artifact.json", isDirectory: false)
             .standardizedFileURL
     }
 
-    /// Compatibility alias. This metadata currently describes a loaded source copy, not a generated effective config.
-    /// Do not use this name for new UI or reports; it is a legacy path alias only.
+    /// Compatibility alias — reads old name if new name doesn't exist yet.
     static var generatedEffectiveMetadataURL: URL {
-        successfulReloadMetadataURL
+        let newURL = successfulReloadMetadataURL
+        if FileManager.default.fileExists(atPath: newURL.path) { return newURL }
+        let oldURL = smartXArtifactsDirectoryURL.appendingPathComponent("generated-effective.json", isDirectory: false).standardizedFileURL
+        return FileManager.default.fileExists(atPath: oldURL.path) ? oldURL : newURL
     }
 
     static var lastKnownGoodMetadataURL: URL {

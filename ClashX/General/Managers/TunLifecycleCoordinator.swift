@@ -260,6 +260,7 @@ final class TunLifecycleCoordinator {
                 return
             }
 
+            let backupPath = configPath + ".smartx-backup"
             do {
                 let originalYaml = try String(contentsOfFile: configPath, encoding: .utf8)
                 let updatedYaml = ConfigYAMLEditor.upsertSection(
@@ -267,14 +268,19 @@ final class TunLifecycleCoordinator {
                     params: ["enable": enabled],
                     keyOrder: ["enable"]
                 )
+                // ponytail: atomic three-step: backup → write → reload.
+                // If crash between write and reload, backup survives.
+                try originalYaml.write(toFile: backupPath, atomically: true, encoding: .utf8)
                 try updatedYaml.write(toFile: configPath, atomically: true, encoding: .utf8)
 
                 ApiRequest.requestConfigUpdate(configPath: configPath) { errorMessage in
                     DispatchQueue.main.async {
                         if let errorMessage {
                             try? originalYaml.write(toFile: configPath, atomically: true, encoding: .utf8)
+                            try? FileManager.default.removeItem(atPath: backupPath)
                             completion(.failed(message: errorMessage, previousState: previousState))
                         } else {
+                            try? FileManager.default.removeItem(atPath: backupPath)
                             let message = enabled
                                 ? NSLocalizedString("TUN enabled via embedded core config update.", comment: "")
                                 : NSLocalizedString("TUN disabled via embedded core config update.", comment: "")

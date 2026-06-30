@@ -71,25 +71,27 @@ enum DiagnosticsBundleExporter {
         return try encoder.encode(manifest)
     }
 
-    private static func buildRecentLogsSnapshot(maxLines: Int) throws -> String {
+    private static func buildRecentLogsSnapshot(maxLines: Int = 400) throws -> String {
+        _ = maxLines // ponytail: DiagnosticsLogReader handles line limit internally
         let latestLogPath = Logger.shared.logFilePath()
         guard !latestLogPath.isEmpty else {
             return NSLocalizedString("No active rolling log file is available yet.", comment: "")
         }
 
-        let raw = try String(contentsOfFile: latestLogPath, encoding: .utf8)
-        let recentLines = raw.components(separatedBy: .newlines).suffix(maxLines)
+        // ponytail: use DiagnosticsLogReader for bounded tail-read instead of
+        // loading the entire log file into memory. Reuses existing tail logic.
+        let snapshot = try DiagnosticsLogReader.load(path: latestLogPath,
+                                                     filterTitle: NSLocalizedString("All", comment: ""),
+                                                     filterToken: nil,
+                                                     searchQuery: "",
+                                                     paused: false)
+        let body = SmartXRedactor.sanitizeText(snapshot.renderedOutput(redactFilePath: true))
         let header = [
             "Recent Logs",
             "-----------",
             "Source File: \(URL(fileURLWithPath: latestLogPath).lastPathComponent)",
-            "Redaction: URLs, credentials, tokens, and authorization-style values are sanitized.",
-            "Showing last \(recentLines.count) line(s)."
+            "Redaction: URLs, credentials, tokens, and authorization-style values are sanitized."
         ].joined(separator: "\n")
-
-        let body = recentLines
-            .map(SmartXRedactor.sanitizeText(_:))
-            .joined(separator: "\n")
 
         return "\(header)\n\n\(body)"
     }

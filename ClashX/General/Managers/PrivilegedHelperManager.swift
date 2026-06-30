@@ -178,14 +178,6 @@ class PrivilegedHelperManager {
         return helper
     }
 
-    static let xpcConnectionTimeout: TimeInterval = 30.0
-
-    /// Parses a structured error prefix from helper reply strings.
-    /// Delegates to HelperCommandContract.classifyReplyError for the canonical mapping.
-    static func classifyHelperError(_ reply: String?) -> HelperCommandErrorCode {
-        HelperCommandContract.classifyReplyError(reply)
-    }
-
     var timer: Timer?
 
     enum HelperStatus {

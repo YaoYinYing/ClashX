@@ -54,7 +54,7 @@ class ConnectionTopListViewModel {
     func closeConnection(for indexs: IndexSet) {
         for idx in indexs {
             let conn = connections[idx]
-            ApiRequest.closeConnection(conn.id)
+            ConnectionAPI.closeConnection(conn.id)
         }
     }
 

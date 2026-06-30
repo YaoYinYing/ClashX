@@ -569,25 +569,12 @@ class ApiRequest {
     }
 }
 
-// MARK: - Connections
+// ponytail: connection read/close methods moved to ConnectionAPI.
+// flushSmartCache, blockSmartConnection, updateSmartLightGBMModel moved
+// to SmartAPI. Remaining methods in this extension still delegate to
+// domain clients until ApiRequest is fully decomposed.
 
 extension ApiRequest {
-    static func getConnections(completeHandler: @escaping ([ClashConnectionBaseSnapShot.Connection]) -> Void) {
-        ConnectionAPI.requestConnections(completeHandler: completeHandler)
-    }
-
-    static func closeConnection(_ id: String) {
-        ConnectionAPI.closeConnection(id)
-    }
-
-    static func closeAllConnection() {
-        ConnectionAPI.closeAllConnections()
-    }
-
-    // TODO: Move the remaining traffic/log stream lifecycle wiring into
-    // dedicated API/domain types after the shared WebSocket ownership model is
-    // untangled from ApiRequest retry timers and delegate callbacks.
-
     // MARK: - Providers
 
     struct AllProviders {
@@ -668,17 +655,8 @@ extension ApiRequest {
         SmartAPI.requestSmartWeights(group: group, completeHandler: completeHandler)
     }
 
-    static func flushSmartCache(configName: String? = nil, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        SmartAPI.flushSmartCache(configName: configName, completeHandler: completeHandler)
-    }
-
-    static func blockSmartConnection(_ id: String, completeHandler: ((ControllerEndpointResult) -> Void)? = nil) {
-        SmartAPI.blockSmartConnection(id, completeHandler: completeHandler)
-    }
-
-    static func updateSmartLightGBMModel(completeHandler: @escaping (ControllerEndpointResult) -> Void) {
-        SmartAPI.updateSmartLightGBMModel(completeHandler: completeHandler)
-    }
+    // ponytail: flushSmartCache, blockSmartConnection, updateSmartLightGBMModel
+    // moved to SmartAPI. Connection read/close moved to ConnectionAPI.
 
     static func requestCoreVersion(completeHandler: @escaping (String?) -> Void) {
         requestCoreVersionResult { result in

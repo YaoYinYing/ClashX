@@ -89,11 +89,11 @@ class ConnectionDetailViewModel {
     }
 
     func closeConnection() {
-        ApiRequest.closeConnection(uuid)
+        ConnectionAPI.closeConnection(uuid)
     }
 
     func blockSmartConnection() {
-        ApiRequest.blockSmartConnection(uuid) { [weak self] result in
+        SmartAPI.blockSmartConnection(uuid) { [weak self] result in
             guard let self else { return }
             switch result {
             case .success:

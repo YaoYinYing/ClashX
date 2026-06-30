@@ -275,14 +275,14 @@ class SmartDashboardViewController: NSViewController {
     }
 
     @objc private func actionFlushAll() {
-        ApiRequest.flushSmartCache { [weak self] result in
+        SmartAPI.flushSmartCache { [weak self] result in
             CapabilityCache.shared.mark(.smartCacheFlush, endpointResult: result)
             self?.reloadData()
         }
     }
 
     @objc private func actionFlushConfig() {
-        ApiRequest.flushSmartCache(configName: ConfigManager.selectConfigName) { [weak self] result in
+        SmartAPI.flushSmartCache(configName: ConfigManager.selectConfigName) { [weak self] result in
             CapabilityCache.shared.mark(.smartCacheFlush, endpointResult: result)
             self?.reloadData()
         }

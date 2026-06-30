@@ -1,13 +1,13 @@
 # Tests in this repository
 
-This repository currently has no dedicated Xcode unit-test target. The tests in this folder are **pending integration**.
+**SmartXTests.xctest** is a dedicated Xcode unit-test bundle with 38 XCTest cases across 11 test classes. It compiles pure-logic production sources directly with minimal stubs. Wired into the ClashX scheme's Test action and runs in CI via `xcodebuild test`.
 
-`Tests/Security/PathSafetyTests.swift` contains XCTest cases for safe config-name validation and config-path containment logic. To enable these tests in Xcode:
+`Tests/Security/PathSafetyTests.swift` contains XCTest cases for safe config-name validation and config-path containment logic.
 
-1. Add a new macOS Unit Testing Bundle target (e.g. `ClashXTests`).
-2. Add `Tests/Security/PathSafetyTests.swift` to that target.
-3. Set `@testable import ClashX` for the test target.
-4. Run the tests with `xcodebuild test`.
+## Smoke harnesses
+
+18 pure-logic harnesses under `Tests/SecurityHarness/` compile production files directly via `swiftc`.
+Run all: `bash scripts/codex-test-focused.sh`.
 
 Notes:
 - A robust symlink-escape integration test should run on macOS with a writable filesystem sandbox representative of app behavior.
@@ -47,9 +47,9 @@ Current temporary-vs-production split:
 - `tun_lifecycle_diagnostics_smoke.swift` compiles the production `TunLifecycleDiagnostics.swift` plus `TunPreflightPlanner.swift` files with lightweight stubs for unrelated app/runtime types and checks the typed preflight blockers, helper-reserved TUN boundary, controller-config-only verification scope, and Codable behavior. It is lifecycle-boundary coverage, not route, DNS, utun, or system-level TUN verification.
 - `tun_runtime_diagnostics_smoke.swift` compiles the production `TunLifecycleDiagnostics.swift`, `TunRuntimeInterfaceProbe.swift`, and `TunPreflightPlanner.swift` files with lightweight stubs for unrelated app/runtime types and checks read-only interface evidence classification, runtime-verification wording, and Codable behavior. It is runtime-diagnostics coverage, not route, DNS, packet-flow, or helper-backed TUN verification.
 - `tun_route_dns_runtime_smoke.swift` compiles the production `TunLifecycleDiagnostics.swift`, `TunRuntimeInterfaceProbe.swift`, `TunRuntimeRouteProbe.swift`, `TunRuntimeDNSProbe.swift`, and `TunPreflightPlanner.swift` files with lightweight stubs for unrelated app/runtime types and checks conservative route and DNS evidence classification, runtime-verification wording, and Codable behavior. It is runtime-diagnostics coverage, not route mutation, DNS mutation, packet-flow, or helper-backed TUN verification.
-- `security_harness.swift` remains a temporary mirrored compatibility smoke harness because there is no real XCTest target yet.
+- `security_harness.swift` is a mirrored compatibility smoke harness; SmartXTests.xctest is the primary test target.
 - No current smoke harness is intentionally skipped in PR CI. Any future omission should be documented here with the exact reason.
-- None of these harnesses replace a dedicated Xcode unit-test bundle; they are focused guardrails until the repo gains one.
+- SmartXTests.xctest (38 cases) is the dedicated unit-test bundle. Smoke harnesses (18) complement it for pure-logic coverage.
 
 New smoke harness coverage added by the SmartX foundation hardening PR:
 

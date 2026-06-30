@@ -10,44 +10,7 @@ import SwiftyJSON
 
 @available(macOS 10.15, *)
 class DiagnosticsDashboardViewController: NSViewController {
-    // This controller is transitional; new diagnostics logic should move to helpers/view models.
-    private enum LogLevelFilter: Int, CaseIterable {
-        case all
-        case error
-        case warning
-        case info
-        case debug
-
-        var title: String {
-            switch self {
-            case .all:
-                return NSLocalizedString("All", comment: "")
-            case .error:
-                return NSLocalizedString("Error", comment: "")
-            case .warning:
-                return NSLocalizedString("Warning", comment: "")
-            case .info:
-                return NSLocalizedString("Info", comment: "")
-            case .debug:
-                return NSLocalizedString("Debug", comment: "")
-            }
-        }
-
-        var token: String? {
-            switch self {
-            case .all:
-                return nil
-            case .error:
-                return "[error]"
-            case .warning:
-                return "[warning]"
-            case .info:
-                return "[info]"
-            case .debug:
-                return "[debug]"
-            }
-        }
-    }
+    // ponytail: LogLevelFilter extracted to LogViewerViewModel.swift (Phase 4)
 
     private let refreshMemoryButton = NSButton(title: NSLocalizedString("Refresh Memory", comment: ""), target: nil, action: nil)
     private let refreshProvidersButton = NSButton(title: NSLocalizedString("Refresh Providers", comment: ""), target: nil, action: nil)
@@ -83,13 +46,10 @@ class DiagnosticsDashboardViewController: NSViewController {
     private var providerOutput = NSLocalizedString("Provider diagnostics have not been loaded yet.", comment: "")
     private var artifactOutput = NSLocalizedString("Profile artifacts have not been inspected yet.", comment: "")
     private var helperOutput = NSLocalizedString("Helper diagnostics have not been loaded yet.", comment: "")
-    private var logOutput = NSLocalizedString("Log viewer has not loaded any log lines yet.", comment: "")
     private var httpProxyProviderNames = [String]()
     private var latestProxyProviderResult: ControllerJSONResult?
     private var latestRuleProviderResult: ControllerJSONResult?
-    private var logRefreshTimer: Timer?
-    private var isLogRefreshPaused = false
-    private var currentLogSnapshot: DiagnosticsLogSnapshot?
+    private let logViewModel = LogViewerViewModel()
 
     override func loadView() {
         view = NSView(frame: NSRect(origin: .zero, size: CGSize(width: 900, height: 600)))
@@ -105,14 +65,17 @@ class DiagnosticsDashboardViewController: NSViewController {
         refreshProviders()
         refreshArtifacts(announce: false)
         refreshHelperStatus(announce: false)
-        refreshLogs()
-        startLogRefreshTimer()
+        logViewModel.onOutputChanged = { [weak self] in
+            self?.renderOutput()
+            self?.updateCapabilityDrivenState()
+        }
+        logViewModel.refresh(announce: true)
+        logViewModel.startAutoRefresh()
     }
 
     override func viewWillDisappear() {
         super.viewWillDisappear()
-        logRefreshTimer?.invalidate()
-        logRefreshTimer = nil
+        logViewModel.stopAutoRefresh()
     }
 
     private static func makeWrapLabel() -> NSTextField {
@@ -277,7 +240,7 @@ class DiagnosticsDashboardViewController: NSViewController {
             "Providers\n---------\n\(providerOutput)",
             "Profile Artifacts\n-----------------\n\(artifactOutput)",
             "Privileged Helper\n-----------------\n\(helperOutput)",
-            "Logs\n----\n\(logOutput)"
+            "Logs\n----\n\(logViewModel.output)"
         ].joined(separator: "\n\n")
     }
 
@@ -311,53 +274,15 @@ class DiagnosticsDashboardViewController: NSViewController {
         openArtifactsButton.isEnabled = FileManager.default.fileExists(atPath: Paths.smartXArtifactsDirectoryURL.path)
         refreshLogsButton.isEnabled = true
         exportBundleButton.isEnabled = true
-        exportLogsButton.isEnabled = !logOutput.isEmpty
-    }
-
-    private func startLogRefreshTimer() {
-        logRefreshTimer?.invalidate()
-        logRefreshTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            guard let self, !self.isLogRefreshPaused else { return }
-            self.refreshLogs(announce: false)
-        }
+        exportLogsButton.isEnabled = !logViewModel.output.isEmpty
     }
 
     private func refreshLogs(announce: Bool = true) {
-        // TODO: Move log tail reading to a background queue before increasing
-        // maxTailBytes or adding richer parsing to this transitional dashboard.
-        let path = Logger.shared.logFilePath()
-        guard !path.isEmpty else {
-            currentLogSnapshot = nil
-            logOutput = NSLocalizedString("No active log file is available yet.", comment: "")
-            if announce {
-                setStatus(NSLocalizedString("No active log file is available yet.", comment: ""))
-            }
-            renderOutput()
-            updateCapabilityDrivenState()
-            return
+        let levelIndex = logLevelPopup.indexOfSelectedItem
+        let searchQuery = logSearchField.stringValue
+        if let status = logViewModel.refresh(levelIndex: levelIndex, searchQuery: searchQuery, announce: announce) {
+            setStatus(status)
         }
-
-        do {
-            let filter = LogLevelFilter(rawValue: logLevelPopup.indexOfSelectedItem) ?? .all
-            let snapshot = try DiagnosticsLogReader.load(path: path,
-                                                         filterTitle: filter.title,
-                                                         filterToken: filter.token,
-                                                         searchQuery: logSearchField.stringValue,
-                                                         paused: isLogRefreshPaused)
-            currentLogSnapshot = snapshot
-            logOutput = snapshot.renderedOutput()
-            if announce {
-                setStatus(NSLocalizedString("Log viewer refreshed from the current rolling log file.", comment: ""))
-            }
-        } catch {
-            currentLogSnapshot = nil
-            logOutput = String(format: NSLocalizedString("The current log file could not be read: %@", comment: ""), path)
-            if announce {
-                setStatus(NSLocalizedString("Failed to read the current log file.", comment: ""))
-            }
-        }
-        renderOutput()
-        updateCapabilityDrivenState()
     }
 
     private func refreshArtifacts(announce: Bool = true) {
@@ -778,7 +703,7 @@ class DiagnosticsDashboardViewController: NSViewController {
         let handleSave: (NSApplication.ModalResponse) -> Void = { [weak self] response in
             guard let self, response == .OK, let url = savePanel.url else { return }
             do {
-                let exportText = self.currentLogSnapshot?.renderedOutput(redactFilePath: true) ?? self.logOutput
+                let exportText = self.logViewModel.snapshot?.renderedOutput(redactFilePath: true) ?? self.logViewModel.output
                 try exportText.write(to: url, atomically: true, encoding: .utf8)
                 self.setStatus(NSLocalizedString("Filtered log output was exported successfully.", comment: ""))
             } catch {
@@ -798,11 +723,13 @@ class DiagnosticsDashboardViewController: NSViewController {
     }
 
     @objc private func actionTogglePauseLogs() {
-        isLogRefreshPaused = pauseLogsButton.state == .on
-        setStatus(isLogRefreshPaused
+        logViewModel.togglePause()
+        let paused = logViewModel.paused
+        pauseLogsButton.state = paused ? .on : .off
+        setStatus(paused
             ? NSLocalizedString("Automatic log refresh is paused.", comment: "")
             : NSLocalizedString("Automatic log refresh resumed.", comment: ""))
-        if !isLogRefreshPaused {
+        if !paused {
             refreshLogs(announce: false)
         } else {
             renderOutput()

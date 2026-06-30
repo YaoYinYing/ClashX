@@ -153,7 +153,7 @@ enum LightGBMSettingsViewModel {
             return
         }
 
-        ApiRequest.updateSmartLightGBMModel { result in
+        SmartAPI.updateSmartLightGBMModel { result in
             switch result {
             case .success:
                 CapabilityCache.shared.set(.lightGBMUpgrade, availability: .available)
